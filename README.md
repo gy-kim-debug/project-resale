@@ -27,7 +27,8 @@ npm run preview
 
 현재는 신규 화면 개발을 멈추고, 사용자가 후보를 보고 처음부터 규칙을 결정하는 단계입니다. 새 설계서에는 직접 선택한 내용만 기록하며 이전 초안을 자동으로 이어받지 않습니다.
 
-- [게임 설계서 — 사용자 결정 기록](docs/GAME_DESIGN.md)
+- [게임 설계 — 주제별 문서 목차](docs/design/README.md)
+- [미정 사항](docs/design/OPEN_QUESTIONS.md)
 
 - [이전 상세 설계 초안 — 참고용](docs/GAME_DESIGN_REFERENCE.md)
 
