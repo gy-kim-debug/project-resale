@@ -1,7 +1,6 @@
 import { useGameStore } from '../app/store';
 import { initialPlayer as player, formatWon } from '../domain/models';
 import { Icon } from './Icon';
-import { PlayerStatus } from './PlayerStatus';
 export function HomeScreen() {
   const setTab = useGameStore((state) => state.setTab);
   return (
@@ -46,7 +45,6 @@ export function HomeScreen() {
           0 <small>원</small>
         </strong>
       </div>
-      <PlayerStatus />
       <section className="market-entry-section">
         <div className="section-label">
           <span>살아남을 방법</span>

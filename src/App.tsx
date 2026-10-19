@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useGameStore, type Tab } from './app/store';
+import { PlayerStatus } from './components/PlayerStatus';
 import { HomeScreen } from './components/HomeScreen';
 import { MarketScreen } from './components/MarketScreen';
 import { UtilityScreens } from './components/UtilityScreens';
@@ -22,19 +23,22 @@ export default function App() {
   return (
     <div className={`app-shell ${state.tab === '게시판' ? 'in-market' : ''}`}>
       <header className="game-header">
-        <button
-          className="game-brand"
-          onClick={() => state.setTab('생존')}
-          aria-label="생존 홈으로"
-        >
-          <span className="brand-slash">/</span>
-          <span>
-            100억<span className="brand-sub">상환 생존기</span>
+        <div className="header-top">
+          <button
+            className="game-brand"
+            onClick={() => state.setTab('생존')}
+            aria-label="생존 홈으로"
+          >
+            <span className="brand-slash">/</span>
+            <span>
+              100억<span className="brand-sub">상환 생존기</span>
+            </span>
+          </button>
+          <span className="run-indicator">
+            <span /> 1회차 <i /> 무직
           </span>
-        </button>
-        <span className="run-indicator">
-          <span /> 1회차 <i /> 무직
-        </span>
+        </div>
+        <PlayerStatus />
       </header>
       <main>
         {state.saveError && (

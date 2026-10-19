@@ -76,11 +76,23 @@ button {
   box-shadow: 0 0 100px #0004;
 }
 .game-header {
-  padding: calc(17px + env(safe-area-inset-top)) 24px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--bg);
+  border-bottom: 1px solid #ffffff16;
+}
+.header-top {
+  padding: calc(9px + env(safe-area-inset-top)) 24px 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--line);
+}
+html {
+  scroll-padding-top: calc(132px + env(safe-area-inset-top));
+}
+.survival-status {
+  padding: 0 24px 13px;
 }
 .game-brand {
   display: flex;
@@ -278,14 +290,19 @@ main {
 .vital-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 0;
 }
 .vital {
-  padding: 11px 10px 10px;
-  border: 1px solid #ffffff08;
-  background: #1b1f1c;
-  border-radius: 3px;
   --vital: #beab78;
+  padding: 0 13px;
+  border-left: 1px solid #ffffff12;
+}
+.vital:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.vital:last-child {
+  padding-right: 0;
 }
 .vital.blue {
   --vital: #8c9da9;
@@ -296,24 +313,21 @@ main {
 .vital-top {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: var(--vital);
   font-size: 10px;
+  white-space: nowrap;
 }
 .vital-value {
-  font-size: 23px;
-  color: #dddcd1;
-  margin: 7px 0 8px;
-  line-height: 1;
-}
-.vital-value small {
-  font-size: 9px;
-  color: #6c7568;
-  margin-left: 4px;
+  font-size: 13px;
+  color: #e3e3d8;
+  margin-left: auto;
+  font-weight: 500;
 }
 meter {
   display: block;
   width: 100%;
+  margin-top: 6px;
   height: 3px;
   border: none;
   background: #333a30;
@@ -329,13 +343,6 @@ meter::-webkit-meter-optimum-value {
 }
 meter::-moz-meter-bar {
   background: var(--vital);
-}
-.vital p {
-  font-size: 9px;
-  white-space: nowrap;
-  color: #828c7c;
-  margin-top: 8px;
-  letter-spacing: -0.5px;
 }
 .market-entry-section .section-label {
   margin-top: 20px;
@@ -1057,7 +1064,8 @@ dd {
     padding-left: 18px;
     padding-right: 18px;
   }
-  .game-header {
+  .header-top,
+  .survival-status {
     padding-left: 18px;
     padding-right: 18px;
   }
@@ -1065,10 +1073,10 @@ dd {
     font-size: 29px;
   }
   .vital {
-    padding: 12px 9px;
+    padding: 0 9px;
   }
-  .vital p {
-    font-size: 8px;
+  .vital-top {
+    gap: 4px;
   }
   .debt-card {
     padding-left: 14px;
