@@ -71,6 +71,8 @@
 - [구매 가격 협상](trading/purchasing/NEGOTIATION.md)
 - [구매 합의 후 거래 완료](trading/purchasing/TRANSACTION.md)
 - [구매 전후 숨겨진 결함 확인](trading/purchasing/DEFECT_DISCOVERY.md)
+- [구매 전후 물건 가치 정보](trading/purchasing/VALUE_INFORMATION.md)
+- [물건 구매 시 운반비](trading/purchasing/TRANSPORT_COST.md)
 
 ### 판매 경로
 
