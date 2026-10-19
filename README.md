@@ -25,6 +25,10 @@ npm run preview
 
 ## 문서
 
+현재는 신규 화면 개발을 멈추고 상세 게임 규칙을 정리하는 단계입니다. 아래 기준서에서 확정·미정·제안을 구분해 순서대로 결정합니다.
+
+- [게임 상세 설계 기준서 — 논의 시작점](docs/GAME_DESIGN.md)
+
 - [게임 콘셉트](docs/GAME_CONCEPT.md)
 - [시스템·미확정 규칙](docs/GAME_SYSTEMS.md)
 - [아키텍처](docs/ARCHITECTURE.md)
