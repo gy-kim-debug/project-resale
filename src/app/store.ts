@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Category } from '../domain/models';
 import { saveRepository } from '../storage/saveRepository';
-type Tab = '게시판' | '보관함' | '생활' | '채무';
+export type Tab = '생존' | '게시판' | '보관함' | '생활' | '채무';
 interface UiState {
   tab: Tab;
   category: Category;
@@ -17,7 +17,7 @@ interface UiState {
 }
 let saving = Promise.resolve();
 export const useGameStore = create<UiState>((set, get) => ({
-  tab: '게시판',
+  tab: '생존',
   category: '전체',
   selectedId: null,
   favoriteIds: [],

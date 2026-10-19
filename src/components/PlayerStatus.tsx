@@ -1,41 +1,57 @@
-import { initialPlayer as player, formatWon } from '../domain/models';
+import { initialPlayer as player } from '../domain/models';
+import { Icon, type IconName } from './Icon';
+const vitals: {
+  label: string;
+  value: number;
+  icon: IconName;
+  tone: string;
+  caption: string;
+}[] = [
+  {
+    label: '배고픔',
+    value: player.hunger,
+    icon: 'food',
+    tone: 'amber',
+    caption: '허기가 느껴진다',
+  },
+  {
+    label: '피로',
+    value: player.fatigue,
+    icon: 'moon',
+    tone: 'blue',
+    caption: '아직 움직일 수 있다',
+  },
+  {
+    label: '건강',
+    value: player.health,
+    icon: 'health',
+    tone: 'green',
+    caption: '몸은 버텨주고 있다',
+  },
+];
 export function PlayerStatus() {
   return (
-    <section aria-label="플레이어 상태" className="status">
-      <div className="flex justify-between items-center">
-        <span className="eyebrow">나의 첫 번째 재기</span>
-        <span className="day">DAY {player.day} · 09:00</span>
+    <section className="survival-status" aria-label="플레이어 상태">
+      <div className="section-label">
+        <span>생존 상태</span>
+        <span className="mono">CONDITION / 01</span>
       </div>
-      <div className="balances">
-        <div>
-          <span>남은 채무</span>
-          <strong>{formatWon(player.principal + player.interest)}</strong>
-        </div>
-        <div>
-          <span>보유 현금</span>
-          <strong>{formatWon(player.cash)}</strong>
-        </div>
-      </div>
-      <div className="vitals">
-        {(
-          [
-            ['배고픔', player.hunger],
-            ['피로', player.fatigue],
-            ['건강', player.health],
-          ] as const
-        ).map(([label, value]) => (
-          <div key={label}>
-            <div className="flex justify-between">
+      <div className="vital-grid">
+        {vitals.map(({ label, value, icon, tone, caption }) => (
+          <div className={`vital ${tone}`} key={label}>
+            <div className="vital-top">
+              <Icon name={icon} size={18} />
               <span>{label}</span>
-              <b>{value}</b>
             </div>
-            <meter min="0" max="100" value={value} aria-label={label} />
+            <div className="vital-value mono">
+              {value}
+              <small>/100</small>
+            </div>
+            <meter aria-label={label} min={0} max={100} value={value} />
+            <p>{caption}</p>
           </div>
         ))}
       </div>
-      <p className="status-note">
-        무직 · 1회차 <span>오늘부터, 다시 시작.</span>
-      </p>
     </section>
   );
 }
