@@ -7,19 +7,19 @@ const vitals: {
   tone: string;
 }[] = [
   {
-    label: '배고픔',
+    label: '포만감',
     value: player.hunger,
     icon: 'food',
     tone: 'amber',
   },
   {
-    label: '피로',
+    label: '피로도',
     value: player.fatigue,
     icon: 'moon',
     tone: 'blue',
   },
   {
-    label: '건강',
+    label: '체력',
     value: player.health,
     icon: 'health',
     tone: 'green',

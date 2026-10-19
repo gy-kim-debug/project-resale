@@ -2,7 +2,15 @@ import { create } from 'zustand';
 import type { Category } from '../domain/models';
 import { saveRepository } from '../storage/saveRepository';
 export type Tab = '활동' | '내 정보' | '보관함' | '상점' | '채무';
-export type Activity = '장터' | '식사' | '수면' | '숙박';
+export type Activity =
+  | '장터'
+  | '무료나눔'
+  | '아르바이트'
+  | '물건 수집'
+  | '식사'
+  | '수면'
+  | '치료'
+  | '매각처';
 interface UiState {
   tab: Tab;
   activity: Activity | null;

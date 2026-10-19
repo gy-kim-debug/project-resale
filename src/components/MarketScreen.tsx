@@ -3,6 +3,8 @@ import { useGameStore } from '../app/store';
 import { categories, listings } from '../content/listings';
 import { formatWon } from '../domain/models';
 import { Icon, type IconName } from './Icon';
+import { PurchaseControls } from './TradeScreens';
+import { usePreviewStore } from '../app/previewStore';
 const itemIcons: Record<string, IconName> = {
   radio: 'radio',
   keyboard: 'keyboard',
@@ -12,6 +14,7 @@ const itemIcons: Record<string, IconName> = {
 };
 export function MarketScreen() {
   const state = useGameStore();
+  const cash = usePreviewStore((s) => s.cash);
   const heading = useRef<HTMLHeadingElement>(null);
   const previousId = useRef<string | null>(null);
   useEffect(() => {
@@ -28,7 +31,7 @@ export function MarketScreen() {
           <Icon name="back" size={17} /> 활동으로
         </button>
         <span className="mono">
-          DAY 01 <span>·</span> 현금 0원
+          DAY 01 <span>·</span> 현금 {formatWon(cash)}
         </span>
       </div>
       <div className="market-window">
@@ -86,11 +89,10 @@ export function MarketScreen() {
                   ? '관심 매물에서 해제'
                   : '관심 매물로 저장'}
               </button>
-              <button className="disabled-action" disabled>
-                구매 · 협상 준비 중
-              </button>
+              <PurchaseControls key={item.id} item={item} />
               <p className="detail-footnote">
-                탐색용 매물입니다. 현금과 시간은 변하지 않습니다.
+                고정 예시 매물입니다. 거래는 메모리에만 적용하며 시간·생존은
+                계산하지 않습니다.
               </p>
             </div>
           </div>

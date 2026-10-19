@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useGameStore, type Tab } from './app/store';
+import { usePreviewStore } from './app/previewStore';
+import { InquiriesScreen } from './components/TradeScreens';
 import { initialPlayer } from './domain/models';
 import { PlayerStatus } from './components/PlayerStatus';
 import {
@@ -18,20 +20,29 @@ const navigation: { tab: Tab; icon: IconName }[] = [
 ];
 export default function App() {
   const state = useGameStore();
+  const preview = usePreviewStore();
+  const pending = preview.inquiries.length > 0;
   useEffect(() => {
     void useGameStore.getState().hydrate();
   }, []);
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [state.tab, state.activity, state.selectedId]);
+  }, [
+    state.tab,
+    state.activity,
+    state.selectedId,
+    preview.selectedItemId,
+    pending,
+  ]);
   return (
     <div
-      className={`app-shell ${state.tab === '활동' && state.activity === '장터' ? 'in-market' : ''}`}
+      className={`app-shell ${!pending && state.tab === '활동' && state.activity === '장터' ? 'in-market' : ''}`}
     >
       <header className="game-header">
         <div className="header-top">
           <button
             className="game-brand"
+            disabled={pending}
             onClick={() => state.setTab('활동')}
             aria-label="활동 홈으로"
           >
@@ -47,16 +58,33 @@ export default function App() {
         <PlayerStatus />
       </header>
       <main>
+        <p className="muted rule-note">
+          화면 토대 · 목업 데이터. 시간·생존·이자·확률은 미계산. 헤더 수치는
+          표시 예시이며 진행은 저장하지 않습니다.
+        </p>
+        {preview.notice && (
+          <div className="save-error" role="status">
+            {preview.notice}
+            <button onClick={() => preview.notify('')} aria-label="안내 닫기">
+              닫기
+            </button>
+          </div>
+        )}
         {state.saveError && (
           <p role="status" className="save-error">
             {state.saveError}
           </p>
         )}
-        {state.tab === '활동' ? (
+        {pending ? (
+          <InquiriesScreen />
+        ) : state.tab === '활동' ? (
           state.activity === '장터' ? (
             <MarketScreen />
           ) : state.activity ? (
-            <ActivityDetailScreen activity={state.activity} />
+            <ActivityDetailScreen
+              key={state.activity}
+              activity={state.activity}
+            />
           ) : (
             <ActivityScreen />
           )
@@ -68,6 +96,7 @@ export default function App() {
         {navigation.map(({ tab, icon }) => (
           <button
             key={tab}
+            disabled={pending}
             aria-current={state.tab === tab ? 'page' : undefined}
             onClick={() => state.setTab(tab)}
           >
