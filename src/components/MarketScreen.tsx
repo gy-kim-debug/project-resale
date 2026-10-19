@@ -24,8 +24,8 @@ export function MarketScreen() {
   return (
     <section className="market-screen">
       <div className="market-return">
-        <button onClick={() => state.setTab('생존')}>
-          <Icon name="back" size={17} /> 생존 화면
+        <button onClick={() => state.openActivity(null)}>
+          <Icon name="back" size={17} /> 활동으로
         </button>
         <span className="mono">
           DAY 01 <span>·</span> 현금 0원

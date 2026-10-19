@@ -27,7 +27,7 @@ export function UtilityScreens() {
             className="saved"
             key={item.id}
             onClick={() => {
-              state.setTab('게시판');
+              state.openActivity('장터');
               state.select(item.id);
             }}
           >
@@ -41,40 +41,64 @@ export function UtilityScreens() {
       {!state.favoriteIds.length && (
         <p className="muted">장터에서 관심 있는 물건을 저장해 보세요.</p>
       )}
-      <button className="outline-button" onClick={() => state.setTab('게시판')}>
+      <button
+        className="outline-button"
+        onClick={() => state.openActivity('장터')}
+      >
         장터 둘러보기 <Icon name="arrow" size={17} />
       </button>
     </section>
-  ) : state.tab === '생활' ? (
+  ) : state.tab === '내 정보' ? (
     <section className="panel">
-      <p className="eyebrow">SURVIVAL / 버티는 법</p>
-      <h1>
-        살아 있어야,
-        <br />
-        다음 거래도 있다.
-      </h1>
-      <p className="panel-lead">배를 채우고 눈을 붙이는 일도 생존의 일부다.</p>
-      {(
-        [
-          ['food', '한 끼 해결하기', '허기를 달랠 방법을 찾는다.'],
-          ['moon', '눈 붙이기', '피로한 몸에 잠깐의 시간을 준다.'],
-          ['home', '머물 곳 찾기', '오늘 밤을 보낼 자리를 찾는다.'],
-        ] as const
-      ).map(([icon, label, description]) => (
-        <div className="action-row" key={label}>
-          <span className="action-icon">
-            <Icon name={icon} size={23} />
-          </span>
-          <div>
-            <h2>{label}</h2>
-            <p>{description}</p>
+      <p className="eyebrow">MY STATUS / 현재의 나</p>
+      <h1>내 정보</h1>
+      <p className="panel-lead">지금 가진 것과 버텨온 시간을 확인한다.</p>
+      <dl>
+        {(
+          [
+            ['보유 현금', formatWon(initialPlayer.cash)],
+            ['경과 일수', `${initialPlayer.day}일차`],
+            ['배고픔', `${initialPlayer.hunger} / 100`],
+            ['피로', `${initialPlayer.fatigue} / 100`],
+            ['건강', `${initialPlayer.health} / 100`],
+          ] as const
+        ).map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd className="mono">{value}</dd>
           </div>
-          <button disabled>준비 중</button>
+        ))}
+      </dl>
+      <button className="debt-card" onClick={() => state.setTab('채무')}>
+        <div className="debt-top">
+          <span>
+            <Icon name="debt" size={15} /> 남은 채무
+          </span>
+          <span className="stamp">미상환</span>
         </div>
-      ))}
-      <p className="muted rule-note">
-        행동 비용과 시간, 생존 규칙은 추후 설계됩니다.
-      </p>
+        <div className="debt-amount mono">
+          {formatWon(initialPlayer.principal + initialPlayer.interest)}
+        </div>
+        <div className="debt-rule" />
+        <div className="debt-bottom">
+          <span>채무 관리 열기</span>
+          <Icon name="arrow" size={17} />
+        </div>
+      </button>
+      <p className="muted rule-note">사망하면 게임이 종료됩니다.</p>
+    </section>
+  ) : state.tab === '상점' ? (
+    <section className="panel">
+      <p className="eyebrow">SHOP / 상점</p>
+      <h1>상점</h1>
+      <div className="empty-inventory">
+        <Icon name="market" size={44} />
+        <h2>상점을 준비하고 있습니다</h2>
+        <p>판매 품목과 이용 방식은 아직 정해지지 않았습니다.</p>
+      </div>
+      <button className="outline-button" disabled>
+        이용 준비 중
+      </button>
     </section>
   ) : (
     <section className="panel debt-panel">

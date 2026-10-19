@@ -120,24 +120,14 @@ html {
   color: #9a9e94;
   margin-top: -3px;
 }
-.run-indicator {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+.game-time {
   font-size: 10px;
-  color: #93998e;
+  color: #abb79b;
+  letter-spacing: 0.5px;
 }
-.run-indicator > span {
-  width: 5px;
-  height: 5px;
-  background: #abb98c;
-  border-radius: 50%;
-}
-.run-indicator i {
-  height: 8px;
-  width: 1px;
-  background: #4b5048;
-  margin: 0 2px;
+.game-time span {
+  color: #89967a;
+  margin-left: 9px;
 }
 main {
   padding-bottom: calc(100px + env(safe-area-inset-bottom));
@@ -1131,4 +1121,74 @@ dd {
   .action-row p {
     font-size: 9px;
   }
+}
+
+.activity-hub .home-intro h1 {
+  font-size: 27px;
+}
+.activity-hub .home-intro .eyebrow {
+  margin-bottom: 8px;
+  font-size: 9px;
+}
+.activity-hub .cash-line {
+  margin-top: 13px;
+}
+.activity-hub .cash-line strong {
+  font-size: 17px;
+}
+.activity-options {
+  display: grid;
+  gap: 9px;
+}
+.activity-option {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #ffffff0e;
+  border-radius: 5px;
+  padding: 14px;
+  background: #1b2119;
+}
+.activity-option > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.activity-option strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #d5ddc7;
+}
+.activity-option small {
+  display: block;
+  font-size: 10px;
+  color: #99a58b;
+  margin-top: 5px;
+}
+.activity-option > svg {
+  color: #8e9e7b;
+}
+.activity-back {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: #a7b19b;
+  font-size: 11px;
+  margin-bottom: 18px;
+}
+.activity-detail-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  background: #232c1c;
+  color: #b5c99a;
+  border: 1px solid #80976330;
+  border-radius: 8px;
+  margin: 24px 0;
 }

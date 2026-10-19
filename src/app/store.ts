@@ -1,15 +1,18 @@
 import { create } from 'zustand';
 import type { Category } from '../domain/models';
 import { saveRepository } from '../storage/saveRepository';
-export type Tab = '생존' | '게시판' | '보관함' | '생활' | '채무';
+export type Tab = '활동' | '내 정보' | '보관함' | '상점' | '채무';
+export type Activity = '장터' | '식사' | '수면' | '숙박';
 interface UiState {
   tab: Tab;
+  activity: Activity | null;
   category: Category;
   selectedId: string | null;
   favoriteIds: string[];
   ready: boolean;
   saveError: string;
   setTab(tab: Tab): void;
+  openActivity(activity: Activity | null): void;
   setCategory(category: Category): void;
   select(id: string | null): void;
   toggleFavorite(id: string): void;
@@ -17,13 +20,15 @@ interface UiState {
 }
 let saving = Promise.resolve();
 export const useGameStore = create<UiState>((set, get) => ({
-  tab: '생존',
+  tab: '활동',
+  activity: null,
   category: '전체',
   selectedId: null,
   favoriteIds: [],
   ready: false,
   saveError: '',
-  setTab: (tab) => set({ tab, selectedId: null }),
+  setTab: (tab) => set({ tab, activity: null, selectedId: null }),
+  openActivity: (activity) => set({ tab: '활동', activity, selectedId: null }),
   setCategory: (category) => set({ category }),
   select: (selectedId) => set({ selectedId }),
   toggleFavorite(id) {

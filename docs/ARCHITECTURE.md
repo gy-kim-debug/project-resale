@@ -4,16 +4,16 @@
 
 React + TypeScript + Vite, Tailwind CSS v4, Zustand, idb 기반 IndexedDB. 네이티브 의존성과 서버는 없다.
 
-| 위치             | 책임                                           |
-| ---------------- | ---------------------------------------------- |
-| src/App.tsx      | 게시판·상세·보관함·생활·채무 화면 조립 및 탐색 |
-| src/components   | 재사용 UI, 플레이어 상태 표시                  |
-| src/app/store.ts | Zustand의 탐색 상태·관심 매물·저장 오류 처리   |
-| src/content      | 고정 매물과 카테고리 콘텐츠                    |
-| src/domain       | React와 무관한 타입·시작 상태·원화 표시 함수   |
-| src/storage      | SaveRepository 인터페이스와 IndexedDB 구현     |
-| docs             | 요구사항, 미확정 규칙, 개발 순서               |
-| work             | 커밋 제외 임시 검증 자료                       |
+| 위치             | 책임                                         |
+| ---------------- | -------------------------------------------- |
+| src/App.tsx      | 5개 탭과 활동 내부 화면 조립 및 탐색         |
+| src/components   | 재사용 UI, 플레이어 상태 표시                |
+| src/app/store.ts | Zustand의 탐색 상태·관심 매물·저장 오류 처리 |
+| src/content      | 고정 매물과 카테고리 콘텐츠                  |
+| src/domain       | React와 무관한 타입·시작 상태·원화 표시 함수 |
+| src/storage      | SaveRepository 인터페이스와 IndexedDB 구현   |
+| docs             | 요구사항, 미확정 규칙, 개발 순서             |
+| work             | 커밋 제외 임시 검증 자료                     |
 
 ## 설계 원칙
 
@@ -30,3 +30,7 @@ UI에서 이자·시간·확률·거래·생존 계산을 하지 않는다. 추�
 뷰포트, safe-area, 100dvh, 최소 44px 버튼, 하단 고정 메뉴 공간, 키보드 포커스를 고려했다. 외부 이미지·폰트·API 요청은 없다. 설치 후 네트워크 없이 실행하는 PWA 서비스 워커는 이번 범위에 포함하지 않았다. 현재는 이미 로드된 화면을 네트워크 없이 조작할 수 있으며 새로고침·첫 실행의 오프라인 보장은 후속 과제다.
 
 생존 상태(PlayerStatus)는 App의 공통 sticky 헤더에서 한 번 렌더링한다. 탭 이동과 장터 상세 탐색·스크롤 중에도 배고픔·피로·건강을 확인할 수 있다.
+
+## 탐색 상태
+
+`Tab`은 활동·내 정보·보관함·상점·채무 5개만 허용한다. `activity`는 장터·식사·수면·숙박 또는 null이다. `openActivity`는 활동 탭에서 내부 화면을 열고, `setTab`은 내부 화면과 선택 매물을 초기화한다. 장터와 생존 행동은 하단 독립 탭이 아니다. 보관함의 관심 매물에서는 활동의 장터 상세로 이동한다. `ActivityScreen`이 활동 허브와 행동 상세를, `MarketScreen`이 장터를, `UtilityScreens`가 나머지 4개 탭을 담당한다.
