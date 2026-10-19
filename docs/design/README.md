@@ -1,10 +1,10 @@
 # 게임 설계 문서 — 사용자 결정 기록
 
-이 디렉터리는 사용자가 직접 결정한 게임 규칙을 주제별로 보관한다. 기존 단일 설계서의 28개 항목을 각각의 문서로 옮겼으며, 이번 정리로 게임 규칙을 새로 정하거나 변경하지 않았다.
+이 디렉터리는 사용자가 직접 결정한 게임 규칙을 주제별로 보관한다. 기존 단일 설계서의 28개 항목을 각각의 문서로 옮긴 뒤, 후속 사용자 결정도 관련 주제 문서에 계속 기록한다.
 
 ## 작성 원칙
 
-- 개발 파트너는 한 주제의 후보와 차이를 제시하고, 사용자가 선택하거나 직접 지정한 내용만 해당 문서에 기록한다.
+- 개발 파트너는 주제별 후보와 차이를 한 번에 여러 항목씩 제시하고, 사용자가 선택하거나 직접 지정한 내용만 해당 문서에 기록한다.
 - 각 문서의 확정 내용·선택 근거·미정 사항을 함께 유지한다.
 - 후속 결정은 해당 주제 문서를 수정한다. 새 주제는 관련 디렉터리에 문서를 추가하고 이 목차에 연결한다.
 - 다른 주제의 규칙은 복사해 재작성하기보다 해당 문서로 링크한다.
@@ -61,17 +61,23 @@
 ### 판매 경로
 
 - [물건 판매 경로](trading/SALES_CHANNELS.md)
+- [판매 경로 전환](trading/CHANNEL_SWITCHING.md)
 
 ### 고물상·상점 등 매각처
 
 - [매각처별 취급 물품과 가격](trading/outlets/ITEMS_AND_PRICES.md)
 - [매각 가격 확인 방식](trading/outlets/PRICE_CHECKS.md)
+- [매각처 가격 협상과 파토](trading/outlets/NEGOTIATION.md)
 
 ### 장터 판매·네고
 
+- [장터 판매 가격 설정과 수정 제한](trading/marketplace/LISTING_PRICE.md)
+- [복수 구매 문의와 유효 기간](trading/marketplace/INQUIRIES.md)
+- [판매 가격과 구매 문의의 관계](trading/marketplace/PRICE_AND_DEMAND.md)
 - [장터 판매 성사 방식](trading/marketplace/SALE_ACCEPTANCE.md)
 - [구매 문의의 제안 가격](trading/marketplace/BUYER_OFFERS.md)
 - [판매 네고 진행 방식](trading/marketplace/NEGOTIATION.md)
+- [파토 후 판매 글 처리](trading/marketplace/LISTING_LIFECYCLE.md)
 - [가격 합의 후 실제 거래](trading/marketplace/TRANSACTION.md)
 
 ## 미정 사항
