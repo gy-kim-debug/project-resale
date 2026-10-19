@@ -65,6 +65,7 @@
 ### 보관함
 
 - [보유 물품 수량 제한](inventory/CAPACITY.md)
+- [필요 없는 물건 버리기](inventory/DISPOSAL.md)
 
 ### 장터 구매
 

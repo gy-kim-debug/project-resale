@@ -18,8 +18,9 @@
 
 ## 구매·정보·보관 일괄 결정 후 남은 사항
 
-- [가치 정보](trading/purchasing/VALUE_INFORMATION.md): 구매 전에는 판매자 가격만 표시, 실제 가치는 구매 후 알 수 있음은 확정. 구매 후 바로 공개할지 확인 행동이 필요한지는 미정.
+- [가치 정보](trading/purchasing/VALUE_INFORMATION.md): 구매 전에는 판매자 가격만 표시, 실제 가치는 구매 후 알 수 있음은 확정. 구매 후 별도 확인 행동을 해야 공개되는 것으로 확정. 확인 수단·소모·가치 변화는 미정.
 - [구매 거래](trading/purchasing/TRANSACTION.md): 별도 운반비 없음, 행동 한 번으로 완료는 확정. 거래 시간·상태 소모량은 미정.
-- [구매 네고](trading/purchasing/NEGOTIATION.md)의 구체적인 진행·응답·파토 규칙.
-- [결함 확인](trading/purchasing/DEFECT_DISCOVERY.md)의 수단·정확도·비용·발견 시점.
-- [보유 수량 한도](inventory/CAPACITY.md)의 값과 계산 단위, 가득 찼을 때의 처리.
+- [구매 네고](trading/purchasing/NEGOTIATION.md): 플레이어가 가격 선택지로 제안하는 것은 확정. 선택지 구성·판매자 응답·파토 규칙은 미정.
+- [결함 확인](trading/purchasing/DEFECT_DISCOVERY.md): 경우에 따라 소모가 발생하는 것은 확정. 수단·정확도·소모 자원과 양·발견 시점은 미정.
+- [보유 수량 한도](inventory/CAPACITY.md): 판매 등록 중 물건도 공간 점유, 가득 차면 획득 불가는 확정. 한도 값·계산 단위·검사 시점은 미정.
+- [버리기](inventory/DISPOSAL.md): 가능하고 시간 소모 없음은 확정. 금전·상태 소모와 판매 중 폐기는 미정.
