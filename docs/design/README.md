@@ -62,6 +62,16 @@
 
 - [물건 수집 결과](income/scavenging/FINDS.md)
 
+### 보관함
+
+- [보유 물품 수량 제한](inventory/CAPACITY.md)
+
+### 장터 구매
+
+- [구매 가격 협상](trading/purchasing/NEGOTIATION.md)
+- [구매 합의 후 거래 완료](trading/purchasing/TRANSACTION.md)
+- [구매 전후 숨겨진 결함 확인](trading/purchasing/DEFECT_DISCOVERY.md)
+
 ### 판매 경로
 
 - [물건 판매 경로](trading/SALES_CHANNELS.md)

@@ -15,3 +15,11 @@
 - [판매 글 한도](trading/marketplace/LISTING_LIMITS.md)와 [캐릭터 능력치](character/ABILITIES.md): 도입·확장 방향은 확정. 구체적인 능력치와 성장·한도 연결 방식은 미정.
 - [매각처 매각](trading/outlets/FIXED_PRICE_SALES.md): 협상 없이 제시 가격으로만 판매는 확정. 가격 유효 기간·변동과 재방문 가격 처리는 미정.
 - [가격과 수요](trading/marketplace/PRICE_AND_DEMAND.md)의 판단 기준과 구체적인 발생 규칙.
+
+## 구매·정보·보관 일괄 결정 후 남은 사항
+
+- 구매 전 장터 화면에서 제공할 가치·예상 시세 정보: 질문의 대상 시점을 설명한 뒤 사용자 선택을 기다린다. 구매 후 가치 정보와 구분한다.
+- 운반비: 물건을 보관함으로 획득할 때 물건값 외 별도 비용을 둘지, 용어를 설명한 뒤 사용자 선택을 기다린다. 구매 합의 후 행동 한 번으로 완료하는 규칙은 유지한다.
+- [구매 네고](trading/purchasing/NEGOTIATION.md)의 구체적인 진행·응답·파토 규칙.
+- [결함 확인](trading/purchasing/DEFECT_DISCOVERY.md)의 수단·정확도·비용·발견 시점.
+- [보유 수량 한도](inventory/CAPACITY.md)의 값과 계산 단위, 가득 찼을 때의 처리.
