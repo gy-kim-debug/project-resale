@@ -8,8 +8,10 @@
 
 ## 판매·네고 일괄 결정 후 남은 사항
 
-- [가격 설정·수정 제한](trading/marketplace/LISTING_PRICE.md): 취소 또는 파토 후 재등록할 때 다른 가격을 설정할 수 있는지.
-- [복수 구매 문의](trading/marketplace/INQUIRIES.md)와 [파토 후 재등록](trading/marketplace/LISTING_LIFECYCLE.md): 한 구매자의 파토가 다른 문의·판매 글 전체에 미치는 영향, 문의 만료도 파토와 동일하게 처리하는지.
+- [가격 설정·수정 제한](trading/marketplace/LISTING_PRICE.md): 취소·파토 후 새 가격 재등록은 확정. 시간 만료 후 재등록 가격은 미정.
+- [복수 구매 문의](trading/marketplace/INQUIRIES.md): 다음 행동 전 필수 응답은 확정. 여러 문의의 처리 순서·단위와 이전 문의 만료 규칙의 적용 여부는 미정.
+- [판매 글 종료](trading/marketplace/LISTING_LIFECYCLE.md): 한 구매자와 파토나면 글·다른 문의 모두 종료, 판매 글 시간 만료는 확정. 만료 시간·판정 순서는 미정.
 - 등록·취소·재등록·문의 응답·네고의 구체적인 시간·상태 소모·비용.
-- [매각처 네고](trading/outlets/NEGOTIATION.md)의 가격 격차 기준, 인상 상한과 파토 후 처리.
+- [판매 글 한도](trading/marketplace/LISTING_LIMITS.md)와 [캐릭터 능력치](character/ABILITIES.md): 도입·확장 방향은 확정. 구체적인 능력치와 성장·한도 연결 방식은 미정.
+- [매각처 매각](trading/outlets/FIXED_PRICE_SALES.md): 협상 없이 제시 가격으로만 판매는 확정. 가격 유효 기간·변동과 재방문 가격 처리는 미정.
 - [가격과 수요](trading/marketplace/PRICE_AND_DEMAND.md)의 판단 기준과 구체적인 발생 규칙.

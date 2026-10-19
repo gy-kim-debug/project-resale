@@ -18,6 +18,10 @@
 - [게임 시작 상황](core/STARTING_STATE.md)
 - [게임 진행의 공통 원칙](core/TIME_AND_PROGRESS.md)
 
+### 캐릭터
+
+- [능력치 도입 계획](character/ABILITIES.md)
+
 ### 생존 지표
 
 - [체력과 포만감의 역할](survival/STAT_ROLES.md)
@@ -67,17 +71,18 @@
 
 - [매각처별 취급 물품과 가격](trading/outlets/ITEMS_AND_PRICES.md)
 - [매각 가격 확인 방식](trading/outlets/PRICE_CHECKS.md)
-- [매각처 가격 협상과 파토](trading/outlets/NEGOTIATION.md)
+- [매각처 제시 가격으로 판매](trading/outlets/FIXED_PRICE_SALES.md)
 
 ### 장터 판매·네고
 
 - [장터 판매 가격 설정과 수정 제한](trading/marketplace/LISTING_PRICE.md)
-- [복수 구매 문의와 유효 기간](trading/marketplace/INQUIRIES.md)
+- [판매 글 등록 한도와 확장](trading/marketplace/LISTING_LIMITS.md)
+- [복수 구매 문의와 필수 응답](trading/marketplace/INQUIRIES.md)
 - [판매 가격과 구매 문의의 관계](trading/marketplace/PRICE_AND_DEMAND.md)
 - [장터 판매 성사 방식](trading/marketplace/SALE_ACCEPTANCE.md)
 - [구매 문의의 제안 가격](trading/marketplace/BUYER_OFFERS.md)
 - [판매 네고 진행 방식](trading/marketplace/NEGOTIATION.md)
-- [파토 후 판매 글 처리](trading/marketplace/LISTING_LIFECYCLE.md)
+- [판매 글 만료와 파토 후 처리](trading/marketplace/LISTING_LIFECYCLE.md)
 - [가격 합의 후 실제 거래](trading/marketplace/TRANSACTION.md)
 
 ## 미정 사항
