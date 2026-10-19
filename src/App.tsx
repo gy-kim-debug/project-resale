@@ -4,9 +4,240 @@ import { categories, listings } from './content/listings';
 import { formatWon, initialPlayer } from './domain/models';
 import { PlayerStatus } from './components/PlayerStatus';
 export default function App() {
- const state = useGameStore(); const heading = useRef<HTMLHeadingElement>(null); const previousId = useRef<string | null>(null);
- useEffect(() => { void useGameStore.getState().hydrate(); }, []);
- useEffect(() => { if (state.selectedId) heading.current?.focus(); else if (previousId.current) document.getElementById(`listing-${previousId.current}`)?.focus(); previousId.current = state.selectedId; }, [state.selectedId]);
- const selected = listings.find((item) => item.id === state.selectedId);
- return <div className="app-shell"><header className="app-header"><a href="#" onClick={(event) => {event.preventDefault(); state.setTab('게시판');}} className="brand"><span className="brand-mark">↗</span><span>다시, 장터<small>중고거래로 100억 갚기</small></span></a><span className="prototype">프로토타입</span></header><main><PlayerStatus/>{state.saveError && <p role="status" className="notice">{state.saveError}</p>}{selected ? <section className="detail"><button className="back" onClick={() => state.select(null)}>← 매물 목록</button><div className="detail-art" aria-hidden="true">{selected.symbol}</div><p className="eyebrow">{selected.category} · {selected.condition}</p><h1 ref={heading} tabIndex={-1}>{selected.title}</h1><strong className="detail-price">{formatWon(selected.price)}</strong><p className="seller">판매자 · {selected.seller}</p><p>{selected.description}</p><aside className="clue"><b>거래 전 살펴보기</b><p>{selected.clue}</p><small>실제 가치와 숨겨진 결함은 아직 알 수 없습니다.</small></aside><button className="primary" disabled={!state.ready} onClick={() => state.toggleFavorite(selected.id)}>{state.favoriteIds.includes(selected.id) ? '♥ 관심 매물에서 해제' : '♡ 관심 매물로 저장'}</button><button className="disabled-action" disabled>구매 · 협상 준비 중</button><p className="muted">현재는 탐색용 목업입니다. 현금과 시간은 변하지 않습니다.</p></section> : state.tab === '게시판' ? <section><div className="section-heading"><div><p className="eyebrow">작은 거래에서 시작하는 이야기</p><h1>동네 매물</h1></div><span className="live-dot">둘러보기</span></div><div className="notice"><b>주머니는 비었지만, 기회는 있어요.</b><p>나눔부터 수집품까지. 첫 거래의 실마리를 찾아보세요.</p></div><div className="categories" aria-label="매물 카테고리">{categories.map((category) => <button key={category} aria-pressed={state.category === category} onClick={() => state.setCategory(category)}>{category}</button>)}</div><div className="list-meta"><span>{state.category} 매물</span><span>목업 · 가격은 예시입니다</span></div><div className="listing-list">{listings.filter((item) => state.category === '전체' || item.category === state.category).map((item) => <button id={`listing-${item.id}`} className="listing" key={item.id} onClick={() => state.select(item.id)}><span className={`item-art art-${item.category}`} aria-hidden="true">{item.symbol}</span><span className="item-info"><span className="item-title">{item.title}</span><span className="item-meta">{item.category} · {item.condition}</span><strong>{item.price === 0 ? '무료 나눔' : formatWon(item.price)}</strong>{item.tag && <span className="tag">{item.tag}</span>}</span><span className="chevron" aria-hidden="true">›</span></button>)}</div><p className="end-note">어떤 물건에 이야기가 숨어 있을까요?</p></section> : state.tab === '보관함' ? <section className="panel"><p className="eyebrow">나의 물건과 기회</p><h1>보관함</h1><div className="empty"><span>□</span><h2>아직 보유한 물품이 없어요</h2><p>매입한 물품은 이곳에서 관리하게 됩니다.</p></div><h2>관심 매물 <small>{state.favoriteIds.length}</small></h2>{listings.filter((item) => state.favoriteIds.includes(item.id)).map((item) => <button id={`listing-${item.id}`} className="saved" key={item.id} onClick={() => state.select(item.id)}>{item.title}<strong>{formatWon(item.price)} →</strong></button>)}{!state.favoriteIds.length && <p className="muted">매물 상세에서 관심 있는 물건을 저장해 보세요.</p>}</section> : state.tab === '생활' ? <section className="panel"><p className="eyebrow">오래 살아남기 위한 준비</p><h1>생활</h1><p className="muted">먹고, 쉬고, 다시 장터로 나갈 준비를 합니다.</p>{['식사', '수면', '숙박'].map((label) => <div className="action-row" key={label}><h2>{label}</h2><button disabled>준비 중</button></div>)}<p className="notice">행동 비용과 시간, 생존 규칙은 추후 설계합니다.</p></section> : <section className="panel"><p className="eyebrow">조금씩 가벼워질 내일</p><h1>채무 관리</h1><dl>{[['남은 원금', initialPlayer.principal], ['발생 이자', initialPlayer.interest], ['보유 현금', initialPlayer.cash]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{formatWon(value as number)}</dd></div>)}</dl><button className="primary" disabled>일부 상환 준비 중</button><p className="notice">이자율, 정산 주기와 상환 순서는 아직 정해지지 않았습니다.</p></section>}</main><nav className="bottom-nav" aria-label="주요 메뉴">{([['게시판', '▦'], ['보관함', '□'], ['생활', '☀'], ['채무', '↘']] as const).map(([tab, icon]) => <button key={tab} aria-current={state.tab === tab ? 'page' : undefined} onClick={() => state.setTab(tab)}><span aria-hidden="true">{icon}</span>{tab}</button>)}</nav></div>;
+  const state = useGameStore();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const previousId = useRef<string | null>(null);
+  useEffect(() => {
+    void useGameStore.getState().hydrate();
+  }, []);
+  useEffect(() => {
+    if (state.selectedId) heading.current?.focus();
+    else if (previousId.current)
+      document.getElementById(`listing-${previousId.current}`)?.focus();
+    previousId.current = state.selectedId;
+  }, [state.selectedId]);
+  const selected = listings.find((item) => item.id === state.selectedId);
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <a
+          href="#"
+          onClick={(event) => {
+            event.preventDefault();
+            state.setTab('게시판');
+          }}
+          className="brand"
+        >
+          <span className="brand-mark">↗</span>
+          <span>
+            다시, 장터<small>중고거래로 100억 갚기</small>
+          </span>
+        </a>
+        <span className="prototype">프로토타입</span>
+      </header>
+      <main>
+        <PlayerStatus />
+        {state.saveError && (
+          <p role="status" className="notice">
+            {state.saveError}
+          </p>
+        )}
+        {selected ? (
+          <section className="detail">
+            <button className="back" onClick={() => state.select(null)}>
+              ← 매물 목록
+            </button>
+            <div className="detail-art" aria-hidden="true">
+              {selected.symbol}
+            </div>
+            <p className="eyebrow">
+              {selected.category} · {selected.condition}
+            </p>
+            <h1 ref={heading} tabIndex={-1}>
+              {selected.title}
+            </h1>
+            <strong className="detail-price">
+              {formatWon(selected.price)}
+            </strong>
+            <p className="seller">판매자 · {selected.seller}</p>
+            <p>{selected.description}</p>
+            <aside className="clue">
+              <b>거래 전 살펴보기</b>
+              <p>{selected.clue}</p>
+              <small>실제 가치와 숨겨진 결함은 아직 알 수 없습니다.</small>
+            </aside>
+            <button
+              className="primary"
+              disabled={!state.ready}
+              onClick={() => state.toggleFavorite(selected.id)}
+            >
+              {state.favoriteIds.includes(selected.id)
+                ? '♥ 관심 매물에서 해제'
+                : '♡ 관심 매물로 저장'}
+            </button>
+            <button className="disabled-action" disabled>
+              구매 · 협상 준비 중
+            </button>
+            <p className="muted">
+              현재는 탐색용 목업입니다. 현금과 시간은 변하지 않습니다.
+            </p>
+          </section>
+        ) : state.tab === '게시판' ? (
+          <section>
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">작은 거래에서 시작하는 이야기</p>
+                <h1>동네 매물</h1>
+              </div>
+              <span className="live-dot">둘러보기</span>
+            </div>
+            <div className="notice">
+              <b>주머니는 비었지만, 기회는 있어요.</b>
+              <p>나눔부터 수집품까지. 첫 거래의 실마리를 찾아보세요.</p>
+            </div>
+            <div className="categories" aria-label="매물 카테고리">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  aria-pressed={state.category === category}
+                  onClick={() => state.setCategory(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+            <div className="list-meta">
+              <span>{state.category} 매물</span>
+              <span>목업 · 가격은 예시입니다</span>
+            </div>
+            <div className="listing-list">
+              {listings
+                .filter(
+                  (item) =>
+                    state.category === '전체' ||
+                    item.category === state.category,
+                )
+                .map((item) => (
+                  <button
+                    id={`listing-${item.id}`}
+                    className="listing"
+                    key={item.id}
+                    onClick={() => state.select(item.id)}
+                  >
+                    <span
+                      className={`item-art art-${item.category}`}
+                      aria-hidden="true"
+                    >
+                      {item.symbol}
+                    </span>
+                    <span className="item-info">
+                      <span className="item-title">{item.title}</span>
+                      <span className="item-meta">
+                        {item.category} · {item.condition}
+                      </span>
+                      <strong>
+                        {item.price === 0 ? '무료 나눔' : formatWon(item.price)}
+                      </strong>
+                      {item.tag && <span className="tag">{item.tag}</span>}
+                    </span>
+                    <span className="chevron" aria-hidden="true">
+                      ›
+                    </span>
+                  </button>
+                ))}
+            </div>
+            <p className="end-note">어떤 물건에 이야기가 숨어 있을까요?</p>
+          </section>
+        ) : state.tab === '보관함' ? (
+          <section className="panel">
+            <p className="eyebrow">나의 물건과 기회</p>
+            <h1>보관함</h1>
+            <div className="empty">
+              <span>□</span>
+              <h2>아직 보유한 물품이 없어요</h2>
+              <p>매입한 물품은 이곳에서 관리하게 됩니다.</p>
+            </div>
+            <h2>
+              관심 매물 <small>{state.favoriteIds.length}</small>
+            </h2>
+            {listings
+              .filter((item) => state.favoriteIds.includes(item.id))
+              .map((item) => (
+                <button
+                  id={`listing-${item.id}`}
+                  className="saved"
+                  key={item.id}
+                  onClick={() => state.select(item.id)}
+                >
+                  {item.title}
+                  <strong>{formatWon(item.price)} →</strong>
+                </button>
+              ))}
+            {!state.favoriteIds.length && (
+              <p className="muted">
+                매물 상세에서 관심 있는 물건을 저장해 보세요.
+              </p>
+            )}
+          </section>
+        ) : state.tab === '생활' ? (
+          <section className="panel">
+            <p className="eyebrow">오래 살아남기 위한 준비</p>
+            <h1>생활</h1>
+            <p className="muted">먹고, 쉬고, 다시 장터로 나갈 준비를 합니다.</p>
+            {['식사', '수면', '숙박'].map((label) => (
+              <div className="action-row" key={label}>
+                <h2>{label}</h2>
+                <button disabled>준비 중</button>
+              </div>
+            ))}
+            <p className="notice">
+              행동 비용과 시간, 생존 규칙은 추후 설계합니다.
+            </p>
+          </section>
+        ) : (
+          <section className="panel">
+            <p className="eyebrow">조금씩 가벼워질 내일</p>
+            <h1>채무 관리</h1>
+            <dl>
+              {[
+                ['남은 원금', initialPlayer.principal],
+                ['발생 이자', initialPlayer.interest],
+                ['보유 현금', initialPlayer.cash],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{formatWon(value as number)}</dd>
+                </div>
+              ))}
+            </dl>
+            <button className="primary" disabled>
+              일부 상환 준비 중
+            </button>
+            <p className="notice">
+              이자율, 정산 주기와 상환 순서는 아직 정해지지 않았습니다.
+            </p>
+          </section>
+        )}
+      </main>
+      <nav className="bottom-nav" aria-label="주요 메뉴">
+        {(
+          [
+            ['게시판', '▦'],
+            ['보관함', '□'],
+            ['생활', '☀'],
+            ['채무', '↘'],
+          ] as const
+        ).map(([tab, icon]) => (
+          <button
+            key={tab}
+            aria-current={state.tab === tab ? 'page' : undefined}
+            onClick={() => state.setTab(tab)}
+          >
+            <span aria-hidden="true">{icon}</span>
+            {tab}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
 }

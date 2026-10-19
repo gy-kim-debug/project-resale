@@ -1,2 +1,41 @@
 import { initialPlayer as player, formatWon } from '../domain/models';
-export function PlayerStatus() { return <section aria-label="플레이어 상태" className="status"><div className="flex justify-between items-center"><span className="eyebrow">나의 첫 번째 재기</span><span className="day">DAY {player.day} · 09:00</span></div><div className="balances"><div><span>남은 채무</span><strong>{formatWon(player.principal + player.interest)}</strong></div><div><span>보유 현금</span><strong>{formatWon(player.cash)}</strong></div></div><div className="vitals">{([['배고픔', player.hunger], ['피로', player.fatigue], ['건강', player.health]] as const).map(([label, value]) => <div key={label}><div className="flex justify-between"><span>{label}</span><b>{value}</b></div><meter min="0" max="100" value={value} aria-label={label}/></div>)}</div><p className="status-note">무직 · 1회차 <span>오늘부터, 다시 시작.</span></p></section>; }
+export function PlayerStatus() {
+  return (
+    <section aria-label="플레이어 상태" className="status">
+      <div className="flex justify-between items-center">
+        <span className="eyebrow">나의 첫 번째 재기</span>
+        <span className="day">DAY {player.day} · 09:00</span>
+      </div>
+      <div className="balances">
+        <div>
+          <span>남은 채무</span>
+          <strong>{formatWon(player.principal + player.interest)}</strong>
+        </div>
+        <div>
+          <span>보유 현금</span>
+          <strong>{formatWon(player.cash)}</strong>
+        </div>
+      </div>
+      <div className="vitals">
+        {(
+          [
+            ['배고픔', player.hunger],
+            ['피로', player.fatigue],
+            ['건강', player.health],
+          ] as const
+        ).map(([label, value]) => (
+          <div key={label}>
+            <div className="flex justify-between">
+              <span>{label}</span>
+              <b>{value}</b>
+            </div>
+            <meter min="0" max="100" value={value} aria-label={label} />
+          </div>
+        ))}
+      </div>
+      <p className="status-note">
+        무직 · 1회차 <span>오늘부터, 다시 시작.</span>
+      </p>
+    </section>
+  );
+}
