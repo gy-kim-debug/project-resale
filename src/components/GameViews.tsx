@@ -8,9 +8,8 @@ import {
   marketValue,
   checkCost,
   repairCost,
-  tier,
 } from '../domain/engine';
-import { FOODS, JOBS, OUTLETS, RULES, TIERS } from '../content/rules';
+import { FOODS, JOBS, OUTLETS, RULES } from '../content/rules';
 
 export type Route = {
   kind:
@@ -27,7 +26,6 @@ export type Route = {
     | '판매 등록'
     | '문의'
     | '특별 제안'
-    | '안내'
     | '기록'
     | '저장 관리';
   id?: string;
@@ -132,7 +130,6 @@ export function InfoView({ g }: { g: Game }) {
   return (
     <>
       <h1>내 정보</h1>
-      <p className="lead">경험은 이번 생의 능력이 됩니다.</p>
       <div className="abilities">
         {(
           [
@@ -165,15 +162,10 @@ export function InfoView({ g }: { g: Game }) {
               value={level(g, a.stat) >= 10 ? a.each : g.stats[a.stat] % a.each}
               max={a.each}
             />
-            <small>
-              경험 {g.stats[a.stat]} · {a.each}회마다 성장 · 최대 Lv.10
-            </small>
+            <small>경험 {g.stats[a.stat]}</small>
           </section>
         ))}
       </div>
-      <p className="footnote">
-        생존 수치는 물건의 실제 가치나 거래 확률에 영향을 주지 않습니다.
-      </p>
     </>
   );
 }
@@ -186,7 +178,6 @@ export function InventoryView({ g, open }: { g: Game; open: Open }) {
           {g.inventory.length}/{RULES.capacity}
         </span>
       </h1>
-      <p className="lead">판매 등록 중인 물품도 보관 공간을 사용합니다.</p>
       {g.inventory.length ? (
         g.inventory.map((i) => (
           <ItemRow
@@ -205,7 +196,6 @@ export function InventoryView({ g, open }: { g: Game; open: Open }) {
       ) : (
         <div className="empty">
           <h2>아직 보유한 물품이 없습니다.</h2>
-          <p>활동에서 무료나눔이나 물건 수집으로 시작하세요.</p>
         </div>
       )}
     </>
@@ -243,11 +233,7 @@ export function DebtView({
           <dd>{won(g.cash)}</dd>
         </div>
       </dl>
-      <p className="lead">
-        처음 3일 무이자. 4일째부터 자정마다 남은 원금의 일 0.0001%가 발생합니다.
-        1원 미만은 올림하며, 이자에 이자는 붙지 않습니다.
-      </p>
-      <p>상환은 이자부터 차감합니다. 5분 소모.</p>
+
       <AmountForm
         title="입력 금액 상환"
         label="상환 금액"
@@ -278,18 +264,13 @@ export function ShopView({
   return (
     <>
       <h1>상점</h1>
-      <p className="lead">
-        음식은 구매 즉시 먹습니다. 물품 매각은 활동의 매각처에서 진행하세요.
-      </p>
       {FOODS.filter((f) => f.cost > 0).map((f) => (
         <section className="card" key={f.id}>
           <h2>{f.title}</h2>
           <p>
             {won(f.cost)} · {f.minutes}분
           </p>
-          <p>
-            포만감 +{f.satiety} · 체력 +{f.health}
-          </p>
+
           <Button
             disabled={g.cash < f.cost}
             onClick={() => act({ type: 'meal', id: f.id })}
@@ -322,11 +303,6 @@ export function MarketView({
   );
   return (
     <>
-      <p className="lead">
-        {free
-          ? '나눔 글은 랜덤하게 올라옵니다. 현금이 없어도 글이 없을 수 있습니다.'
-          : `${TIERS[tier(g)].name} 거래가 열려 있습니다. 판매자 가격만 표시하며 실제 가치는 숨겨져 있습니다.`}
-      </p>
       <p className="market-trend">
         오늘의 시장: {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}
         {g.marketFactor - 100}%
@@ -373,11 +349,6 @@ export function MarketView({
           <h2>
             {free ? '현재 무료나눔 글이 없습니다.' : '표시할 매물이 없습니다.'}
           </h2>
-          <p>
-            {free
-              ? '아르바이트·물건 수집을 하거나 시간을 써서 새 매물을 찾아보세요.'
-              : '다른 카테고리나 새 매물을 확인하세요.'}
-          </p>
         </div>
       )}
     </>
@@ -407,12 +378,7 @@ export function ListingView({
       </p>
       <p className="lead">{item.description}</p>
       <Details>
-        <p>실제 가치: 구매 후 별도 확인</p>
-        <p>
-          {item.inspected
-            ? `직접 확인한 상태: ${item.condition}. 가품·숨겨진 결함은 아직 알 수 없습니다.`
-            : '판매자 설명만으로 상태를 보증할 수 없습니다.'}
-        </p>
+        <p>{item.inspected ? `상태: ${item.condition}` : '상태 미확인'}</p>
         <p>매물 유효 시간: {Math.max(0, item.expires - g.minute)}분 남음</p>
       </Details>
       <Button onClick={() => toggle(item.id)}>
@@ -424,14 +390,11 @@ export function ListingView({
       >
         {item.inspected
           ? '구매 전 상태 확인 완료'
-          : `구매 전 외관·작동 확인 · 15분${item.kind === '디지털' ? ' · 200원' : ' · 현금 소모 없음'}`}
+          : `구매 전 외관·작동 확인 · 15분${item.kind === '디지털' ? ' · 200원' : ' · 0원'}`}
       </Button>
       {item.price > 0 && item.negotiation === 'none' && (
         <section className="card">
           <h3>구매 가격 제안 · 각 15분</h3>
-          <p>
-            판매자가 거절할 수 있습니다. 한 매물에 한 번만 제안할 수 있습니다.
-          </p>
           {item.offers.map((p) => (
             <Button
               key={p}
@@ -446,7 +409,7 @@ export function ListingView({
         <p className="lead">
           {item.negotiation === 'accepted'
             ? `협상 수락 · 합의 금액 ${won(price)}`
-            : '협상 거절 · 원래 가격으로 구매 가능'}
+            : '협상 거절'}
         </p>
       )}
       {!confirm ? (
@@ -460,10 +423,7 @@ export function ListingView({
       ) : (
         <section className="card">
           <h3>지불·수령 확인</h3>
-          <p>
-            {won(price)} · 15분 · 포만감 추가 1 · 피로도 추가 1. 운반비는
-            없습니다.
-          </p>
+          <p>{won(price)} · 15분</p>
           <Button
             disabled={g.cash < price || g.inventory.length >= RULES.capacity}
             onClick={() => act({ type: 'buy', id: item.id })}
@@ -509,7 +469,7 @@ export function OwnedView({
             </p>
           </>
         ) : (
-          <p>실제 가치·숨겨진 결함은 아직 알 수 없습니다.</p>
+          <p>가치 미확인</p>
         )}
       </Details>
       {!item.checked && (
@@ -523,11 +483,7 @@ export function OwnedView({
       {item.checked && item.condition !== '양호' && !item.repaired && (
         <section className="card">
           <h3>수리</h3>
-          <p>
-            비용 {won(repairCost(item))} · 60분 · 성공률{' '}
-            {Math.min(95, 70 + level(g, 'repairs') * 5)}%. 실패해도 비용은
-            사용됩니다. 재수리 불가.
-          </p>
+          <p>비용 {won(repairCost(item))} · 60분</p>
           <Button
             disabled={!!sale || g.cash < repairCost(item)}
             onClick={() => act({ type: 'repair', id: item.id })}
@@ -543,9 +499,6 @@ export function OwnedView({
             {won(sale.price)} · 만료까지 {Math.max(0, sale.expires - g.minute)}
             분
           </p>
-          <p>
-            등록 중 가격 수정 불가. 취소 후 새 가격으로 재등록할 수 있습니다.
-          </p>
           <Button onClick={() => act({ type: 'wait' })}>
             구매 문의 기다리기 · 30분
           </Button>
@@ -559,18 +512,13 @@ export function OwnedView({
         </Button>
       )}
       <Button onClick={() => open({ kind: '매각처' })}>매각처 방문</Button>
-      {sale && (
-        <p className="footnote">
-          매각·수리·버리기 전에 판매 등록을 취소하세요.
-        </p>
-      )}
       {!discard ? (
         <Button danger disabled={!!sale} onClick={() => setDiscard(true)}>
           물품 버리기
         </Button>
       ) : (
         <section className="card">
-          <p>복구할 수 없습니다. 시간·현금·상태 소모는 없습니다.</p>
+          <p>이 물품을 버릴까요?</p>
           <Button danger onClick={() => act({ type: 'discard', id: item.id })}>
             버리기 확정
           </Button>
@@ -593,10 +541,6 @@ export function OutletView({
   const quote = item && g.quotes?.prices[item.id];
   return (
     <>
-      <p className="lead">
-        방문해야 가격을 알 수 있습니다. 매각처는 협상 없이 제시 가격으로만
-        매입합니다.
-      </p>
       {OUTLETS.map((o) => (
         <Button
           key={o.id}
@@ -669,10 +613,6 @@ export function InquiriesView({
 }) {
   return (
     <>
-      <p className="warning">
-        문의에 응답해야 다음 행동으로 넘어갈 수 있습니다. 제안을 비교해
-        결정하세요.
-      </p>
       {g.inquiries.map((q) => {
         const sale = g.sales.find((s) => s.id === q.saleId);
         const item = g.inventory.find((i) => i.id === sale?.itemId);
@@ -685,10 +625,10 @@ export function InquiriesView({
             <p className="item-price">제안 {won(q.price)}</p>
             <p>{q.rounds ? '거절 후 재제안' : '새로운 구매 문의'}</p>
             <Button onClick={() => act({ type: 'accept', id: q.id })}>
-              수락 · 판매 완료 (15분)
+              수락 (15분)
             </Button>
             <Button onClick={() => act({ type: 'reject', id: q.id })}>
-              거절 · 재제안 또는 파토 (5분)
+              거절 (5분)
             </Button>
           </section>
         );
@@ -697,7 +637,7 @@ export function InquiriesView({
         danger
         onClick={() => act({ type: 'break', id: g.inquiries[0].id })}
       >
-        거래 파토 · 판매 글과 전체 문의 종료 (5분)
+        거래 파토 (5분)
       </Button>
     </>
   );
@@ -727,8 +667,8 @@ export function StorageView() {
   return (
     <>
       <p className="lead">
-        매 행동과 관심 매물 변경 후 이 브라우저에 자동 저장합니다. 앱을 꺼도
-        시간은 흐르지 않습니다. 다른 폰으로 옮기려면 백업을 사용하세요.
+        매 행동과 관심 매물 변경 후 이 브라우저에 자동 저장합니다. 다른 폰으로
+        옮기려면 백업을 사용하세요.
       </p>
       <Button onClick={download}>백업 파일 내보내기</Button>
       <label className="file-input">
@@ -814,7 +754,6 @@ export function RouteView({
       ) : (
         <div className="empty">
           <h2>매물이 종료됐습니다.</h2>
-          <p>수령한 물품은 보관함에서 확인할 수 있습니다.</p>
           <Button
             onClick={() => {
               const received = g.inventory.find((i) => i.id === route.id);
@@ -838,9 +777,7 @@ export function RouteView({
       return item ? (
         g.sales.some((s) => s.itemId === item.id) ? (
           <>
-            <p className="success">
-              판매 글이 등록됐습니다. 등록 중 가격을 바꿀 수 없습니다.
-            </p>
+            <p className="success">판매 글이 등록됐습니다.</p>
             <Button onClick={() => open({ kind: '물품', id: item.id })}>
               등록한 물품 확인
             </Button>
@@ -852,12 +789,7 @@ export function RouteView({
           <>
             <h2>{item.title}</h2>
             <p className="lead">
-              등록 15분 · 무료 · 48시간 유효. 등록 중 가격 수정은 불가능합니다.{' '}
-              {g.sales.length}/{listingLimit(g)}개 등록 중.
-            </p>
-            <p>
-              원하는 가격을 입력하세요. 높을수록 문의가 줄고, 실제 가치보다 높은
-              제안은 드뭅니다.
+              등록 15분 · {g.sales.length}/{listingLimit(g)}개 등록 중
             </p>
             {item.checked && <p>현재 시장 기준 {won(marketValue(g, item))}</p>}
             <AmountForm
@@ -877,19 +809,13 @@ export function RouteView({
     case '아르바이트':
       return (
         <>
-          <p className="lead">
-            고정 보상을 받고 시간을 씁니다. 상태가 허용하면 반복해서 선택할 수
-            있습니다. 표시된 추가 소모 외에 시간 경과 소모도 적용됩니다.
-          </p>
           {JOBS.map((j) => (
             <section key={j.id} className="card">
               <h2>{j.title}</h2>
               <p>
                 {j.minutes}분 · 보상 {won(j.reward)}
               </p>
-              <p>
-                포만감 추가 -{j.satiety} · 피로도 추가 -{j.fatigue}
-              </p>
+
               <Button
                 disabled={g.satiety === 0}
                 onClick={() => act({ type: 'job', id: j.id })}
@@ -903,10 +829,7 @@ export function RouteView({
     case '물건 수집':
       return (
         <>
-          <p className="lead">
-            항상 물건을 발견하지만 대부분 저렴합니다. 종류·상태·가치는 다릅니다.
-            60분 · 포만감 추가 5 · 피로도 추가 5.
-          </p>
+          <p>60분</p>
           <p>
             보관함 {g.inventory.length}/{RULES.capacity}
           </p>
@@ -921,16 +844,11 @@ export function RouteView({
     case '식사':
       return (
         <>
-          <p className="lead">
-            포만감 0에서도 식사는 가능합니다. 무료 급식은 언제나 이용할 수 있고
-            반복하면 가득 채울 수 있습니다.
-          </p>
           {FOODS.map((f) => (
             <section key={f.id} className="card">
               <h2>{f.title}</h2>
               <p>
-                {won(f.cost)} · {f.minutes}분 · 포만감 +{f.satiety} · 체력 +
-                {f.health}
+                {won(f.cost)} · {f.minutes}분
               </p>
               <Button
                 disabled={g.cash < f.cost}
@@ -945,25 +863,15 @@ export function RouteView({
     case '수면':
       return (
         <>
-          <p className="lead">
-            무료 · 다음 날 09:00. 피로도는 100으로 회복, 체력은 유지, 포만감은
-            18 감소합니다. 자정 이자 정산과 매물 갱신도 진행됩니다.
-          </p>
-          <p>
-            포만감 0에서도 수면할 수 있습니다. 잠으로 체력은 회복되지 않습니다.
-          </p>
-          <Button onClick={() => act({ type: 'sleep' })}>
-            잠자고 다음 날로
-          </Button>
+          <p>0 원</p>
+
+          <Button onClick={() => act({ type: 'sleep' })}>잠자기</Button>
         </>
       );
     case '치료':
       return (
         <>
-          <p className="lead">
-            동네 의원 · {won(10_000)} · 60분 · 체력 +60. 포만감 0에서도 치료할
-            수 있습니다.
-          </p>
+          <p className="lead">동네 의원 · {won(10_000)} · 60분</p>
           <Button
             disabled={g.cash < 10_000}
             onClick={() => act({ type: 'treat' })}
@@ -1012,41 +920,5 @@ export function RouteView({
       );
     case '저장 관리':
       return <StorageView />;
-    case '안내':
-      return (
-        <>
-          <h2>현금 0원에서 시작하기</h2>
-          <p className="lead">
-            아르바이트로 현금을 만들거나, 무료나눔·물건 수집으로 물품을
-            얻으세요. 매각처는 빠르지만 낮은 가격에 매입합니다. 장터는 원하는
-            가격으로 등록하고 시간을 보내 문의를 받습니다.
-          </p>
-          <h2>생존</h2>
-          <p>
-            포만감 0이면 포만감 소모 행동은 불가능합니다. 무료 급식은 항상
-            가능합니다. 시간당 포만감 3·피로도 4가 줄고, 활동별 추가 소모가
-            있습니다. 활동 중 포만감이 바닥나면 체력이 줄며, 체력 0은
-            사망입니다. 피로도 0은 다음 날 아침으로 넘어갑니다.
-          </p>
-          <h2>거래 위험</h2>
-          <p>
-            구매 전에는 판매 가격만 알 수 있습니다. 확인으로 일부 결함을 찾을 수
-            있지만 가품·실제 가치는 구매 후 별도 가치 확인이 필요합니다. 수리는
-            실패할 수 있습니다. 생존 수치는 물품 가치·거래 확률을 바꾸지
-            않습니다.
-          </p>
-          <h2>성장과 목표</h2>
-          <p>
-            현금 최고 기록이 오르면 더 큰 거래가 열립니다. 물품 가치를 확인하고
-            적절한 가격에 재판매해 100억 원과 이자를 갚으세요. 내 정보에서는
-            능력치만 확인할 수 있습니다.
-          </p>
-          <h2>저장</h2>
-          <p>
-            매 행동 후 자동 저장합니다. 앱을 꺼도 시간은 흐르지 않습니다. 다른
-            기기에서는 저장 관리의 백업 파일을 가져오세요.
-          </p>
-        </>
-      );
   }
 }

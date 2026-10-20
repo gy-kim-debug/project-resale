@@ -149,7 +149,7 @@ function daily(g: Game, before: number) {
     if (d + 1 > RULES.graceDays && g.principal > 0) {
       const interest = Math.ceil(g.principal / RULES.interestDenominator);
       g.interest += interest;
-      log(g, `이자 ${won(interest)} 발생. 원금에만 일 0.0001%를 적용합니다.`);
+      log(g, `이자 ${won(interest)} 발생.`);
     }
   }
   if (g.marketDay !== dayOf(g)) {
@@ -181,7 +181,7 @@ function expire(g: Game) {
   for (const s of expired)
     log(
       g,
-      `${g.inventory.find((i) => i.id === s.itemId)?.title ?? '물품'} 판매 글이 만료됐습니다. 재등록할 수 있습니다.`,
+      `${g.inventory.find((i) => i.id === s.itemId)?.title ?? '물품'} 판매 글이 만료됐습니다.`,
     );
   g.sales = g.sales.filter((s) => !expired.some((e) => e.id === s.id));
   g.board = g.board.filter((i) => i.expires > g.minute);
@@ -222,10 +222,7 @@ function inquiries(g: Game) {
         rounds: 0,
       });
     }
-    log(
-      g,
-      `${item.title}에 구매 문의 ${g.inquiries.length}건이 왔습니다. 응답해야 다음 행동을 할 수 있습니다.`,
-    );
+    log(g, `${item.title}에 구매 문의 ${g.inquiries.length}건이 왔습니다.`);
     return;
   }
 }
@@ -241,7 +238,7 @@ function event(g: Game) {
       expires: g.minute + 2880,
     };
     g.lastEvent = g.minute;
-    log(g, '수리 전문가에게 특별 제안이 왔습니다. 활동에서 확인하세요.');
+    log(g, '수리 전문가에게 특별 제안이 왔습니다.');
   } else if (g.eventStage === 2) {
     if (g.minute - g.lastEvent < 1440) return;
     g.eventStage = 3;
@@ -279,10 +276,7 @@ function advance(
   g.fatigueRemainder %= 60;
   if (!recovery && g.satiety <= hunger + hungerExtra) {
     g.health = clamp(g.health - Math.max(1, Math.ceil(minutes / 30)) * 2);
-    log(
-      g,
-      '활동 중 포만감이 바닥나 체력이 감소했습니다. 무료 급식으로 회복할 수 있습니다.',
-    );
+    log(g, '활동 중 포만감이 바닥나 체력이 감소했습니다.');
   }
   g.satiety = clamp(g.satiety - hunger - hungerExtra);
   g.fatigue = clamp(g.fatigue - fatigue - fatigueExtra);
@@ -307,26 +301,21 @@ function owned(g: Game, itemId: string) {
 }
 function unlisted(g: Game, itemId: string) {
   if (g.sales.some((s) => s.itemId === itemId))
-    throw Error('먼저 장터 판매 등록을 취소하세요.');
+    throw Error('장터 판매 등록 중인 물품입니다.');
 }
 function affordable(g: Game, cost: number) {
   if (!isMoney(cost) || g.cash < cost) throw Error('현금이 부족합니다.');
 }
 function room(g: Game) {
   if (g.inventory.length >= RULES.capacity)
-    throw Error(
-      '보관함이 가득 찼습니다. 물품을 매각하거나 버려 공간을 확보하세요.',
-    );
+    throw Error('보관함이 가득 찼습니다.');
 }
 function hunger(g: Game) {
-  if (g.satiety === 0)
-    throw Error(
-      '포만감이 0입니다. 포만감을 소모하는 행동 전 식사를 하세요. 무료 급식은 항상 이용할 수 있습니다.',
-    );
+  if (g.satiety === 0) throw Error('포만감이 부족합니다.');
 }
 function preItem(g: Game, itemId: string) {
   const i = g.board.find((i) => i.id === itemId && i.expires > g.minute);
-  if (!i) throw Error('판매가 끝난 매물입니다. 새 매물을 탐색하세요.');
+  if (!i) throw Error('판매가 끝난 매물입니다.');
   return i;
 }
 
@@ -368,23 +357,19 @@ export function newGame(seed = 1): Game {
     lastEvent: 540,
   };
   board(g);
-  log(
-    g,
-    '현금 0원, 채무 100억 원. 무료나눔·아르바이트·물건 수집에서 시작하세요. 처음 3일은 이자가 없습니다.',
-  );
+  log(g, '현금 0원, 채무 100억 원.');
   return g;
 }
 export function execute(original: Game, command: Command): Result {
   // Copy first; any rejected/invalid command leaves all state and RNG unchanged.
   const g = structuredClone(original);
   try {
-    if (g.status !== 'playing')
-      throw Error('종료된 게임입니다. 기록을 확인할 수 있습니다.');
+    if (g.status !== 'playing') throw Error('종료된 게임입니다.');
     if (
       g.inquiries.length &&
       !['accept', 'reject', 'break'].includes(command.type)
     )
-      throw Error('구매 문의에 먼저 응답하세요.');
+      throw Error('구매 문의 응답이 필요합니다.');
     let message = '';
     switch (command.type) {
       case 'job': {
@@ -405,7 +390,7 @@ export function execute(original: Game, command: Command): Result {
         advance(g, f.minutes, 0, 0, true);
         g.satiety = clamp(g.satiety + f.satiety);
         g.health = clamp(g.health + f.health);
-        message = `${f.title}: 포만감 +${f.satiety} · 체력 +${f.health}. 시간 경과 소모도 반영됐습니다.`;
+        message = `${f.title}: 포만감 +${f.satiety} · 체력 +${f.health}.`;
         log(g, message);
         break;
       }
@@ -422,7 +407,7 @@ export function execute(original: Game, command: Command): Result {
         expire(g);
         inquiries(g);
         event(g);
-        message = '다음 날 아침입니다. 체력은 수면으로 회복되지 않습니다.';
+        message = '다음 날 아침입니다.';
         break;
       case 'scavenge': {
         hunger(g);
@@ -437,7 +422,7 @@ export function execute(original: Game, command: Command): Result {
             ? `수집한 ${found.kind === '수집품' ? '낡은 소품' : '생활 잡화'}`
             : found.title;
         g.inventory.push(found);
-        message = `${found.title} 발견. 종류·상태·실제 가치는 확인이 필요합니다.`;
+        message = `${found.title} 발견.`;
         log(g, message);
         advance(g, 60, 5, 5);
         break;
@@ -446,14 +431,13 @@ export function execute(original: Game, command: Command): Result {
         hunger(g);
         advance(g, 30);
         board(g);
-        message =
-          '30분 동안 새 매물을 찾았습니다. 나눔 글은 없을 수도 있습니다.';
+        message = '새 매물을 찾았습니다.';
         log(g, message);
         break;
       case 'wait':
         hunger(g);
         advance(g, 30);
-        message = '30분이 지났습니다. 판매 문의와 새로운 소식을 확인합니다.';
+        message = '30분이 지났습니다.';
         log(g, message);
         break;
       case 'inspect': {
@@ -464,7 +448,7 @@ export function execute(original: Game, command: Command): Result {
         affordable(g, cost);
         money(g, -cost);
         i.inspected = true;
-        message = `외관·작동 확인: ${i.condition}. ${i.condition === '고장' ? '수리 비용이 들 수 있습니다.' : '숨겨진 결함·가품 여부는 보증할 수 없습니다.'} 확인비 ${won(cost)}. 실제 가치는 구매 후 별도 확인하세요.`;
+        message = `외관·작동 확인: ${i.condition}. 확인비 ${won(cost)}.`;
         log(g, message);
         advance(g, 15);
         break;
@@ -484,7 +468,7 @@ export function execute(original: Game, command: Command): Result {
         i.negotiatedPrice = accepted ? command.price : null;
         message = accepted
           ? `판매자가 ${won(command.price)} 제안에 동의했습니다.`
-          : '판매자가 네고를 거절했습니다. 원래 제시 가격으로는 구매할 수 있습니다.';
+          : '판매자가 네고를 거절했습니다.';
         log(g, message);
         advance(g, 15);
         break;
@@ -499,7 +483,7 @@ export function execute(original: Game, command: Command): Result {
         g.inventory.push({ ...item });
         g.board = g.board.filter((i) => i.id !== item.id);
         g.stats.purchases++;
-        message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료. 별도 가치 확인 전에는 실제 가치를 알 수 없습니다.`;
+        message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
         log(g, message);
         advance(g, 15, 1, 1);
         break;
@@ -522,7 +506,7 @@ export function execute(original: Game, command: Command): Result {
         const i = owned(g, command.id);
         unlisted(g, i.id);
         hunger(g);
-        if (!i.checked) throw Error('가치와 결함을 먼저 확인하세요.');
+        if (!i.checked) throw Error('미확인 물품입니다.');
         if (i.repaired || i.condition === '양호')
           throw Error('수리할 수 없는 물품입니다.');
         const cost = repairCost(i);
@@ -539,7 +523,7 @@ export function execute(original: Game, command: Command): Result {
         }
         message = success
           ? `수리 성공. 실제 가치 ${won(i.value)}.`
-          : '수리 실패. 비용은 사용했으며 물품 가치는 그대로입니다. 재수리는 불가능합니다.';
+          : `수리 실패. ${won(cost)} 사용.`;
         log(g, message);
         advance(g, 60, 2, 5);
         break;
@@ -548,7 +532,7 @@ export function execute(original: Game, command: Command): Result {
         const i = owned(g, command.id);
         unlisted(g, i.id);
         g.inventory = g.inventory.filter((x) => x.id !== i.id);
-        message = `${i.title}을 버렸습니다. 시간·현금·상태 소모는 없습니다. 되돌릴 수 없습니다.`;
+        message = `${i.title}을 버렸습니다.`;
         log(g, message);
         break;
       }
@@ -575,7 +559,7 @@ export function execute(original: Game, command: Command): Result {
           nextCheck: g.minute + 30,
         };
         g.sales.push(sale);
-        message = `판매 글 등록: ${won(command.price)}. 48시간 유효, 등록 중 가격 수정 불가.`;
+        message = `판매 글 등록: ${won(command.price)}.`;
         log(g, message);
         advance(g, 15);
         break;
@@ -585,8 +569,7 @@ export function execute(original: Game, command: Command): Result {
         if (!s) throw Error('판매 글이 없습니다.');
         hunger(g);
         finishSale(g, s.id);
-        message =
-          '판매 등록을 취소했습니다. 새 가격 재등록·다른 매각처 판매가 가능합니다.';
+        message = '판매 등록을 취소했습니다.';
         log(g, message);
         advance(g, 5);
         break;
@@ -612,7 +595,7 @@ export function execute(original: Game, command: Command): Result {
         if (q.rounds >= 2 || q.price >= q.max || roll(g) < 0.3) {
           finishSale(g, q.saleId);
           message =
-            '구매자가 거래를 파토냈습니다. 판매 글과 다른 문의가 모두 종료됐습니다. 재등록할 수 있습니다.';
+            '구매자가 거래를 파토냈습니다. 판매 글과 다른 문의가 모두 종료됐습니다.';
         } else {
           q.rounds++;
           q.price = Math.min(
@@ -647,7 +630,7 @@ export function execute(original: Game, command: Command): Result {
               Math.floor((marketValue(g, i) * outlet.percent) / 100),
             );
         g.quotes = { outlet: outlet.id, at: g.minute, prices };
-        message = `${outlet.title} 방문. 제시 가격은 2시간 유효하며 협상할 수 없습니다.`;
+        message = `${outlet.title} 방문.`;
         log(g, message);
         break;
       }
@@ -657,7 +640,7 @@ export function execute(original: Game, command: Command): Result {
         hunger(g);
         const quote = g.quotes;
         if (!quote || g.minute - quote.at >= 120 || !quote.prices[i.id])
-          throw Error('매각처를 방문해 현재 제시 가격을 확인하세요.');
+          throw Error('유효한 매각 견적이 없습니다.');
         const price = quote.prices[i.id];
         money(g, price);
         g.inventory = g.inventory.filter((i) => i.id !== command.id);
@@ -679,7 +662,7 @@ export function execute(original: Game, command: Command): Result {
         g.interest -= toInterest;
         g.principal -= amount - toInterest;
         g.stats.repaid += amount;
-        message = `${won(amount)} 상환했습니다. 이자부터 차감했습니다.`;
+        message = `${won(amount)} 상환했습니다.`;
         log(g, message);
         advance(g, 5);
         if (g.principal + g.interest === 0 && g.status === 'playing') {

@@ -17,7 +17,7 @@ with sync_playwright() as pw:
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.on('console',lambda m:errors.append(m.text) if m.type=='error' else None)
         page.goto(BASE)
-        page.get_by_role('button',name='활동 시작',exact=True).click()
+        page.get_by_role('heading',name='활동',exact=True).wait_for()
         nav=page.get_by_role('navigation',name='주요 메뉴')
         def click(name): page.get_by_role('button',name=name,exact=True).click()
         def tab(name): nav.get_by_role('button',name=name,exact=True).click()
@@ -33,6 +33,8 @@ with sync_playwright() as pw:
         def fixture(name):
             data=json.loads(Path(f'work/{name}.json').read_text())
             page.evaluate(WRITE_SAVE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();return data
+        expect(page.get_by_role('button',name='플레이 안내',exact=True)).to_have_count(0)
+        assert page.get_by_text('무료 급식은 언제나',exact=False).count()==0
         assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','상점']
         assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','매각처','식사','수면','치료']
         expect(page.locator('.header-debt')).to_contain_text('10,000,000,000 원')
@@ -43,7 +45,7 @@ with sync_playwright() as pw:
         expect(page.locator('.status-top')).to_contain_text('9,000 원')
         expect(page.locator('.status-top')).to_contain_text('10:00')
         click('닫기');activity('물건 수집');click('물건 수집하기');click('닫기');tab('보관함')
-        page.locator('.item-row').first.click();expect(page.get_by_text('실제 가치·숨겨진 결함은 아직 알 수 없습니다.')).to_be_visible()
+        page.locator('.item-row').first.click();expect(page.get_by_text('가치 미확인',exact=True)).to_be_visible()
         page.get_by_role('button',name='가치 확인 ·',exact=False).click()
         expect(page.get_by_text('현재 시장 기준',exact=False)).to_be_visible()
         click('장터에 판매 등록');page.get_by_label('판매 가격 (원)').fill('1');click('판매 글 등록 확정')
@@ -59,12 +61,12 @@ with sync_playwright() as pw:
         page.wait_for_function("async()=> (await ("+READ_SAVE+")())?.game?.inquiries?.length > 0")
         before=saved()['game'];page.reload();expect(page.get_by_role('heading',name='문의',exact=True)).to_be_visible()
         assert saved()['game']['minute']==before['minute']
-        page.get_by_role('button',name='수락 · 판매 완료 (15분)',exact=True).first.click()
+        page.get_by_role('button',name='수락 (15분)',exact=True).first.click()
         tab('보관함')
         expect(page.get_by_text('아직 보유한 물품이 없습니다.')).to_be_visible()
         # Real buy, negotiation, outlet and archive flows from a non-production fixture.
         fixture('rich');activity('장터');page.locator('.item-row').first.click();layout()
-        expect(page.get_by_text('실제 가치: 구매 후 별도 확인')).to_be_visible()
+        expect(page.get_by_text('상태 미확인')).to_be_visible()
         page.get_by_role('button',name='구매 전 외관·작동 확인',exact=False).click()
         page.get_by_role('button',name=' 제안',exact=False).first.click()
         page.get_by_role('button',name='구매 내용 확인',exact=False).click();click('지불·수령 확정')

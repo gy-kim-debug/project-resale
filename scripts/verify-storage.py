@@ -5,7 +5,7 @@ WRITE="""async data=>{const db=await new Promise((r,j)=>{const q=indexedDB.open(
 READ="""async key=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result);});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get(key);q.onsuccess=()=>{db.close();r(q.result);};});}"""
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
- ctx=browser.new_context();page=ctx.new_page();page.goto('http://127.0.0.1:4182');page.get_by_role('button',name='활동 시작',exact=True).click()
+ ctx=browser.new_context();page=ctx.new_page();page.goto('http://127.0.0.1:4182');page.get_by_role('heading',name='활동',exact=True).wait_for()
  bad={'version':2,'game':{'cash':'corrupt'},'favoriteIds':[]};page.evaluate(WRITE,bad);page.reload();expect(page.get_by_role('alert')).to_contain_text('자동 저장을 멈췄습니다')
  assert page.evaluate(READ,'current')==bad
  page.get_by_role('button',name='백업·저장 관리 열기',exact=True).click();expect(page.get_by_role('button',name='백업 파일 내보내기')).to_be_visible()
@@ -14,7 +14,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='닫기',exact=True).click();page.reload();expect(page.locator('.status-top')).to_contain_text('50,000 원')
  ctx.close()
  # Legacy favorites-only data backed up before playable state creation.
- ctx=browser.new_context();page=ctx.new_page();page.goto('http://127.0.0.1:4182');page.get_by_role('button',name='활동 시작',exact=True).click()
+ ctx=browser.new_context();page=ctx.new_page();page.goto('http://127.0.0.1:4182');page.get_by_role('heading',name='활동',exact=True).wait_for()
  legacy={'version':1,'favoriteIds':['radio']};page.evaluate(WRITE,legacy);page.reload();expect(page.get_by_role('heading',name='활동',exact=True)).to_be_visible();assert page.evaluate(READ,'legacy-v1')==legacy
  ctx.close()
  # Blocked IndexedDB and localStorage must not crash first render.

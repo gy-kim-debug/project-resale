@@ -194,10 +194,7 @@ function ActivityHome({ g, open }: { g: Game; open: (r: Route) => void }) {
           <h2>
             판매 중 {g.sales.length}/{listingLimit(g)}
           </h2>
-          <p>
-            시간을 보내면 문의가 올 수 있습니다. 읽거나 메뉴를 바꿀 때는 시간이
-            흐르지 않습니다.
-          </p>
+
           <Button onClick={() => useGameStore.getState().act({ type: 'wait' })}>
             구매 문의 기다리기 · 30분
           </Button>
@@ -221,13 +218,6 @@ export default function App() {
   const state = useGameStore();
   const g = state.game;
   const [routes, setRoutes] = useState<Route[]>([]);
-  const [welcome, setWelcome] = useState(() => {
-    try {
-      return localStorage.getItem('game-help-seen') !== 'yes';
-    } catch {
-      return true;
-    }
-  });
   useEffect(() => {
     void useGameStore.getState().hydrate();
   }, []);
@@ -262,10 +252,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <Header g={g} />
-      <div
-        className="base-content"
-        inert={shownRoutes.length > 0 || over || welcome}
-      >
+      <div className="base-content" inert={shownRoutes.length > 0 || over}>
         <main>
           {state.tab === '활동' ? (
             <ActivityHome g={g} open={open} />
@@ -290,7 +277,6 @@ export default function App() {
             </div>
           )}
           <footer className="utility-links">
-            <button onClick={() => open({ kind: '안내' })}>플레이 안내</button>
             <button onClick={() => open({ kind: '기록' })}>진행 기록</button>
             <button onClick={() => open({ kind: '저장 관리' })}>
               저장 관리
@@ -353,50 +339,12 @@ export default function App() {
           <p>{state.saveError}</p>
           <Button
             onClick={() => {
-              setWelcome(false);
               setRoutes([{ kind: '저장 관리' }]);
             }}
           >
             백업·저장 관리 열기
           </Button>
         </aside>
-      )}
-      {welcome && !over && !state.saveError && (
-        <div className="welcome-overlay">
-          <section
-            className="welcome-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="welcome-title"
-          >
-            <p className="eyebrow">게임 시작 안내</p>
-            <h1 id="welcome-title">
-              현금 0원.
-              <br />
-              갚아야 할 돈, 100억.
-            </h1>
-            <p>
-              일하고, 물건을 찾고, 되팔며 빚을 갚으세요. 무료 급식은 언제나
-              이용할 수 있습니다.
-            </p>
-            <p>
-              행동할 때만 시간이 흐릅니다. 체력 0은 사망이며, 수면은 체력을
-              회복하지 않습니다. 진행은 이 브라우저에 자동 저장됩니다.
-            </p>
-            <Button
-              onClick={() => {
-                try {
-                  localStorage.setItem('game-help-seen', 'yes');
-                } catch {
-                  /* optional onboarding preference */
-                }
-                setWelcome(false);
-              }}
-            >
-              활동 시작
-            </Button>
-          </section>
-        </div>
       )}
       {over && (
         <div className="end-overlay">
