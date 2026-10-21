@@ -6,7 +6,7 @@
 
 - 기본 진행: `design/core/`
 - 생존 지표: `design/survival/`
-- 식사: `design/food/`
+- 포만감·식사 관련 문서는 폐기 표시를 남겼다. 현재 생존 설계는 `design/survival/`을 따른다.
 - 수면: `design/sleep/`
 - 수익 경로: `design/income/`
   - 아르바이트: `design/income/part-time/`

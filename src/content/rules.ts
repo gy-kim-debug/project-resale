@@ -3,10 +3,7 @@ export const RULES = {
   debt: 10_000_000_000,
   capacity: 12,
   maxMoney: 1_000_000_000_000_000,
-  sleepSatiety: 18,
-  actionSatiety: 12,
   actionFatigue: 12,
-  emptySatietyDamage: 8,
   interestDenominator: 1_000_000,
   graceDays: 3,
 };
@@ -16,7 +13,6 @@ export const JOBS = [
     title: '전단 배포',
     actions: 1,
     reward: 9_000,
-    satiety: 6,
     fatigue: 8,
   },
   {
@@ -24,7 +20,6 @@ export const JOBS = [
     title: '매장 정리',
     actions: 1,
     reward: 22_000,
-    satiety: 10,
     fatigue: 20,
   },
   {
@@ -32,34 +27,7 @@ export const JOBS = [
     title: '창고 분류',
     actions: 1,
     reward: 38_000,
-    satiety: 16,
     fatigue: 42,
-  },
-];
-export const FOODS = [
-  {
-    id: 'free',
-    title: '무료 급식',
-    actions: 1,
-    cost: 0,
-    satiety: 20,
-    health: 5,
-  },
-  {
-    id: 'rice',
-    title: '주먹밥',
-    actions: 1,
-    cost: 1_500,
-    satiety: 30,
-    health: 2,
-  },
-  {
-    id: 'meal',
-    title: '든든한 한 끼',
-    actions: 1,
-    cost: 5_000,
-    satiety: 65,
-    health: 12,
   },
 ];
 export const OUTLETS = [

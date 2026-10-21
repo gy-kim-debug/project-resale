@@ -12,7 +12,7 @@ import {
   checkCost,
   repairCost,
 } from '../domain/engine';
-import { FOODS, JOBS, OUTLETS, RULES } from '../content/rules';
+import { JOBS, OUTLETS, RULES } from '../content/rules';
 
 export type Route = {
   kind:
@@ -21,7 +21,6 @@ export type Route = {
     | '아르바이트'
     | '물건 수집'
     | '매각처'
-    | '식사'
     | '수면'
     | '치료'
     | '매물'
@@ -261,25 +260,11 @@ export function DebtView({ g, act }: { g: Game; act: Act }) {
     </>
   );
 }
-export function ShopView({ g, act }: { g: Game; act: Act }) {
+export function ShopView() {
   return (
     <>
       <h1>상점</h1>
-      {FOODS.filter((f) => f.cost > 0).map((f) => (
-        <section className="card" key={f.id}>
-          <h2>{f.title}</h2>
-          <p>
-            {won(f.cost)} · 행동 {f.actions}회
-          </p>
-
-          <Button
-            disabled={g.cash < f.cost}
-            onClick={() => act({ type: 'meal', id: f.id })}
-          >
-            구매하고 먹기 · 행동 {f.actions}회
-          </Button>
-        </section>
-      ))}
+      <p className="empty">판매 중인 상품이 없습니다.</p>
     </>
   );
 }
@@ -841,10 +826,7 @@ export function RouteView({
                 행동 {j.actions}회 · 보상 {won(j.reward)}
               </p>
 
-              <Button
-                disabled={g.satiety === 0}
-                onClick={() => act({ type: 'job', id: j.id })}
-              >
+              <Button onClick={() => act({ type: 'job', id: j.id })}>
                 일하기 · 행동 {j.actions}회
               </Button>
             </section>
@@ -859,30 +841,11 @@ export function RouteView({
             보관함 {g.inventory.length}/{RULES.capacity}
           </p>
           <Button
-            disabled={g.inventory.length >= RULES.capacity || g.satiety === 0}
+            disabled={g.inventory.length >= RULES.capacity}
             onClick={() => act({ type: 'scavenge' })}
           >
             물건 수집하기 · 행동 1회
           </Button>
-        </>
-      );
-    case '식사':
-      return (
-        <>
-          {FOODS.map((f) => (
-            <section key={f.id} className="card">
-              <h2>{f.title}</h2>
-              <p>
-                {won(f.cost)} · 행동 {f.actions}회
-              </p>
-              <Button
-                disabled={g.cash < f.cost}
-                onClick={() => act({ type: 'meal', id: f.id })}
-              >
-                먹기 · 행동 {f.actions}회
-              </Button>
-            </section>
-          ))}
         </>
       );
     case '수면':

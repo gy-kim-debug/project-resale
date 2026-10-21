@@ -38,7 +38,7 @@ const nav: { tab: Tab; icon: IconName }[] = [
 const groups: { title: string; activities: Route['kind'][] }[] = [
   { title: '돈 벌기', activities: ['무료나눔', '아르바이트', '물건 수집'] },
   { title: '거래', activities: ['장터', '매각처'] },
-  { title: '회복', activities: ['식사', '수면', '치료'] },
+  { title: '회복', activities: ['수면', '치료'] },
 ];
 function Header({
   g,
@@ -118,7 +118,6 @@ function Header({
       <div className="vitals">
         {(
           [
-            { name: '포만감', value: g.satiety, icon: 'food', key: 'satiety' },
             { name: '체력', value: g.health, icon: 'heart', key: 'health' },
             { name: '피로도', value: g.fatigue, icon: 'moon', key: 'fatigue' },
           ] as const
@@ -332,7 +331,7 @@ export default function App() {
             ) : state.tab === '보관함' ? (
               <InventoryView g={g} open={open} />
             ) : (
-              <ShopView g={g} act={act} />
+              <ShopView />
             )}
             {state.notice && !shownRoutes.length && !over && (
               <div

@@ -29,7 +29,8 @@ with sync_playwright() as p:
    work();expect(page.locator('.status-clock')).to_have_text('남은 행동 '+str(left)+'/3')
   expect(page.locator('.status-day')).to_have_text('2일째')
   assert read()['minute']==1440;assert read()['cash']==27000
-  assert read()['satiety']==28;assert read()['fatigue']==100
+  assert read()['fatigue']==100
+  assert 'satiety' not in read() and 'hungerRemainder' not in read()
   page.get_by_role('button',name='닫기',exact=True).click()
   page.screenshot(path=f'work/daily-home-{width}.png',full_page=True)
   load();activity('아르바이트');work(2)
@@ -41,6 +42,13 @@ with sync_playwright() as p:
   expect(page.locator('.action-layer')).to_have_count(0)
   expect(page.locator('.status-day')).to_have_text('2일째')
   expect(page.locator('.status-clock')).to_have_text('남은 행동 3/3')
+  legacy=load();legacy['game'].update({'satiety':0,'hungerRemainder':59,'minute':480})
+  page.evaluate(WRITE,legacy);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
+  expect(page.locator('.status-clock')).to_have_text('남은 행동 2/3')
+  expect(page.locator('meter[aria-label="포만감"]')).to_have_count(0)
+  activity('아르바이트');work();assert read()['cash']==59000
+  assert 'satiety' not in read() and 'hungerRemainder' not in read()
+  expect(page.locator('.status-clock')).to_have_text('남은 행동 1/3')
   # Old hourly snapshots keep their date and finances; the first action persists the marker.
   old=json.loads(Path('work/rich.json').read_text());old['game'].pop('timeMode',None)
   old['game']['minute']=14*1440+23*60+45;old['game']['marketDay']=15

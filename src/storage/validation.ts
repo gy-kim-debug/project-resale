@@ -55,8 +55,7 @@ export function isGame(v: unknown): v is Game {
     )
   )
     return false;
-  if (!['satiety', 'health', 'fatigue'].every((k) => integer(v[k], 100)))
-    return false;
+  if (!['health', 'fatigue'].every((k) => integer(v[k], 100))) return false;
   if (
     !['seed', 'serial', 'minute', 'marketDay', 'eventStage', 'lastEvent'].every(
       (k) => integer(v[k]),
@@ -66,7 +65,6 @@ export function isGame(v: unknown): v is Game {
   if (v.timeMode === 'daily-actions' && Number(v.minute) % 480 !== 0)
     return false;
   if (
-    !integer(v.hungerRemainder, 59) ||
     !integer(v.fatigueRemainder, 59) ||
     !integer(v.marketFactor, 200) ||
     !kind(v.trend)

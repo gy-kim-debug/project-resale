@@ -10,7 +10,6 @@ export type IconName =
   | 'arrow'
   | 'back'
   | 'heart'
-  | 'food'
   | 'health'
   | 'wallet'
   | 'clock'
@@ -38,7 +37,6 @@ const paths: Record<IconName, string> = {
   back: 'M20 12H4m6-6-6 6 6 6',
   heart:
     'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',
-  food: 'M4 3v6a3 3 0 0 0 6 0V3M7 3v18M20 21V3c-4 2-5 7 0 9',
   health: 'M8 3h8v5h5v8h-5v5H8v-5H3V8h5V3Z',
   wallet: 'M20 7V4H4a2 2 0 0 0-2 2v13h19V7H4M16 11h5v5h-5v-5Z',
   clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2',

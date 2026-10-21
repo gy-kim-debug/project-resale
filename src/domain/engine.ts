@@ -3,7 +3,6 @@ import { dayOf, isMoney, won, ACTION_TICK } from './game';
 import { toDailyActions } from './time';
 import {
   CATALOG,
-  FOODS,
   JOBS,
   OUTLETS,
   RULES,
@@ -167,12 +166,11 @@ function endDay(
   reason: 'sleep' | 'fatigue' | 'budget',
 ) {
   g.minute = (Math.floor(before / 1440) + 1) * 1440;
-  g.satiety = clamp(g.satiety - RULES.sleepSatiety);
   g.fatigue = 100;
   daily(g, before);
   log(
     g,
-    `${reason === 'fatigue' ? '피로도 소진으로' : reason === 'budget' ? '오늘의 행동을 모두 마쳐' : '수면으로'} 하루 종료. 포만감 -${RULES.sleepSatiety} · 피로도 100.`,
+    `${reason === 'fatigue' ? '피로도 소진으로' : reason === 'budget' ? '오늘의 행동을 모두 마쳐' : '수면으로'} 하루 종료. 피로도 100.`,
   );
   board(g);
 }
@@ -265,26 +263,15 @@ function event(g: Game) {
 function advance(
   g: Game,
   actions: number,
-  hungerExtra = 0,
   fatigueExtra = 0,
-  recovery = false,
   generate = true,
-  gains?: { satiety?: number; health?: number },
+  healthGain = 0,
 ) {
   const before = g.minute;
   g.minute += actions * ACTION_TICK;
-  const hunger = RULES.actionSatiety * actions + hungerExtra;
   const fatigue = RULES.actionFatigue * actions + fatigueExtra;
-  if (!recovery && g.satiety <= hunger) {
-    g.health = clamp(g.health - RULES.emptySatietyDamage);
-    log(g, '활동 중 포만감이 바닥나 체력이 감소했습니다.');
-  }
-  g.satiety = clamp(g.satiety - hunger);
   g.fatigue = clamp(g.fatigue - fatigue);
-  if (gains) {
-    g.satiety = clamp(g.satiety + (gains.satiety ?? 0));
-    g.health = clamp(g.health + (gains.health ?? 0));
-  }
+  g.health = clamp(g.health + healthGain);
   if (g.health === 0) {
     daily(g, before);
     g.status = 'dead';
@@ -321,9 +308,6 @@ function room(g: Game) {
   if (g.inventory.length >= RULES.capacity)
     throw Error('보관함이 가득 찼습니다.');
 }
-function hunger(g: Game) {
-  if (g.satiety === 0) throw Error('포만감이 부족합니다.');
-}
 function preItem(g: Game, itemId: string) {
   const i = g.board.find((i) => i.id === itemId && i.expires > g.minute);
   if (!i) throw Error('판매가 끝난 매물입니다.');
@@ -341,10 +325,8 @@ export function newGame(seed = 1): Game {
     cash: 0,
     principal: RULES.debt,
     interest: 0,
-    satiety: 100,
     health: 100,
     fatigue: 100,
-    hungerRemainder: 0,
     fatigueRemainder: 0,
     marketDay: 1,
     marketFactor: 100,
@@ -387,30 +369,16 @@ export function execute(original: Game, command: Command): Result {
       case 'job': {
         const j = JOBS.find((j) => j.id === command.id);
         if (!j) throw Error('없는 일입니다.');
-        hunger(g);
         money(g, j.reward);
         message = `${j.title} 완료. ${won(j.reward)}을 받았습니다.`;
         log(g, message);
-        advance(g, j.actions, j.satiety, j.fatigue);
-        break;
-      }
-      case 'meal': {
-        const f = FOODS.find((f) => f.id === command.id);
-        if (!f) throw Error('없는 음식입니다.');
-        affordable(g, f.cost);
-        money(g, -f.cost);
-        advance(g, f.actions, 0, 0, true, true, {
-          satiety: f.satiety,
-          health: f.health,
-        });
-        message = `${f.title}: 포만감 +${f.satiety} · 체력 +${f.health}.`;
-        log(g, message);
+        advance(g, j.actions, j.fatigue);
         break;
       }
       case 'treat':
         affordable(g, 10_000);
         money(g, -10_000);
-        advance(g, 1, 0, 0, true, true, { health: 60 });
+        advance(g, 1, 0, true, 60);
         message = '치료 완료. 체력 +60.';
         log(g, message);
         break;
@@ -422,7 +390,6 @@ export function execute(original: Game, command: Command): Result {
         message = '다음 날입니다.';
         break;
       case 'scavenge': {
-        hunger(g);
         room(g);
         const found = makeItem(
           g,
@@ -437,18 +404,16 @@ export function execute(original: Game, command: Command): Result {
         g.inventory.push(found);
         message = `${found.title} 발견.`;
         log(g, message);
-        advance(g, 1, 5, 5);
+        advance(g, 1, 5);
         break;
       }
       case 'refresh':
-        hunger(g);
         advance(g, 1);
         board(g);
         message = '새 매물을 찾았습니다.';
         log(g, message);
         break;
       case 'wait':
-        hunger(g);
         advance(g, 1);
         message = '기다리기를 마쳤습니다.';
         log(g, message);
@@ -497,7 +462,6 @@ export function execute(original: Game, command: Command): Result {
       case 'buy': {
         const item = preItem(g, command.id);
         room(g);
-        hunger(g);
         const cost = item.negotiatedPrice ?? item.price;
         affordable(g, cost);
         money(g, -cost);
@@ -518,13 +482,12 @@ export function execute(original: Game, command: Command): Result {
         g.stats.purchases++;
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
         log(g, message);
-        advance(g, 1, 1, 1);
+        advance(g, 1, 1);
         break;
       }
       case 'check': {
         const i = owned(g, command.id);
         if (i.checked) throw Error('이미 확인한 물품입니다.');
-        hunger(g);
         const cost = checkCost(g, i);
         affordable(g, cost);
         money(g, -cost);
@@ -538,7 +501,6 @@ export function execute(original: Game, command: Command): Result {
       case 'repair': {
         const i = owned(g, command.id);
         unlisted(g, i.id);
-        hunger(g);
         if (!i.checked) throw Error('미확인 물품입니다.');
         if (i.repaired || i.condition === '양호')
           throw Error('수리할 수 없는 물품입니다.');
@@ -558,7 +520,7 @@ export function execute(original: Game, command: Command): Result {
           ? `수리 성공. 실제 가치 ${won(i.value)}.`
           : `수리 실패. ${won(cost)} 사용.`;
         log(g, message);
-        advance(g, 1, 2, 5);
+        advance(g, 1, 5);
         break;
       }
       case 'discard': {
@@ -572,7 +534,6 @@ export function execute(original: Game, command: Command): Result {
       case 'post': {
         owned(g, command.id);
         unlisted(g, command.id);
-        hunger(g);
         if (
           !isMoney(command.price) ||
           command.price < 1 ||
@@ -600,7 +561,6 @@ export function execute(original: Game, command: Command): Result {
       case 'cancel': {
         const s = g.sales.find((s) => s.itemId === command.id);
         if (!s) throw Error('판매 글이 없습니다.');
-        hunger(g);
         finishSale(g, s.id);
         message = '판매 등록을 취소했습니다.';
         log(g, message);
@@ -619,7 +579,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.sales++;
         message = `${i.title} 판매 완료. ${won(q.price)}을 받았습니다. 물품·대금 교환을 한 번에 마쳤습니다.`;
         log(g, message);
-        advance(g, 1, 0, 0, true, false);
+        advance(g, 1, 0, false);
         break;
       }
       case 'counter': {
@@ -718,7 +678,6 @@ export function execute(original: Game, command: Command): Result {
       case 'outletSell': {
         const i = owned(g, command.id);
         unlisted(g, i.id);
-        hunger(g);
         const quote = g.quotes;
         if (
           !quote ||
@@ -741,7 +700,6 @@ export function execute(original: Game, command: Command): Result {
         if (!isMoney(amount) || amount < 1 || amount > g.principal + g.interest)
           throw Error('남은 채무 이내의 정수 금액을 입력하세요.');
         affordable(g, amount);
-        hunger(g);
         money(g, -amount);
         const toInterest = Math.min(g.interest, amount);
         g.interest -= toInterest;
@@ -768,7 +726,6 @@ export function execute(original: Game, command: Command): Result {
           log(g, message);
           break;
         }
-        hunger(g);
         if (e.type === 'repair') {
           affordable(g, 5000);
           money(g, -5000);
@@ -783,7 +740,7 @@ export function execute(original: Game, command: Command): Result {
         }
         g.event = null;
         log(g, message);
-        advance(g, 1, e.type === 'deal' ? 8 : 0, e.type === 'deal' ? 5 : 0);
+        advance(g, 1, e.type === 'deal' ? 5 : 0);
         break;
       }
       default:

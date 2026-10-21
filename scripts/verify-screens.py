@@ -39,9 +39,9 @@ with sync_playwright() as pw:
         expect(page.get_by_role('button',name='플레이 안내',exact=True)).to_have_count(0)
         assert page.get_by_text('무료 급식은 언제나',exact=False).count()==0
         assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','상점']
-        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','매각처','식사','수면','치료']
+        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','매각처','수면','치료']
         expect(page.locator('.header-debt')).to_contain_text('10,000,000,000 원')
-        assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==['포만감','체력','피로도']
+        assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==['체력','피로도']
         layout();page.screenshot(path=f'work/playable-home-{width}.png',full_page=True)
         activity('아르바이트');layout()
         assert page.get_by_role('button',name=re.compile('^일하기')).all_text_contents()==['일하기 · 행동 1회','일하기 · 행동 1회','일하기 · 행동 1회']
@@ -52,10 +52,7 @@ with sync_playwright() as pw:
         page.locator('.item-row').first.click();expect(page.get_by_text('가치 미확인',exact=True)).to_be_visible()
         page.get_by_role('button',name='가치 확인 ·',exact=False).click()
         expect(page.locator('.sheet-layer .item-comparison [data-field=value]')).not_to_contain_text('미확인')
-        click('닫기');tab('활동');activity('식사')
-        page.get_by_role('button',name='먹기 · 행동 1회',exact=True).nth(2).click()
-        expect(page.locator('.action-layer')).to_have_count(0)
-        click('닫기');tab('보관함');page.locator('.item-row').first.click()
+        click('닫기');page.locator('.item-row').first.click()
         click('장터에 판매 등록');page.get_by_label('판매 가격 (원)').fill('1');click('판매 글 등록 확정')
         expect(page.get_by_label('판매 가격 (원)')).to_have_count(0)
         for _ in range(8):
@@ -85,7 +82,7 @@ with sync_playwright() as pw:
         while page.get_by_role('button',name='← 뒤로',exact=True).count():click('← 뒤로')
         click('닫기')
         tab('내 정보');expect(page.get_by_role('heading',name='거래 감각',exact=False)).to_be_visible();layout()
-        tab('상점');layout();tab('채무');layout()
+        tab('상점');expect(page.get_by_text('판매 중인 상품이 없습니다.',exact=True)).to_be_visible();layout();tab('채무');layout()
         page.get_by_label('상환 금액').fill('100');click('입력 금액 상환')
         expect(page.locator('main')).to_contain_text('9,999,999,900 원')
         # Full state export and malformed import rejection, keeping existing progress.
@@ -99,10 +96,10 @@ with sync_playwright() as pw:
         assert saved()['game']['principal']==9_999_999_900
         click('← 뒤로');click('닫기')
         # Recovery at zero, final death, final clear through actual UI commands.
-        fixture('empty');activity('식사');page.get_by_role('button',name='먹기 · 행동 1회',exact=True).first.click()
-        expect(page.locator('meter[aria-label="포만감"]')).to_have_attribute('value','20')
+        fixture('empty');activity('치료');click('치료받기')
+        expect(page.locator('meter[aria-label="체력"]')).to_have_attribute('value','80')
         click('닫기')
-        fixture('death');activity('아르바이트');page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
+        data=json.loads(Path('work/death.json').read_text());page.evaluate(WRITE_SAVE,data);page.reload()
         expect(page.get_by_role('heading',name='이 이야기는 여기까지.')).to_be_visible()
         fixture('clear');tab('채무');page.get_by_role('button',name='가능한 만큼 상환',exact=False).click()
         expect(page.get_by_role('heading',name='드디어, 자유.')).to_be_visible();layout()

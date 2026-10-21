@@ -92,12 +92,10 @@ test('date boundaries and changed fields use actual engine deltas', () => {
     after = structuredClone(before);
   after.minute += 1440;
   after.cash += 100;
-  after.satiety -= 18;
   after.interest += 10000;
   assert.deepEqual(changesBetween(before, after), {
     minute: 1440,
     cash: 100,
-    satiety: -18,
     debt: 10000,
   });
 });
@@ -150,7 +148,6 @@ test('seller counteroffers are saved immediately without presentation or transfe
 test('outlet navigation updates and saves quotes immediately without action layer or result notice', async () => {
   setup();
   const g = structuredClone(useGameStore.getState().game!);
-  g.satiety = 0;
   useGameStore.setState({ game: g });
   assert.equal(
     await useGameStore.getState().act({ type: 'visit', id: 'scrap' }),
@@ -159,7 +156,6 @@ test('outlet navigation updates and saves quotes immediately without action laye
   assert.equal(useGameStore.getState().action, null);
   assert.equal(useGameStore.getState().notice, '');
   assert.equal(useGameStore.getState().game!.minute, g.minute);
-  assert.equal(useGameStore.getState().game!.satiety, 0);
   await flushSaves();
   assert.equal(writes.at(-1)?.game.quotes?.outlet, 'scrap');
   assert.deepEqual(writes.at(-1)?.game.logs, g.logs);

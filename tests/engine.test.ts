@@ -60,39 +60,44 @@ test('start, deterministic RNG, pure engine, rejected commands do not change tim
   assert.equal(next.cash, 9000);
   assert.deepEqual(g, snapshot);
 });
-test('satiety zero blocks consuming actions, not free meal / sleep / discard / inquiry replies', () => {
-  let g = owned();
-  g.satiety = 0;
+test('obsolete hunger fields are discarded without blocking actions or changing progress', () => {
+  const original = owned();
+  original.minute = ACTION_TICK;
+  original.inventory[0].checked = false;
+  const legacy = { ...original, satiety: 0, hungerRemainder: 59 };
+  const snapshot = structuredClone(legacy);
+  const g = parseSave({ version: 2, game: legacy, favoriteIds: [] }).game;
+  assert.equal('satiety' in g, false);
+  assert.equal('hungerRemainder' in g, false);
+  assert.equal(actionsLeft(g), 2);
+  assert.deepEqual(legacy, snapshot);
+  assert.deepEqual(g.inventory, original.inventory);
   for (const c of [
     { type: 'job', id: 'flyer' },
     { type: 'scavenge' },
     { type: 'refresh' },
     { type: 'check', id: g.inventory[0].id },
   ] as Command[])
-    assert.equal(execute(g, c).ok, false);
-  const healed = run(g, { type: 'meal', id: 'free' });
-  assert.ok(healed.satiety > 0);
-  assert.ok(run(g, { type: 'sleep' }).satiety === 0);
-  const discarded = run(g, { type: 'discard', id: g.inventory[0].id });
-  assert.equal(discarded.minute, g.minute);
-  g = pending();
-  g.satiety = 0;
-  assert.ok(run(g, { type: 'accept', id: g.inquiries[0].id }).cash > g.cash);
+    assert.equal(execute(g, c).ok, true);
+  assert.equal(g.cash, original.cash);
+  assert.equal(g.principal, original.principal);
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
 });
-test('free meals remain repeatable across days; sleep has fixed hunger cost and preserves health', () => {
-  let g = newGame(4);
-  g.satiety = 0;
+test('removed meals are rejected atomically and sleep preserves health', () => {
+  const g = rich();
   g.health = 30;
-  for (let i = 0; i < 12; i++) g = run(g, { type: 'meal', id: 'free' });
-  assert.ok(g.satiety > 0);
-  assert.ok(g.health > 30);
-  const beforeSleep = g.satiety;
-  const h = g.health;
-  g = run(g, { type: 'sleep' });
-  assert.equal(g.satiety, Math.max(0, beforeSleep - RULES.sleepSatiety));
-  assert.equal(g.health, h);
-  assert.equal(g.fatigue, 100);
-  assert.equal(g.minute % 1440, 0);
+  const before = structuredClone(g);
+  const result = execute(g, { type: 'meal', id: 'free' } as unknown as Command);
+  assert.equal(result.ok, false);
+  assert.strictEqual(result.game, g);
+  assert.deepEqual(g, before);
+  const healed = run(g, { type: 'treat' });
+  assert.equal(healed.health, 90);
+  assert.equal(healed.cash, g.cash - 10000);
+  const slept = run(g, { type: 'sleep' });
+  assert.equal(slept.health, 30);
+  assert.equal(slept.fatigue, 100);
+  assert.equal(slept.minute % 1440, 0);
 });
 test('fatigue zero ends day, health zero is final, death cannot be healed', () => {
   let g = newGame();
@@ -102,18 +107,17 @@ test('fatigue zero ends day, health zero is final, death cannot be healed', () =
   assert.ok(Math.floor(g.minute / 1440) > day);
   assert.equal(g.fatigue, 100);
   g = newGame();
-  g.health = 1;
-  g.satiety = 1;
-  g = run(g, { type: 'job', id: 'flyer' });
+  g.health = 0;
+  g.status = 'dead';
   assert.equal(g.health, 0);
   assert.equal(g.status, 'dead');
-  assert.equal(execute(g, { type: 'meal', id: 'free' }).ok, false);
+  assert.equal(execute(g, { type: 'treat' }).ok, false);
+  assert.equal(execute(g, { type: 'job', id: 'flyer' }).ok, false);
 });
 test('survival numbers do not modify hidden value or stochastic negotiation outcomes', () => {
   const a = rich(60),
     b = structuredClone(a);
   b.health = 20;
-  b.satiety = 20;
   b.fatigue = 60;
   const c: Command = {
     type: 'offer',
@@ -145,7 +149,6 @@ test('free giveaways may be absent despite zero cash; available giveaway is guar
 test('scavenging always finds one item; capacity checked before cost/time', () => {
   let g = newGame();
   for (let n = 0; n < RULES.capacity; n++) {
-    g.satiety = 100;
     g.fatigue = 100;
     g = run(g, { type: 'scavenge' });
     assert.equal(g.inventory.length, n + 1);
@@ -212,7 +215,6 @@ test('pending inquiries block actions; breaking one chat preserves listing and o
   assert.deepEqual(serialized.game, g);
   for (const c of [
     { type: 'sleep' },
-    { type: 'meal', id: 'free' },
     { type: 'repay', amount: 1 },
     { type: 'discard', id: g.inventory[0].id },
     { type: 'refresh' },
@@ -370,8 +372,8 @@ for (const seed of [1, 42, 210])
         step({ type: 'accept', id: q.id });
         continue;
       }
-      if (g.health < 30 || g.satiety < 35) {
-        step({ type: 'meal', id: g.cash >= 5000 ? 'meal' : 'free' });
+      if (g.health < 30 && g.cash >= 10000) {
+        step({ type: 'treat' });
         continue;
       }
       if (g.fatigue < 25) {
@@ -441,8 +443,6 @@ test('each major action costs one daily action and inquiries start after registr
     ['warehouse', 1],
   ] as const)
     cases.push({ game: rich(), command: { type: 'job', id }, cost });
-  for (const id of ['free', 'rice', 'meal'])
-    cases.push({ game: rich(), command: { type: 'meal', id }, cost: 1 });
   for (const type of ['treat', 'scavenge', 'refresh', 'wait'] as const)
     cases.push({ game: rich(), command: { type }, cost: 1 });
   for (const type of ['buy', 'offer'] as const) {
@@ -529,7 +529,7 @@ test('legacy saves migrate once to a fresh three-action day without losing resou
   old.board[0].expires = old.minute + 30;
   old.lastEvent = old.minute - 180;
   old.quotes!.at = old.minute - 15;
-  old.hungerRemainder = 15;
+  Object.assign(old, { satiety: 0, hungerRemainder: 15 });
   const snapshot = structuredClone(old);
   const migrated = parseSave({
     version: 2,
@@ -547,10 +547,8 @@ test('legacy saves migrate once to a fresh three-action day without losing resou
     'cash',
     'principal',
     'interest',
-    'satiety',
     'health',
     'fatigue',
-    'hungerRemainder',
     'fatigueRemainder',
     'seed',
   ] as const)
@@ -578,7 +576,6 @@ test('purchase chat and closure are free; only purchase consumes transaction tim
     'minute',
     'cash',
     'interest',
-    'satiety',
     'fatigue',
     'health',
     'lastEvent',
@@ -601,7 +598,6 @@ test('purchase chat and closure are free; only purchase consumes transaction tim
   assert.equal(closed.board[0].chatSettled, true);
   assert.equal(execute(closed, { type: 'closeChat', id: item.id }).ok, false);
   const hungry = structuredClone(before);
-  hungry.satiety = 0;
   const hungryChat = run(hungry, {
     type: 'offer',
     id: item.id,
@@ -632,7 +628,6 @@ test('sales chat and either side walking cost no time; completed sale costs one 
       continued = true;
       for (const key of [
         'minute',
-        'satiety',
         'fatigue',
         'health',
         'interest',
@@ -773,7 +768,6 @@ test('seller counteroffers can be accepted or countered; failed negotiation keep
   for (const key of [
     'minute',
     'cash',
-    'satiety',
     'health',
     'fatigue',
     'interest',
@@ -840,11 +834,10 @@ test('new buyers can inquire on the same unchanged listing after all previous ch
   assert.ok(g.inquiries.every((q) => !previous.includes(q.id)));
 });
 
-test('outlet travel at zero satiety consumes no time, stats, RNG or journal entries; actual selling costs one daily action', () => {
+test('outlet travel consumes no time, stats, RNG or journal entries; actual selling costs one daily action', () => {
   const original = owned();
   original.minute = 3 * 1440 + ACTION_TICK * 2;
   original.marketDay = 4;
-  original.satiety = 0;
   original.fatigue = 0;
   let g = original;
   for (const id of ['scrap', 'used', 'collector', 'scrap']) {
@@ -858,7 +851,6 @@ test('outlet travel at zero satiety consumes no time, stats, RNG or journal entr
     assert.deepEqual(after, before);
   }
   const playable = structuredClone(g);
-  playable.satiety = 100;
   playable.fatigue = 100;
   const quote = playable.quotes!.prices[playable.inventory[0].id];
   const sold = run(playable, {
@@ -888,7 +880,6 @@ test('three major actions end exactly one day and refill the next daily budget',
   assert.equal(g.minute, 1440);
   assert.equal(g.cash, 27000);
   assert.equal(g.fatigue, 100);
-  assert.equal(g.satiety, 100 - (12 + 6) * 3 - 18);
   assert.equal(g.health, 100);
   assert.notDeepEqual(
     g.board.map((i) => i.id),
@@ -903,7 +894,6 @@ test('manual sleep forfeits remaining actions and heavy work can end the day ear
   g = run(g, { type: 'sleep' });
   assert.equal(dayOf(g), dayOf(beforeSleep) + 1);
   assert.equal(actionsLeft(g), 3);
-  assert.equal(g.satiety, beforeSleep.satiety - 18);
   assert.equal(g.health, beforeSleep.health);
   assert.equal(g.fatigue, 100);
   g = newGame();
@@ -918,20 +908,16 @@ test('manual sleep forfeits remaining actions and heavy work can end the day ear
   assert.ok(g.logs.some((l) => l.text.includes('피로도 소진')));
 });
 
-test('third-action meal recovers after the action cost and before the overnight loss', () => {
-  const g = newGame();
+test('third-action treatment heals before day rollover, with health capped at 100', () => {
+  const g = rich();
   g.minute = ACTION_TICK * 2;
-  g.satiety = 20;
   g.health = 50;
-  const after = run(g, { type: 'meal', id: 'free' });
+  const after = run(g, { type: 'treat' });
   assert.equal(dayOf(after), 2);
   assert.equal(actionsLeft(after), 3);
-  assert.equal(after.satiety, 20 - 12 + 20 - 18);
-  assert.equal(after.health, 55);
+  assert.equal(after.health, 100);
   assert.equal(after.fatigue, 100);
-  const fed = rich();
-  fed.satiety = 70;
-  assert.equal(run(fed, { type: 'meal', id: 'meal' }).satiety, 100);
+  assert.equal(after.cash, g.cash - 10000);
 });
 
 test('free navigation, bargaining, disposal and declining proposals never spend a daily action', () => {
@@ -951,7 +937,6 @@ test('free navigation, bargaining, disposal and declining proposals never spend 
   g = run(g, { type: 'event', choice: 'no' });
   assert.equal(g.minute, before);
   assert.equal(actionsLeft(g), 3);
-  assert.equal(g.satiety, 100);
   assert.equal(g.fatigue, 100);
 });
 
@@ -999,7 +984,6 @@ test('migration retains active listings, chats, prices and finances and refuses 
     'cash',
     'principal',
     'interest',
-    'satiety',
     'fatigue',
     'health',
     'seed',

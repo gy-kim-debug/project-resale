@@ -3,8 +3,7 @@ import { JOBS } from '../content/rules';
 
 export const ACTION_DURATION_MS = 750;
 export const HIGHLIGHT_DURATION_MS = 1400;
-export type ChangeKey =
-  'minute' | 'cash' | 'satiety' | 'health' | 'fatigue' | 'debt';
+export type ChangeKey = 'minute' | 'cash' | 'health' | 'fatigue' | 'debt';
 export type Changes = Partial<Record<ChangeKey, number>>;
 export interface ActionPresentation {
   id: number;
@@ -15,13 +14,7 @@ export interface ActionPresentation {
 }
 export function changesBetween(before: Game, after: Game): Changes {
   const changes: Changes = {};
-  for (const key of [
-    'minute',
-    'cash',
-    'satiety',
-    'health',
-    'fatigue',
-  ] as const) {
+  for (const key of ['minute', 'cash', 'health', 'fatigue'] as const) {
     if (after[key] !== before[key]) changes[key] = after[key] - before[key];
   }
   const debt =
@@ -33,7 +26,6 @@ export function actionLabel(command: Command): string {
   if (command.type === 'job')
     return `${JOBS.find((j) => j.id === command.id)?.title ?? '일'} 중…`;
   const labels: Record<Exclude<Command['type'], 'job'>, string> = {
-    meal: '식사하는 중…',
     treat: '치료받는 중…',
     sleep: '잠드는 중…',
     scavenge: '물건을 찾는 중…',

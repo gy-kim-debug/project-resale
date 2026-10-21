@@ -1,9 +1,14 @@
 import { ACTION_TICK, dayOf, type Game } from './game';
 
-/** One-time, pure migration of hour/minute saves. Finances, items and RNG survive. */
+/** Pure save normalization: remove obsolete hunger data and migrate legacy time once. */
 export function toDailyActions(original: Game): Game {
-  if (original.timeMode === 'daily-actions') return original;
-  const g = structuredClone(original);
+  const g = structuredClone(original) as Game & {
+    satiety?: unknown;
+    hungerRemainder?: unknown;
+  };
+  delete g.satiety;
+  delete g.hungerRemainder;
+  if (g.timeMode === 'daily-actions') return g;
   const oldNow = g.minute;
   const now = Math.floor(oldNow / 1440) * 1440;
   const deadline = (old: number) =>

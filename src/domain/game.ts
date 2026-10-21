@@ -66,10 +66,8 @@ export interface Game {
   cash: number;
   principal: number;
   interest: number;
-  satiety: number;
   health: number;
   fatigue: number;
-  hungerRemainder: number;
   fatigueRemainder: number;
   marketDay: number;
   marketFactor: number;
@@ -95,7 +93,6 @@ export interface Game {
 }
 export type Command =
   | { type: 'job'; id: string }
-  | { type: 'meal'; id: string }
   | { type: 'treat' }
   | { type: 'sleep' }
   | { type: 'scavenge' }

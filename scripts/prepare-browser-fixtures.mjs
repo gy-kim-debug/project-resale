@@ -13,11 +13,12 @@ const rich = newGame(31);
 rich.cash = 50_000;
 rich.stats.peakCash = 50_000;
 const empty = newGame(31);
-empty.satiety = 0;
 empty.health = 20;
+empty.cash = 10000;
+empty.stats.peakCash = 10000;
 const death = newGame(31);
-death.satiety = 1;
-death.health = 1;
+death.health = 0;
+death.status = 'dead';
 const clear = newGame(31);
 clear.cash = 10_000_000_000;
 clear.stats.peakCash = clear.cash;
@@ -58,7 +59,6 @@ for (let n = 0; n < 3; n++) {
   comparison = execute(comparison, { type: 'buy', id }).game;
   if (n !== 1) comparison = execute(comparison, { type: 'check', id }).game;
 }
-comparison.satiety = 100;
 comparison.fatigue = 100;
 // Keep one old snapshot shape to verify fallback to its actual agreement.
 delete comparison.inventory[2].acquiredFor;

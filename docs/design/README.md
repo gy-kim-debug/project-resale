@@ -30,23 +30,15 @@
 
 ### 생존 지표
 
-- [체력과 포만감의 역할](survival/STAT_ROLES.md)
-- [포만감 수치의 표시 방향](survival/SATIETY_DISPLAY.md)
-- [포만감 부족 시 행동 처리](survival/ACTION_RESTRICTIONS.md)
+- [체력과 피로도의 역할](survival/STAT_ROLES.md)
+- [행동 제한](survival/ACTION_RESTRICTIONS.md)
 - [지표가 0일 때의 처리](survival/ZERO_STAT_OUTCOMES.md)
-- [포만감 소모 방식](survival/SATIETY_CONSUMPTION.md)
 - [체력 회복 방법](survival/HEALTH_RECOVERY.md)
 - [피로도 소모 방식](survival/FATIGUE_CONSUMPTION.md)
-
-### 식사
-
-- [무료 급식](food/FREE_MEALS.md)
-- [무료 급식의 체력 회복 효과](food/FREE_MEAL_HEALTH_RECOVERY.md)
 
 ### 수면
 
 - [피로도 0으로 다음 날 아침이 되었을 때의 회복](sleep/NEXT_MORNING_RECOVERY.md)
-- [수면 중 포만감 감소](sleep/SATIETY_LOSS.md)
 - [직접 수면 선택](sleep/VOLUNTARY_SLEEP.md)
 - [수면 비용](sleep/COST.md)
 
@@ -109,3 +101,5 @@
 각 항목의 미정 규칙은 해당 문서에 적혀 있다. 전체 검토 범위는 [미정 사항](OPEN_QUESTIONS.md)에서 확인한다.
 
 - [보관함 매입가·현재 가치 비교](inventory/VALUE_COMPARISON.md)
+
+사용자 후속 결정: 포만감·식사 개념을 제거했다. `food/`와 `SATIETY_*` 파일은 폐기 표시만 남기고 현재 규칙 목차에서 제외한다.
