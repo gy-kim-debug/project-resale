@@ -110,6 +110,7 @@ export type Command =
   | { type: 'cancel'; id: string }
   | { type: 'accept'; id: string }
   | { type: 'reject'; id: string }
+  | { type: 'counter'; id: string; price: number }
   | { type: 'break'; id: string }
   | { type: 'visit'; id: string }
   | { type: 'outletSell'; id: string }

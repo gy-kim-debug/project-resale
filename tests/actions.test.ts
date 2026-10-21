@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { useGameStore, flushSaves } from '../src/app/store';
 import { saveRepository, type SaveData } from '../src/storage/saveRepository';
-import { newGame } from '../src/domain/engine';
+import { newGame, execute } from '../src/domain/engine';
 import {
   ACTION_DURATION_MS,
   changesBetween,
@@ -120,4 +120,28 @@ test('chat replies and closure save immediately without time or loading', async 
   assert.equal(await s.getState().act({ type: 'closeChat', id: i.id }), false);
   assert.equal(await completion, true);
   assert.equal(s.getState().game!.minute, g.minute);
+});
+
+test('seller counteroffers are saved immediately without presentation or transferring the item', async () => {
+  setup();
+  let g = newGame(42);
+  g.inventory.push(g.board.shift()!);
+  g = execute(g, { type: 'post', id: g.inventory[0].id, price: 1000 }).game;
+  for (let n = 0; n < 8 && !g.inquiries.length; n++)
+    g = execute(g, { type: 'wait' }).game;
+  assert.ok(g.inquiries.length);
+  g.inquiries[0].price = 100;
+  g.inquiries[0].max = 500;
+  const q = g.inquiries[0];
+  useGameStore.setState({ game: g });
+  const result = useGameStore
+    .getState()
+    .act({ type: 'counter', id: q.id, price: 200 });
+  assert.equal(useGameStore.getState().action, null);
+  assert.equal(await result, true);
+  await flushSaves();
+  assert.equal(writes.at(-1)?.game.inquiries[0].price, 200);
+  assert.equal(useGameStore.getState().game!.minute, g.minute);
+  assert.equal(useGameStore.getState().game!.inventory.length, 1);
+  assert.equal(useGameStore.getState().game!.cash, g.cash);
 });

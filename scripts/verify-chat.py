@@ -64,9 +64,10 @@ with sync_playwright() as p:
    start=load('pending',1)
    name='거절 · 0시간' if ending=='walk' else '거래 파토 · 0시간'
    page.get_by_role('button',name=name,exact=True).first.click();settled()
-   page.wait_for_function("async()=>!(await ("+READ+")()).inquiries.length")
+   page.wait_for_function("async id=>!(await ("+READ+")()).inquiries.some(q=>q.id===id)",arg=start['inquiries'][0]['id'])
    assert read()['minute']==start['minute']
-   assert not read()['inquiries']
+   assert len(read()['inquiries'])==len(start['inquiries'])-1
+   assert read()['sales']==start['sales']
   assert not errors,errors
   results.append({'width':width,'purchase_chat_reload':'PASS','counteroffer_reload':'PASS','purchase_sale_one_hour':'PASS','chat_close_break_walk_zero_time':'PASS'})
   context.close()

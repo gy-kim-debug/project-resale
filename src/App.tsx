@@ -284,7 +284,7 @@ export default function App() {
     const ok = await state.act(c);
     if (
       ok &&
-      ['accept', 'break', 'reject'].includes(c.type) &&
+      ['accept', 'break', 'reject', 'counter'].includes(c.type) &&
       !useGameStore.getState().game?.inquiries.length
     )
       setRoutes([]);

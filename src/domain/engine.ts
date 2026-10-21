@@ -294,6 +294,9 @@ function finishSale(g: Game, saleId: string) {
   g.sales = g.sales.filter((s) => s.id !== saleId);
   g.inquiries = g.inquiries.filter((q) => q.saleId !== saleId);
 }
+function endInquiry(g: Game, inquiryId: string) {
+  g.inquiries = g.inquiries.filter((q) => q.id !== inquiryId);
+}
 function owned(g: Game, itemId: string) {
   const i = g.inventory.find((i) => i.id === itemId);
   if (!i) throw Error('보유하지 않은 물품입니다.');
@@ -367,7 +370,7 @@ export function execute(original: Game, command: Command): Result {
     if (g.status !== 'playing') throw Error('종료된 게임입니다.');
     if (
       g.inquiries.length &&
-      !['accept', 'reject', 'break'].includes(command.type)
+      !['accept', 'reject', 'break', 'counter'].includes(command.type)
     )
       throw Error('구매 문의 응답이 필요합니다.');
     let message = '';
@@ -610,6 +613,52 @@ export function execute(original: Game, command: Command): Result {
         advance(g, 1, 0, 0, true, false);
         break;
       }
+      case 'counter': {
+        const q = g.inquiries.find((q) => q.id === command.id);
+        if (!q) throw Error('종료된 문의입니다.');
+        const sale = g.sales.find((s) => s.id === q.saleId);
+        if (!sale) throw Error('판매 글이 없습니다.');
+        if (
+          !isMoney(command.price) ||
+          command.price <= q.price ||
+          command.price > sale.price
+        )
+          throw Error(
+            '구매자 제안보다 높고 등록 가격 이하인 정수 금액을 입력하세요.',
+          );
+        if (q.rounds >= 2) throw Error('더 이상 가격을 제안할 수 없습니다.');
+        q.chat ??= [
+          { speaker: 'other', text: `${won(q.price)}에 거래할 수 있을까요?` },
+        ];
+        q.chat.push({
+          speaker: 'player',
+          text: `${won(command.price)}에 판매하고 싶습니다.`,
+        });
+        q.rounds++;
+        if (command.price <= q.max) {
+          q.price = command.price;
+          q.chat.push({
+            speaker: 'other',
+            text: `좋아요. ${won(q.price)}에 거래해요.`,
+          });
+          message = `구매자가 ${won(q.price)} 제안을 수락했습니다.`;
+        } else if (q.price >= q.max || roll(g) < 0.3) {
+          endInquiry(g, q.id);
+          message = '구매자가 거래를 파토냈습니다. 판매 글은 유지됩니다.';
+        } else {
+          q.price = Math.min(
+            q.max,
+            Math.max(q.price + 1, Math.floor((q.price + q.max) / 2)),
+          );
+          q.chat.push({
+            speaker: 'other',
+            text: `그 가격은 어렵습니다. ${won(q.price)}은 어떠세요?`,
+          });
+          message = `구매자가 ${won(q.price)}으로 다시 제안했습니다.`;
+        }
+        log(g, message);
+        break;
+      }
       case 'reject': {
         const q = g.inquiries.find((q) => q.id === command.id);
         if (!q) throw Error('종료된 문의입니다.');
@@ -618,9 +667,8 @@ export function execute(original: Game, command: Command): Result {
         ];
         q.chat.push({ speaker: 'player', text: '그 가격에는 어렵습니다.' });
         if (q.rounds >= 2 || q.price >= q.max || roll(g) < 0.3) {
-          finishSale(g, q.saleId);
-          message =
-            '구매자가 거래를 파토냈습니다. 판매 글과 다른 문의가 모두 종료됐습니다.';
+          endInquiry(g, q.id);
+          message = '구매자가 거래를 파토냈습니다. 판매 글은 유지됩니다.';
         } else {
           q.rounds++;
           q.price = Math.min(
@@ -639,8 +687,8 @@ export function execute(original: Game, command: Command): Result {
       case 'break': {
         const q = g.inquiries.find((q) => q.id === command.id);
         if (!q) throw Error('종료된 문의입니다.');
-        finishSale(g, q.saleId);
-        message = '거래를 파토냈습니다. 판매 글과 모든 문의가 종료됐습니다.';
+        endInquiry(g, q.id);
+        message = '구매자와의 거래를 파토냈습니다. 판매 글은 유지됩니다.';
         log(g, message);
         break;
       }

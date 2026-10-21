@@ -64,3 +64,16 @@ await writeFile(
   'work/inventory-comparison.json',
   JSON.stringify({ version: 2, game: comparison, favoriteIds: [] }),
 );
+
+const counter = globalThis.structuredClone(p);
+counter.sales[0].price = 1000;
+counter.inquiries[0].price = 100;
+counter.inquiries[0].max = 500;
+counter.inquiries[0].rounds = 0;
+counter.inquiries[0].chat = [
+  { speaker: 'other', text: '100 원에 거래할 수 있을까요?' },
+];
+await writeFile(
+  'work/seller-counter.json',
+  JSON.stringify({ version: 2, game: counter, favoriteIds: [] }),
+);

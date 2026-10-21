@@ -196,7 +196,7 @@ test('listing capacity, immutable price, inventory slots preserved, cancel permi
       false,
     );
 });
-test('pending inquiries block engine actions, survive serialization, break closes all and permits repost', () => {
+test('pending inquiries block actions; breaking one chat preserves listing and other buyers', () => {
   let g = pending();
   assert.ok(g.inquiries.length >= 2);
   const serialized = parseSave(
@@ -212,24 +212,32 @@ test('pending inquiries block engine actions, survive serialization, break close
   ] as Command[])
     assert.equal(execute(g, c).ok, false);
   const id = g.inventory[0].id;
+  const sale = structuredClone(g.sales[0]);
+  const other = structuredClone(g.inquiries[1]);
   g = run(g, { type: 'break', id: g.inquiries[0].id });
+  assert.deepEqual(g.inquiries, [other]);
+  assert.deepEqual(g.sales, [sale]);
+  g = run(g, { type: 'break', id: other.id });
   assert.equal(g.inquiries.length, 0);
-  assert.equal(g.sales.length, 0);
+  assert.deepEqual(g.sales, [sale]);
+  assert.equal(execute(g, { type: 'post', id, price: 3000 }).ok, false);
+  g = run(g, { type: 'cancel', id });
   g = run(g, { type: 'post', id, price: 3000 });
   assert.equal(g.sales[0].price, 3000);
 });
-test('buyer rejection may raise or walk; rounds terminate and no player counteroffer', () => {
+test('buyer rejection may raise or walk; rounds terminate but listing stays active', () => {
   for (let seed = 1; seed < 20; seed++) {
     let g = pending();
     g.seed = seed;
     let n = 0;
-    while (g.inquiries.length && n++ < 4) {
-      const old = g.inquiries[0].price;
-      g = run(g, { type: 'reject', id: g.inquiries[0].id });
-      if (g.inquiries.length) assert.ok(g.inquiries[0].price > old);
+    while (g.inquiries.length && n++ < 10) {
+      const old = { ...g.inquiries[0] };
+      g = run(g, { type: 'reject', id: old.id });
+      const continuing = g.inquiries.find((q) => q.id === old.id);
+      if (continuing) assert.ok(continuing.price > old.price);
     }
     assert.equal(g.inquiries.length, 0);
-    assert.equal(g.sales.length, 0);
+    assert.equal(g.sales.length, 1);
   }
 });
 test('accepted sale transfers item and exact money once, improves trade ability', () => {
@@ -604,7 +612,7 @@ test('sales chat and either side walking cost no time; completed sale takes one 
     q.max = 1000;
     q.rounds = 0;
     const after = run(g, { type: 'reject', id: q.id });
-    if (after.inquiries.length) {
+    if (after.inquiries.some((inquiry) => inquiry.id === q.id)) {
       continued = true;
       for (const key of [
         'minute',
@@ -620,13 +628,18 @@ test('sales chat and either side walking cost no time; completed sale takes one 
       for (const type of ['accept', 'break'] as const) {
         const ended = run(after, { type, id: q.id });
         assert.equal(ended.minute - g.minute, type === 'accept' ? 60 : 0);
-        assert.equal(ended.inquiries.length, 0);
+        assert.equal(
+          ended.inquiries.length,
+          type === 'accept' ? 0 : after.inquiries.length - 1,
+        );
+        assert.equal(ended.sales.length, type === 'accept' ? 0 : 1);
         assert.equal(execute(ended, { type, id: q.id }).ok, false);
       }
     } else {
       walked = true;
       assert.equal(after.minute, g.minute);
-      assert.equal(after.sales.length, 0);
+      assert.deepEqual(after.sales, g.sales);
+      assert.equal(after.inquiries.length, g.inquiries.length - 1);
     }
   }
   assert.ok(continued && walked, 'both negotiation outcomes covered');
@@ -722,4 +735,88 @@ test('inventory comparison follows market changes and safely reads legacy costs 
     bad.inventory[0].acquiredFor = invalid;
     assert.equal(isGame(bad), false);
   }
+});
+
+test('seller counteroffers can be accepted or countered; failed negotiation keeps the listing and other buyers', () => {
+  const base = pending();
+  base.sales[0].price = 1000;
+  base.inquiries[0].price = 100;
+  base.inquiries[0].max = 500;
+  const q = base.inquiries[0];
+  const sale = structuredClone(base.sales[0]);
+  const accepted = run(base, { type: 'counter', id: q.id, price: 200 });
+  assert.equal(accepted.inquiries[0].price, 200);
+  assert.equal(accepted.inquiries[0].rounds, 1);
+  assert.equal(
+    accepted.inquiries[0].chat?.at(-1)?.text.includes('좋아요'),
+    true,
+  );
+  for (const key of [
+    'minute',
+    'cash',
+    'satiety',
+    'health',
+    'fatigue',
+    'interest',
+  ] as const)
+    assert.equal(accepted[key], base[key]);
+  assert.deepEqual(accepted.sales, [sale]);
+  assert.deepEqual(accepted.inquiries[1], base.inquiries[1]);
+  const restored = parseSave(
+    JSON.parse(JSON.stringify({ version: 2, game: accepted, favoriteIds: [] })),
+  ).game;
+  assert.deepEqual(restored, accepted);
+  const sold = run(restored, { type: 'accept', id: q.id });
+  assert.equal(sold.cash - base.cash, 200);
+  assert.equal(sold.minute - base.minute, 60);
+  assert.equal(sold.inventory.length, 0);
+  assert.equal(sold.sales.length, 0);
+  for (const price of [-1, 0, 100, 1.5, 1001, Infinity, NaN]) {
+    const snapshot = structuredClone(base);
+    const invalid = execute(base, { type: 'counter', id: q.id, price });
+    assert.equal(invalid.ok, false);
+    assert.deepEqual(base, snapshot);
+    assert.strictEqual(invalid.game, base);
+  }
+  const exhausted = structuredClone(base);
+  exhausted.inquiries[0].rounds = 2;
+  assert.equal(
+    execute(exhausted, { type: 'counter', id: q.id, price: 200 }).ok,
+    false,
+  );
+  for (const seed of [1, 1000]) {
+    const g = structuredClone(base);
+    g.seed = seed;
+    const result = run(g, { type: 'counter', id: q.id, price: 800 });
+    assert.deepEqual(result.sales, [sale]);
+    assert.deepEqual(result.inventory, base.inventory);
+    assert.deepEqual(
+      result.inquiries.find((i) => i.id === base.inquiries[1].id),
+      base.inquiries[1],
+    );
+    const continuing = result.inquiries.find((i) => i.id === q.id);
+    if (seed === 1) assert.equal(continuing, undefined);
+    else
+      assert.ok(
+        continuing && continuing.price > 100 && continuing.price <= 500,
+      );
+    assert.equal(result.minute, g.minute);
+  }
+});
+
+test('new buyers can inquire on the same unchanged listing after all previous chats break', () => {
+  let g = pending();
+  const sale = structuredClone(g.sales[0]);
+  const previous = g.inquiries.map((q) => q.id);
+  while (g.inquiries.length)
+    g = run(g, { type: 'break', id: g.inquiries[0].id });
+  assert.deepEqual(g.sales, [sale]);
+  assert.equal(g.inventory.length, 1);
+  for (let n = 0; n < 8 && !g.inquiries.length; n++)
+    g = run(g, { type: 'wait' });
+  assert.ok(g.inquiries.length);
+  assert.equal(g.sales[0].id, sale.id);
+  assert.equal(g.sales[0].price, sale.price);
+  assert.equal(g.sales[0].expires, sale.expires);
+  assert.ok(g.inquiries.every((q) => !previous.includes(q.id)));
 });

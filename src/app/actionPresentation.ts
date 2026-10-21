@@ -49,6 +49,7 @@ export function actionLabel(command: Command): string {
     cancel: '판매 글을 내리는 중…',
     accept: '거래하는 중…',
     reject: '답변하는 중…',
+    counter: '판매 가격을 제안하는 중…',
     break: '거래를 마무리하는 중…',
     visit: '매각처로 가는 중…',
     outletSell: '매각하는 중…',

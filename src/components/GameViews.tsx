@@ -64,12 +64,14 @@ export function AmountForm({
   title,
   label,
   initial = '',
+  min = 1,
   max,
   submit,
 }: {
   title: string;
   label: string;
   initial?: string;
+  min?: number;
   max: number;
   submit: (n: number) => void;
 }) {
@@ -77,7 +79,7 @@ export function AmountForm({
   const valid =
     /^\d+$/.test(amount) &&
     Number.isSafeInteger(Number(amount)) &&
-    Number(amount) >= 1 &&
+    Number(amount) >= min &&
     Number(amount) <= max;
   return (
     <form
@@ -637,21 +639,28 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
                 ]
               }
             />
+            {sale && q.rounds < 2 && q.price < sale.price && (
+              <AmountForm
+                key={`${q.id}-${q.rounds}`}
+                title="가격 제안 · 0시간"
+                label="제안할 판매 가격 (원)"
+                min={q.price + 1}
+                max={sale.price}
+                submit={(price) => act({ type: 'counter', id: q.id, price })}
+              />
+            )}
             <Button onClick={() => act({ type: 'accept', id: q.id })}>
               수락하고 거래 · 1시간
             </Button>
             <Button onClick={() => act({ type: 'reject', id: q.id })}>
               거절 · 0시간
             </Button>
+            <Button danger onClick={() => act({ type: 'break', id: q.id })}>
+              거래 파토 · 0시간
+            </Button>
           </section>
         );
       })}
-      <Button
-        danger
-        onClick={() => act({ type: 'break', id: g.inquiries[0].id })}
-      >
-        거래 파토 · 0시간
-      </Button>
     </>
   );
 }
