@@ -195,7 +195,7 @@ function inquiries(g: Game) {
   if (g.inquiries.length || g.status !== 'playing') return;
   for (const sale of g.sales) {
     if (sale.nextCheck > g.minute) continue;
-    sale.nextCheck = g.minute + 30;
+    sale.nextCheck = g.minute + 60;
     const item = g.inventory.find((i) => i.id === sale.itemId);
     if (!item) continue;
     const value = marketValue(g, item);
@@ -234,7 +234,7 @@ function event(g: Game) {
       id: id(g),
       type: 'repair',
       title: '수리 전문가의 연락',
-      text: '작은 거래들을 지켜봤다며 정비 교육을 제안합니다. 5,000원 · 60분. 수리 경험 +4.',
+      text: '작은 거래들을 지켜봤다며 정비 교육을 제안합니다. 5,000원 · 1시간. 수리 경험 +4.',
       expires: g.minute + 2880,
     };
     g.lastEvent = g.minute;
@@ -250,7 +250,7 @@ function event(g: Game) {
       id: id(g),
       type: 'deal',
       title: '이사 정리 일손 제안',
-      text: '급히 일손을 구하는 이웃입니다. 60분 · 포만감 추가 8 · 피로도 추가 5, 보상 15,000원.',
+      text: '급히 일손을 구하는 이웃입니다. 1시간 · 포만감 추가 8 · 피로도 추가 5, 보상 15,000원.',
       expires: g.minute + 480,
     };
     g.lastEvent = g.minute;
@@ -260,12 +260,13 @@ function event(g: Game) {
 /** Advance only on commands. No wall-clock/offline progression. */
 function advance(
   g: Game,
-  minutes: number,
+  hours: number,
   hungerExtra = 0,
   fatigueExtra = 0,
   recovery = false,
   generate = true,
 ) {
+  const minutes = hours * 60;
   const before = g.minute;
   g.minute += minutes;
   g.hungerRemainder += minutes * 3;
@@ -275,7 +276,7 @@ function advance(
   const fatigue = Math.floor(g.fatigueRemainder / 60);
   g.fatigueRemainder %= 60;
   if (!recovery && g.satiety <= hunger + hungerExtra) {
-    g.health = clamp(g.health - Math.max(1, Math.ceil(minutes / 30)) * 2);
+    g.health = clamp(g.health - hours * 4);
     log(g, '활동 중 포만감이 바닥나 체력이 감소했습니다.');
   }
   g.satiety = clamp(g.satiety - hunger - hungerExtra);
@@ -379,7 +380,7 @@ export function execute(original: Game, command: Command): Result {
         money(g, j.reward);
         message = `${j.title} 완료. ${won(j.reward)}을 받았습니다.`;
         log(g, message);
-        advance(g, j.minutes, j.satiety, j.fatigue);
+        advance(g, j.hours, j.satiety, j.fatigue);
         break;
       }
       case 'meal': {
@@ -387,7 +388,7 @@ export function execute(original: Game, command: Command): Result {
         if (!f) throw Error('없는 음식입니다.');
         affordable(g, f.cost);
         money(g, -f.cost);
-        advance(g, f.minutes, 0, 0, true);
+        advance(g, f.hours, 0, 0, true);
         g.satiety = clamp(g.satiety + f.satiety);
         g.health = clamp(g.health + f.health);
         message = `${f.title}: 포만감 +${f.satiety} · 체력 +${f.health}.`;
@@ -397,7 +398,7 @@ export function execute(original: Game, command: Command): Result {
       case 'treat':
         affordable(g, 10_000);
         money(g, -10_000);
-        advance(g, 60, 0, 0, true);
+        advance(g, 1, 0, 0, true);
         g.health = clamp(g.health + 60);
         message = '치료 완료. 체력 +60.';
         log(g, message);
@@ -424,20 +425,20 @@ export function execute(original: Game, command: Command): Result {
         g.inventory.push(found);
         message = `${found.title} 발견.`;
         log(g, message);
-        advance(g, 60, 5, 5);
+        advance(g, 1, 5, 5);
         break;
       }
       case 'refresh':
         hunger(g);
-        advance(g, 30);
+        advance(g, 1);
         board(g);
         message = '새 매물을 찾았습니다.';
         log(g, message);
         break;
       case 'wait':
         hunger(g);
-        advance(g, 30);
-        message = '30분이 지났습니다.';
+        advance(g, 1);
+        message = '1시간이 지났습니다.';
         log(g, message);
         break;
       case 'inspect': {
@@ -450,7 +451,7 @@ export function execute(original: Game, command: Command): Result {
         i.inspected = true;
         message = `외관·작동 확인: ${i.condition}. 확인비 ${won(cost)}.`;
         log(g, message);
-        advance(g, 15);
+        advance(g, 1);
         break;
       }
       case 'offer': {
@@ -470,7 +471,7 @@ export function execute(original: Game, command: Command): Result {
           ? `판매자가 ${won(command.price)} 제안에 동의했습니다.`
           : '판매자가 네고를 거절했습니다.';
         log(g, message);
-        advance(g, 15);
+        advance(g, 1);
         break;
       }
       case 'buy': {
@@ -485,7 +486,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.purchases++;
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
         log(g, message);
-        advance(g, 15, 1, 1);
+        advance(g, 1, 1, 1);
         break;
       }
       case 'check': {
@@ -499,7 +500,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.checks++;
         message = `가치 확인: ${i.title}, 실제 가치 ${won(i.value)}. ${i.defect}`;
         log(g, message);
-        advance(g, 15);
+        advance(g, 1);
         break;
       }
       case 'repair': {
@@ -525,7 +526,7 @@ export function execute(original: Game, command: Command): Result {
           ? `수리 성공. 실제 가치 ${won(i.value)}.`
           : `수리 실패. ${won(cost)} 사용.`;
         log(g, message);
-        advance(g, 60, 2, 5);
+        advance(g, 1, 2, 5);
         break;
       }
       case 'discard': {
@@ -554,14 +555,14 @@ export function execute(original: Game, command: Command): Result {
           id: id(g),
           itemId: command.id,
           price: command.price,
-          created: g.minute,
-          expires: g.minute + 2880,
-          nextCheck: g.minute + 30,
+          created: g.minute + 60,
+          expires: g.minute + 60 + 2880,
+          nextCheck: g.minute + 120,
         };
         g.sales.push(sale);
         message = `판매 글 등록: ${won(command.price)}.`;
         log(g, message);
-        advance(g, 15);
+        advance(g, 1);
         break;
       }
       case 'cancel': {
@@ -571,7 +572,7 @@ export function execute(original: Game, command: Command): Result {
         finishSale(g, s.id);
         message = '판매 등록을 취소했습니다.';
         log(g, message);
-        advance(g, 5);
+        advance(g, 1);
         break;
       }
       case 'accept': {
@@ -586,7 +587,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.sales++;
         message = `${i.title} 판매 완료. ${won(q.price)}을 받았습니다. 물품·대금 교환을 한 번에 마쳤습니다.`;
         log(g, message);
-        advance(g, 15, 0, 0, true, false);
+        advance(g, 1, 0, 0, true, false);
         break;
       }
       case 'reject': {
@@ -605,7 +606,7 @@ export function execute(original: Game, command: Command): Result {
           message = `구매자가 ${won(q.price)}으로 다시 제안했습니다.`;
         }
         log(g, message);
-        advance(g, 5, 0, 0, true, false);
+        advance(g, 1, 0, 0, true, false);
         break;
       }
       case 'break': {
@@ -614,14 +615,14 @@ export function execute(original: Game, command: Command): Result {
         finishSale(g, q.saleId);
         message = '거래를 파토냈습니다. 판매 글과 모든 문의가 종료됐습니다.';
         log(g, message);
-        advance(g, 5, 0, 0, true, false);
+        advance(g, 1, 0, 0, true, false);
         break;
       }
       case 'visit': {
         const outlet = OUTLETS.find((o) => o.id === command.id);
         if (!outlet) throw Error('없는 매각처입니다.');
         hunger(g);
-        advance(g, 30);
+        advance(g, 1);
         const prices: Record<string, number> = {};
         for (const i of g.inventory)
           if (outlet.kinds.includes(i.kind))
@@ -648,7 +649,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.sales++;
         message = `${i.title}을 제시 가격 ${won(price)}에 매각했습니다.`;
         log(g, message);
-        advance(g, 15);
+        advance(g, 1);
         break;
       }
       case 'repay': {
@@ -664,7 +665,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.repaid += amount;
         message = `${won(amount)} 상환했습니다.`;
         log(g, message);
-        advance(g, 5);
+        advance(g, 1);
         if (g.principal + g.interest === 0 && g.status === 'playing') {
           g.status = 'cleared';
           g.inquiries = [];
@@ -681,7 +682,7 @@ export function execute(original: Game, command: Command): Result {
           g.event = null;
           message = '특별 제안을 거절했습니다.';
           log(g, message);
-          advance(g, 5, 0, 0, true);
+          advance(g, 1, 0, 0, true);
           break;
         }
         hunger(g);
@@ -699,7 +700,7 @@ export function execute(original: Game, command: Command): Result {
         }
         g.event = null;
         log(g, message);
-        advance(g, 60, e.type === 'deal' ? 8 : 0, e.type === 'deal' ? 5 : 0);
+        advance(g, 1, e.type === 'deal' ? 8 : 0, e.type === 'deal' ? 5 : 0);
         break;
       }
     }

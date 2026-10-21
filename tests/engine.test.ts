@@ -413,3 +413,126 @@ for (const seed of [1, 42, 210])
       `Failed to reach goal after ${commands} actions; cash ${g.cash}`,
     );
   });
+
+test('every paid-time action advances whole hours, and listing wait starts after registration', () => {
+  const cases: { game: Game; command: Command; hours: number }[] = [];
+  for (const [id, hours] of [
+    ['flyer', 1],
+    ['shop', 2],
+    ['warehouse', 3],
+  ] as const)
+    cases.push({ game: rich(), command: { type: 'job', id }, hours });
+  for (const id of ['free', 'rice', 'meal'])
+    cases.push({ game: rich(), command: { type: 'meal', id }, hours: 1 });
+  for (const type of ['treat', 'scavenge', 'refresh', 'wait'] as const)
+    cases.push({ game: rich(), command: { type }, hours: 1 });
+  for (const type of ['inspect', 'buy', 'offer'] as const) {
+    const g = rich();
+    cases.push({
+      game: g,
+      command:
+        type === 'offer'
+          ? { type, id: g.board[0].id, price: g.board[0].offers[0] }
+          : { type, id: g.board[0].id },
+      hours: 1,
+    });
+  }
+  for (const type of ['check', 'repair', 'post', 'visit', 'repay'] as const) {
+    const g = owned();
+    g.inventory[0].checked = type !== 'check';
+    g.inventory[0].condition = '고장';
+    const command: Command =
+      type === 'post'
+        ? { type, id: g.inventory[0].id, price: 1 }
+        : type === 'visit'
+          ? { type, id: 'scrap' }
+          : type === 'repay'
+            ? { type, amount: 1 }
+            : { type, id: g.inventory[0].id };
+    cases.push({ game: g, command, hours: 1 });
+  }
+  let g = run(owned(), { type: 'post', id: owned().inventory[0].id, price: 1 });
+  assert.equal(
+    g.inquiries.length,
+    0,
+    'posting itself does not generate an early inquiry',
+  );
+  assert.equal(g.sales[0].created, g.minute);
+  assert.equal(g.sales[0].expires - g.minute, 48 * 60);
+  assert.equal(g.sales[0].nextCheck - g.minute, 60);
+  cases.push({
+    game: g,
+    command: { type: 'cancel', id: g.inventory[0].id },
+    hours: 1,
+  });
+  g = run(owned(), { type: 'visit', id: 'scrap' });
+  cases.push({
+    game: g,
+    command: { type: 'outletSell', id: g.inventory[0].id },
+    hours: 1,
+  });
+  for (const type of ['accept', 'reject', 'break'] as const) {
+    g = pending();
+    cases.push({ game: g, command: { type, id: g.inquiries[0].id }, hours: 1 });
+  }
+  for (const choice of ['yes', 'no'] as const) {
+    g = rich();
+    g.event = {
+      id: 'hour-event',
+      type: 'deal',
+      title: '제안',
+      text: '1시간',
+      expires: g.minute + 480,
+    };
+    cases.push({ game: g, command: { type: 'event', choice }, hours: 1 });
+  }
+  for (const { game, command, hours } of cases) {
+    const next = run(game, command);
+    assert.equal(
+      next.minute - game.minute,
+      hours * 60,
+      JSON.stringify(command),
+    );
+    assert.equal(next.minute % 60, 0);
+  }
+});
+
+test('hourly actions settle midnight once and legacy saves retain resources and relative deadlines', () => {
+  const old = run(owned(), { type: 'visit', id: 'scrap' });
+  old.minute = 3 * 1440 + 23 * 60 + 45;
+  old.marketDay = 4;
+  old.board[0].expires = old.minute + 30;
+  old.lastEvent = old.minute - 180;
+  old.quotes!.at = old.minute - 15;
+  old.hungerRemainder = 15;
+  const snapshot = structuredClone(old);
+  const migrated = parseSave({
+    version: 2,
+    game: old,
+    favoriteIds: ['favorite'],
+  });
+  const g = migrated.game;
+  assert.deepEqual(old, snapshot, 'migration is pure');
+  assert.ok(isGame(g));
+  assert.equal(g.minute, 3 * 1440 + 23 * 60);
+  assert.equal(g.board[0].expires - g.minute, 30);
+  assert.equal(g.minute - g.quotes!.at, 15);
+  for (const key of [
+    'cash',
+    'principal',
+    'interest',
+    'satiety',
+    'health',
+    'fatigue',
+    'hungerRemainder',
+    'fatigueRemainder',
+    'seed',
+  ] as const)
+    assert.equal(g[key], old[key]);
+  assert.deepEqual(migrated.favoriteIds, ['favorite']);
+  assert.deepEqual(parseSave(migrated), migrated, 'migration is idempotent');
+  const after = run(g, { type: 'wait' });
+  assert.equal(after.minute, 4 * 1440);
+  assert.equal(after.interest - g.interest, 10_000);
+  assert.equal(run(after, { type: 'wait' }).interest, after.interest);
+});

@@ -1,6 +1,7 @@
 import { openDB } from 'idb';
 import type { Game } from '../domain/game';
 import { isGame } from './validation';
+import { alignToHour } from '../domain/time';
 export interface SaveData {
   version: 2;
   game: Game;
@@ -26,7 +27,11 @@ export function parseSave(value: unknown): SaveData {
     throw Error(
       '저장 형식이 올바르지 않습니다. 기존 데이터는 덮어쓰지 않았습니다.',
     );
-  return { version: 2, game: value.game, favoriteIds: value.favoriteIds };
+  return {
+    version: 2,
+    game: alignToHour(value.game),
+    favoriteIds: value.favoriteIds,
+  };
 }
 const database = () =>
   openDB('resale-game', 2, {

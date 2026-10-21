@@ -13,9 +13,10 @@ export function ActionClock({ action }: { action: ActionPresentation }) {
       const progress = Math.min(1, (now - start) / action.duration);
       setMinute(
         Math.floor(
-          action.before.minute +
-            (action.after.minute - action.before.minute) * progress,
-        ),
+          (action.before.minute +
+            (action.after.minute - action.before.minute) * progress) /
+            60,
+        ) * 60,
       );
       if (progress < 1) frame = requestAnimationFrame(tick);
     };

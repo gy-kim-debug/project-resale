@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ItemArt } from './ItemArt';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, Kind } from '../domain/game';
-import { won, dayOf, timeOf } from '../domain/game';
+import { won, dayOf, timeOf, hoursText } from '../domain/game';
 import {
   level,
   listingLimit,
@@ -231,7 +231,7 @@ export function DebtView({ g, act }: { g: Game; act: Act }) {
       </dl>
 
       <AmountForm
-        title="입력 금액 상환"
+        title="입력 금액 상환 · 1시간"
         label="상환 금액"
         max={Math.min(g.cash, g.principal + g.interest)}
         submit={(amount) => act({ type: 'repay', amount })}
@@ -245,7 +245,8 @@ export function DebtView({ g, act }: { g: Game; act: Act }) {
           })
         }
       >
-        가능한 만큼 상환 · {won(Math.min(g.cash, g.principal + g.interest))}
+        가능한 만큼 상환 · 1시간 ·{' '}
+        {won(Math.min(g.cash, g.principal + g.interest))}
       </Button>
     </>
   );
@@ -258,14 +259,14 @@ export function ShopView({ g, act }: { g: Game; act: Act }) {
         <section className="card" key={f.id}>
           <h2>{f.title}</h2>
           <p>
-            {won(f.cost)} · {f.minutes}분
+            {won(f.cost)} · {f.hours}시간
           </p>
 
           <Button
             disabled={g.cash < f.cost}
             onClick={() => act({ type: 'meal', id: f.id })}
           >
-            구매하고 먹기
+            구매하고 먹기 · {f.hours}시간
           </Button>
         </section>
       ))}
@@ -323,7 +324,7 @@ export function MarketView({
         </>
       )}
       <Button onClick={() => act({ type: 'refresh' })}>
-        새 매물 탐색 · 30분
+        새 매물 탐색 · 1시간
       </Button>
       {listings.length ? (
         listings.map((i) => (
@@ -370,7 +371,7 @@ export function ListingView({
       <p className="lead">{item.description}</p>
       <Details>
         <p>{item.inspected ? `상태: ${item.condition}` : '상태 미확인'}</p>
-        <p>매물 유효 시간: {Math.max(0, item.expires - g.minute)}분 남음</p>
+        <p>매물 유효 시간: {hoursText(item.expires - g.minute)} 남음</p>
       </Details>
       <Button onClick={() => toggle(item.id)}>
         {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
@@ -381,17 +382,17 @@ export function ListingView({
       >
         {item.inspected
           ? '구매 전 상태 확인 완료'
-          : `구매 전 외관·작동 확인 · 15분${item.kind === '디지털' ? ' · 200원' : ' · 0원'}`}
+          : `구매 전 외관·작동 확인 · 1시간${item.kind === '디지털' ? ' · 200원' : ' · 0원'}`}
       </Button>
       {item.price > 0 && item.negotiation === 'none' && (
         <section className="card">
-          <h3>구매 가격 제안 · 각 15분</h3>
+          <h3>구매 가격 제안 · 각 1시간</h3>
           {item.offers.map((p) => (
             <Button
               key={p}
               onClick={() => act({ type: 'offer', id: item.id, price: p })}
             >
-              {won(p)} 제안
+              {won(p)} 제안 · 1시간
             </Button>
           ))}
         </section>
@@ -414,12 +415,12 @@ export function ListingView({
       ) : (
         <section className="card">
           <h3>지불·수령 확인</h3>
-          <p>{won(price)} · 15분</p>
+          <p>{won(price)} · 1시간</p>
           <Button
             disabled={g.cash < price || g.inventory.length >= RULES.capacity}
             onClick={() => act({ type: 'buy', id: item.id })}
           >
-            {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'}
+            {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'} · 1시간
           </Button>
           <Button onClick={() => setConfirm(false)}>구매하지 않기</Button>
         </section>
@@ -469,18 +470,18 @@ export function OwnedView({
           disabled={g.cash < checkCost(g, item)}
           onClick={() => act({ type: 'check', id: item.id })}
         >
-          가치 확인 · 15분 · {won(checkCost(g, item))}
+          가치 확인 · 1시간 · {won(checkCost(g, item))}
         </Button>
       )}
       {item.checked && item.condition !== '양호' && !item.repaired && (
         <section className="card">
           <h3>수리</h3>
-          <p>비용 {won(repairCost(item))} · 60분</p>
+          <p>비용 {won(repairCost(item))} · 1시간</p>
           <Button
             disabled={!!sale || g.cash < repairCost(item)}
             onClick={() => act({ type: 'repair', id: item.id })}
           >
-            수리하기
+            수리하기 · 1시간
           </Button>
         </section>
       )}
@@ -488,14 +489,13 @@ export function OwnedView({
         <section className="card">
           <h3>판매 글 등록 중</h3>
           <p>
-            {won(sale.price)} · 만료까지 {Math.max(0, sale.expires - g.minute)}
-            분
+            {won(sale.price)} · 만료까지 {hoursText(sale.expires - g.minute)}
           </p>
           <Button onClick={() => act({ type: 'wait' })}>
-            구매 문의 기다리기 · 30분
+            구매 문의 기다리기 · 1시간
           </Button>
           <Button onClick={() => act({ type: 'cancel', id: item.id })}>
-            판매 등록 취소 · 5분
+            판매 등록 취소 · 1시간
           </Button>
         </section>
       ) : (
@@ -512,7 +512,7 @@ export function OwnedView({
         <section className="card">
           <p>이 물품을 버릴까요?</p>
           <Button danger onClick={() => act({ type: 'discard', id: item.id })}>
-            버리기 확정
+            버리기 확정 · 시간 소모 없음
           </Button>
           <Button onClick={() => setDiscard(false)}>계속 보관</Button>
         </section>
@@ -535,13 +535,13 @@ export function OutletView({ g, act }: { g: Game; act: Act }) {
             act({ type: 'visit', id: o.id });
           }}
         >
-          {o.title} 방문 · 30분
+          {o.title} 방문 · 1시간
         </Button>
       ))}
       {g.quotes && outlet && (
         <section className="card">
           <h2>{outlet.title} 제시 가격</h2>
-          <p>{120 - (g.minute - g.quotes.at)}분 유효 · 판매 15분</p>
+          <p>{hoursText(120 - (g.minute - g.quotes.at))} 유효 · 판매 1시간</p>
           {g.inventory.length ? (
             g.inventory.map((i) => (
               <button
@@ -583,7 +583,7 @@ export function OutletView({ g, act }: { g: Game; act: Act }) {
               setSelected(null);
             }}
           >
-            제시 가격으로 판매 확정
+            제시 가격으로 판매 확정 · 1시간
           </Button>
           <Button onClick={() => setSelected(null)}>보관하기</Button>
         </section>
@@ -607,10 +607,10 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
             <p className="item-price">제안 {won(q.price)}</p>
             <p>{q.rounds ? '거절 후 재제안' : '새로운 구매 문의'}</p>
             <Button onClick={() => act({ type: 'accept', id: q.id })}>
-              수락 (15분)
+              수락 (1시간)
             </Button>
             <Button onClick={() => act({ type: 'reject', id: q.id })}>
-              거절 (5분)
+              거절 (1시간)
             </Button>
           </section>
         );
@@ -619,7 +619,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
         danger
         onClick={() => act({ type: 'break', id: g.inquiries[0].id })}
       >
-        거래 파토 (5분)
+        거래 파토 (1시간)
       </Button>
     </>
   );
@@ -764,7 +764,7 @@ export function RouteView({
               등록한 물품 확인
             </Button>
             <Button onClick={() => act({ type: 'wait' })}>
-              구매 문의 기다리기 · 30분
+              구매 문의 기다리기 · 1시간
             </Button>
           </>
         ) : (
@@ -772,11 +772,11 @@ export function RouteView({
             <ItemArt item={item} large />
             <h2>{item.title}</h2>
             <p className="lead">
-              등록 15분 · {g.sales.length}/{listingLimit(g)}개 등록 중
+              등록 1시간 · {g.sales.length}/{listingLimit(g)}개 등록 중
             </p>
             {item.checked && <p>현재 시장 기준 {won(marketValue(g, item))}</p>}
             <AmountForm
-              title="판매 글 등록 확정"
+              title="판매 글 등록 확정 · 1시간"
               label="판매 가격 (원)"
               max={RULES.maxMoney}
               submit={(price) => act({ type: 'post', id: item.id, price })}
@@ -796,14 +796,14 @@ export function RouteView({
             <section key={j.id} className="card">
               <h2>{j.title}</h2>
               <p>
-                {j.minutes}분 · 보상 {won(j.reward)}
+                {j.hours}시간 · 보상 {won(j.reward)}
               </p>
 
               <Button
                 disabled={g.satiety === 0}
                 onClick={() => act({ type: 'job', id: j.id })}
               >
-                일하기
+                일하기 · {j.hours}시간
               </Button>
             </section>
           ))}
@@ -812,7 +812,7 @@ export function RouteView({
     case '물건 수집':
       return (
         <>
-          <p>60분</p>
+          <p>1시간</p>
           <p>
             보관함 {g.inventory.length}/{RULES.capacity}
           </p>
@@ -820,7 +820,7 @@ export function RouteView({
             disabled={g.inventory.length >= RULES.capacity || g.satiety === 0}
             onClick={() => act({ type: 'scavenge' })}
           >
-            물건 수집하기
+            물건 수집하기 · 1시간
           </Button>
         </>
       );
@@ -831,13 +831,13 @@ export function RouteView({
             <section key={f.id} className="card">
               <h2>{f.title}</h2>
               <p>
-                {won(f.cost)} · {f.minutes}분
+                {won(f.cost)} · {f.hours}시간
               </p>
               <Button
                 disabled={g.cash < f.cost}
                 onClick={() => act({ type: 'meal', id: f.id })}
               >
-                먹기
+                먹기 · {f.hours}시간
               </Button>
             </section>
           ))}
@@ -848,18 +848,24 @@ export function RouteView({
         <>
           <p>0 원</p>
 
-          <Button onClick={() => act({ type: 'sleep' })}>잠자기</Button>
+          <p>다음 날 09:00까지</p>
+          <Button onClick={() => act({ type: 'sleep' })}>
+            잠자기 ·{' '}
+            {hoursText(
+              (Math.floor(g.minute / 1440) + 1) * 1440 + 540 - g.minute,
+            )}
+          </Button>
         </>
       );
     case '치료':
       return (
         <>
-          <p className="lead">동네 의원 · {won(10_000)} · 60분</p>
+          <p className="lead">동네 의원 · {won(10_000)} · 1시간</p>
           <Button
             disabled={g.cash < 10_000}
             onClick={() => act({ type: 'treat' })}
           >
-            치료받기
+            치료받기 · 1시간
           </Button>
         </>
       );
@@ -876,12 +882,12 @@ export function RouteView({
         <>
           <h2>{g.event.title}</h2>
           <p className="lead">{g.event.text}</p>
-          <p>남은 시간 {g.event.expires - g.minute}분</p>
+          <p>남은 시간 {hoursText(g.event.expires - g.minute)}</p>
           <Button onClick={() => act({ type: 'event', choice: 'yes' })}>
-            제안 수락
+            제안 수락 · 1시간
           </Button>
           <Button onClick={() => act({ type: 'event', choice: 'no' })}>
-            거절 (5분)
+            거절 (1시간)
           </Button>
         </>
       ) : (

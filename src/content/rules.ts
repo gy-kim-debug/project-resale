@@ -11,7 +11,7 @@ export const JOBS = [
   {
     id: 'flyer',
     title: '전단 배포',
-    minutes: 60,
+    hours: 1,
     reward: 9_000,
     satiety: 6,
     fatigue: 4,
@@ -19,7 +19,7 @@ export const JOBS = [
   {
     id: 'shop',
     title: '매장 정리',
-    minutes: 120,
+    hours: 2,
     reward: 22_000,
     satiety: 10,
     fatigue: 8,
@@ -27,7 +27,7 @@ export const JOBS = [
   {
     id: 'warehouse',
     title: '창고 분류',
-    minutes: 180,
+    hours: 3,
     reward: 38_000,
     satiety: 16,
     fatigue: 14,
@@ -37,7 +37,7 @@ export const FOODS = [
   {
     id: 'free',
     title: '무료 급식',
-    minutes: 60,
+    hours: 1,
     cost: 0,
     satiety: 20,
     health: 5,
@@ -45,7 +45,7 @@ export const FOODS = [
   {
     id: 'rice',
     title: '주먹밥',
-    minutes: 15,
+    hours: 1,
     cost: 1_500,
     satiety: 30,
     health: 2,
@@ -53,7 +53,7 @@ export const FOODS = [
   {
     id: 'meal',
     title: '든든한 한 끼',
-    minutes: 30,
+    hours: 1,
     cost: 5_000,
     satiety: 65,
     health: 12,

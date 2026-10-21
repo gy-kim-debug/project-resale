@@ -17,7 +17,7 @@ with sync_playwright() as p:
         nav.get_by_role('button',name='활동',exact=True).click()
         page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
         assert page.locator('.action-layer').count()==0
-        start=time.monotonic();page.get_by_role('button',name='일하기',exact=True).first.click()
+        start=time.monotonic();page.get_by_role('button',name='일하기 · 1시간',exact=True).first.click()
         expect(page.locator('.action-layer')).to_be_visible()
         expect(page.locator('.action-time')).to_contain_text('1일째 09:00')
         expect(page.locator('.action-time')).to_contain_text('1일째 10:00')
@@ -37,14 +37,14 @@ with sync_playwright() as p:
         assert page.locator('.status-header .stat-changed').count()>=3
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         # A refresh during presentation restores the committed action, with no replay.
-        page.get_by_role('button',name='일하기',exact=True).first.click()
+        page.get_by_role('button',name='일하기 · 1시간',exact=True).first.click()
         expect(page.locator('.action-layer')).to_be_visible()
         page.wait_for_function("async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result);});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result?.game?.cash===18000);};});}")
         page.reload();expect(page.locator('.status-top')).to_contain_text('18,000 원')
         expect(page.locator('.status-top')).to_contain_text('11:00')
         assert page.locator('.action-layer').count()==0
         page.locator('.activity-grid').get_by_role('button',name='수면',exact=True).click()
-        page.get_by_role('button',name='잠자기',exact=True).click()
+        page.get_by_role('button',name='잠자기 ·',exact=False).click()
         expect(page.locator('.action-time')).to_contain_text('2일째 09:00')
         expect(page.locator('.action-layer')).to_have_count(0)
         expect(page.locator('.status-top')).to_contain_text('2일째 09:00')
@@ -53,7 +53,7 @@ with sync_playwright() as p:
         context.close()
     context=browser.new_context(reduced_motion='reduce');page=context.new_page();page.goto(BASE)
     page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
-    page.get_by_role('button',name='일하기',exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible()
+    page.get_by_role('button',name='일하기 · 1시간',exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible()
     assert page.locator('.action-progress-track span').evaluate('(e)=>getComputedStyle(e).animationName')=='none'
     expect(page.locator('.action-layer')).to_have_count(0)
     expect(page.locator('.status-top')).to_contain_text('9,000 원')

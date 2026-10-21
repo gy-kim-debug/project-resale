@@ -118,3 +118,7 @@ export const dayOf = (g: Game) => Math.floor(g.minute / 1440) + 1;
 export const timeOf = (g: Game) =>
   `${String(Math.floor((g.minute % 1440) / 60)).padStart(2, '0')}:${String(g.minute % 60).padStart(2, '0')}`;
 export const isMoney = (n: number) => Number.isSafeInteger(n) && n >= 0;
+
+/** Remaining durations round up for compatible legacy saves. */
+export const hoursText = (minutes: number) =>
+  `${Math.ceil(Math.max(0, minutes) / 60)}시간`;

@@ -234,7 +234,7 @@ function ActivityHome({ g, open }: { g: Game; open: (r: Route) => void }) {
           </h2>
 
           <Button onClick={() => useGameStore.getState().act({ type: 'wait' })}>
-            구매 문의 기다리기 · 30분
+            구매 문의 기다리기 · 1시간
           </Button>
         </section>
       )}
