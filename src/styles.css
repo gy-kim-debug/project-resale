@@ -581,39 +581,6 @@ input[type='checkbox'] {
 .success {
   color: #d1e9a2;
 }
-.utility-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px 16px;
-  margin-top: 32px;
-  border-top: 1px solid var(--border);
-  padding-top: 15px;
-}
-.utility-links button {
-  background: none;
-  color: #91a084;
-  font-size: 11px;
-  padding: 0;
-}
-.utility-links small {
-  width: 100%;
-  font-size: 10px;
-}
-.recent {
-  margin-top: 28px;
-}
-.recent h2 {
-  font-size: 12px;
-  color: #b0bca2;
-  margin-bottom: 12px;
-}
-.recent p {
-  font-size: 11px;
-  color: #899a80;
-  border-left: 1px solid #536345;
-  padding-left: 10px;
-  margin: 10px 0;
-}
 .journal {
   list-style: none;
   padding: 0;

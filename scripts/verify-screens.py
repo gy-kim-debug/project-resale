@@ -85,14 +85,15 @@ with sync_playwright() as pw:
         page.get_by_label('상환 금액').fill('100');click('입력 금액 상환')
         expect(page.locator('main')).to_contain_text('9,999,999,900 원')
         # Full state export and malformed import rejection, keeping existing progress.
-        click('저장 관리')
+        page.locator('.header-tools').get_by_role('button',name='설정',exact=True).click()
+        click('저장·백업 관리')
         with page.expect_download() as download_info:click('백업 파일 내보내기')
         download=download_info.value;payload=json.loads(Path(download.path()).read_text());assert payload['version']==2
         page.once('dialog',lambda d:d.accept())
         page.locator('input[type=file]').set_input_files({'name':'bad.json','mimeType':'application/json','buffer':b'{"version":2,"game":{}}'})
         expect(page.get_by_role('status')).to_contain_text('저장 형식이 올바르지 않습니다.')
         assert saved()['game']['principal']==9_999_999_900
-        click('닫기')
+        click('← 뒤로');click('닫기')
         # Recovery at zero, final death, final clear through actual UI commands.
         fixture('empty');activity('식사');page.get_by_role('button',name='먹기 · 1시간',exact=True).first.click()
         expect(page.locator('meter[aria-label="포만감"]')).to_have_attribute('value','20')

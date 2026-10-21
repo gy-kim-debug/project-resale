@@ -262,12 +262,6 @@ function ActivityHome({ g, open }: { g: Game; open: (r: Route) => void }) {
           새 특별 제안 · {g.event.title}
         </Button>
       )}
-      <section className="recent">
-        <h2>최근 소식</h2>
-        {g.logs.slice(0, 3).map((l) => (
-          <p key={l.id}>{l.text}</p>
-        ))}
-      </section>
     </>
   );
 }
@@ -349,19 +343,6 @@ export default function App() {
                 </button>
               </div>
             )}
-            <footer className="utility-links">
-              <button onClick={() => open({ kind: '기록' })}>진행 기록</button>
-              <button onClick={() => open({ kind: '저장 관리' })}>
-                저장 관리
-              </button>
-              <small>
-                {state.saving
-                  ? '저장 중…'
-                  : state.saveError
-                    ? '저장 확인 필요'
-                    : '이 기기에 자동 저장'}
-              </small>
-            </footer>
           </main>
           <nav className="bottom-nav" aria-label="주요 메뉴">
             {nav.map((n) => (
