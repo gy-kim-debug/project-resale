@@ -91,9 +91,15 @@ export const useGameStore = create<State>((set, get) => ({
     clearTimeout(highlightTimer);
     // Navigation and chat replies update immediately, without action presentation.
     if (
-      ['offer', 'reject', 'counter', 'break', 'closeChat', 'visit'].includes(
-        command.type,
-      ) &&
+      [
+        'offer',
+        'reject',
+        'counter',
+        'break',
+        'closeChat',
+        'visit',
+        'event',
+      ].includes(command.type) &&
       result.game.minute === g.minute
     ) {
       set({

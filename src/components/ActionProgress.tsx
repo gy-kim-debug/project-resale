@@ -1,33 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ActionPresentation } from '../app/actionPresentation';
-import { dayOf, timeOf } from '../domain/game';
+import { actionsLeft, dayOf, dayStatus } from '../domain/game';
 
-/** Presentation only: elapsed game time was already resolved by the pure engine. */
-export function ActionClock({ action }: { action: ActionPresentation }) {
-  const [minute, setMinute] = useState(action.before.minute);
+/** Presentation only: the engine already committed the action and any new day. */
+export function ActionBudget({ action }: { action: ActionPresentation }) {
+  const [finished, setFinished] = useState(false);
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const start = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - start) / action.duration);
-      setMinute(
-        Math.floor(
-          (action.before.minute +
-            (action.after.minute - action.before.minute) * progress) /
-            60,
-        ) * 60,
-      );
-      if (progress < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    const timer = setTimeout(() => setFinished(true), action.duration * 0.7);
+    return () => clearTimeout(timer);
   }, [action]);
-  const clock = { ...action.before, minute };
+  const snapshot = finished ? action.after : action.before;
   return (
     <>
-      <span className="status-day">{dayOf(clock)}일째</span>{' '}
-      <strong className="status-clock">{timeOf(clock)}</strong>
+      <span className="status-day">{dayOf(snapshot)}일째</span>
+      <strong className="status-clock">
+        남은 행동 {actionsLeft(snapshot)}/3
+      </strong>
     </>
   );
 }
@@ -71,14 +60,10 @@ export function ActionProgress({ action }: { action: ActionPresentation }) {
           {action.label}
         </h2>
         {action.before.minute !== action.after.minute && (
-          <div className="action-time" aria-label="행동 전후 시간">
-            <time>
-              {dayOf(action.before)}일째 {timeOf(action.before)}
-            </time>
+          <div className="action-time" aria-label="행동 전후 상태">
+            <time>{dayStatus(action.before)}</time>
             <span aria-hidden="true">→</span>
-            <time>
-              {dayOf(action.after)}일째 {timeOf(action.after)}
-            </time>
+            <time>{dayStatus(action.after)}</time>
           </div>
         )}
         <div className="action-progress-track" aria-hidden="true">

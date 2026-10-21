@@ -30,12 +30,13 @@ with sync_playwright() as p:
   page.get_by_role('button',name='← 뒤로',exact=True).click()
   page.get_by_role('button',name='닫기',exact=True).click()
   page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
-  page.get_by_role('button',name='일하기 · 1시간',exact=True).click()
+  page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
   expect(page.locator('.action-layer')).to_be_visible()
   assert tools.locator('button:disabled').count()==2
   expect(page.locator('.action-layer')).to_have_count(0)
   assert tools.locator('button:enabled').count()==2
   page.get_by_role('button',name='닫기',exact=True).click()
+  page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name='보관함',exact=True).click()
   comparisons=page.locator('main .item-comparison')
   assert comparisons.count()==3

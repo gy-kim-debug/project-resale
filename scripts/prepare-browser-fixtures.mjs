@@ -58,6 +58,8 @@ for (let n = 0; n < 3; n++) {
   comparison = execute(comparison, { type: 'buy', id }).game;
   if (n !== 1) comparison = execute(comparison, { type: 'check', id }).game;
 }
+comparison.satiety = 100;
+comparison.fatigue = 100;
 // Keep one old snapshot shape to verify fallback to its actual agreement.
 delete comparison.inventory[2].acquiredFor;
 await writeFile(
@@ -67,6 +69,10 @@ await writeFile(
 
 const counter = globalThis.structuredClone(p);
 counter.sales[0].price = 1000;
+counter.inventory[0].value = 10000;
+counter.inventory[0].base = 10000;
+counter.inventory[0].condition = '양호';
+counter.inventory[0].checked = true;
 counter.inquiries[0].price = 100;
 counter.inquiries[0].max = 500;
 counter.inquiries[0].rounds = 0;

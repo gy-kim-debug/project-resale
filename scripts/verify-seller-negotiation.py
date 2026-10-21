@@ -19,12 +19,12 @@ with sync_playwright() as p:
   def state():return page.evaluate(READ)
   def propose(amount):
    page.get_by_label('제안할 판매 가격 (원)',exact=True).first.fill(str(amount))
-   page.get_by_role('button',name='가격 제안 · 0시간',exact=True).first.click()
+   page.get_by_role('button',name='가격 제안 · 행동 소모 없음',exact=True).first.click()
    assert page.locator('.action-layer').count()==0
   g=load()
   field=page.get_by_label('제안할 판매 가격 (원)',exact=True).first
   for invalid in ['100','1001','1.5']:
-   field.fill(invalid);assert page.get_by_role('button',name='가격 제안 · 0시간',exact=True).first.is_disabled()
+   field.fill(invalid);assert page.get_by_role('button',name='가격 제안 · 행동 소모 없음',exact=True).first.is_disabled()
   propose(200)
   expect(page.get_by_role('log').first).to_contain_text('좋아요. 200 원에 거래해요.')
   page.wait_for_function("async()=>(await ("+READ+")()).inquiries[0].price===200")
@@ -32,8 +32,8 @@ with sync_playwright() as p:
   page.reload();expect(page.get_by_role('log').first).to_contain_text('좋아요. 200 원에 거래해요.')
   page.get_by_role('log').first.scroll_into_view_if_needed();page.screenshot(path=f'work/seller-counter-{width}.png',full_page=True)
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-  page.get_by_role('button',name='수락하고 거래 · 1시간',exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible();expect(page.locator('.action-layer')).to_have_count(0)
-  assert state()['cash']==g['cash']+200;assert state()['minute']==g['minute']+60
+  page.get_by_role('button',name='수락하고 거래 · 행동 1회',exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible();expect(page.locator('.action-layer')).to_have_count(0)
+  assert state()['cash']==g['cash']+200;assert state()['minute']==g['minute']+480
   assert not state()['sales'] and not state()['inventory']
   # Above-budget counteroffer gets a reply, without changing listing or time.
   g=load();propose(800);expect(page.get_by_role('log').first).to_contain_text('그 가격은 어렵습니다.')
@@ -44,13 +44,13 @@ with sync_playwright() as p:
   page.wait_for_function("async id=>!(await ("+READ+")()).inquiries.some(q=>q.id===id)",arg=g['inquiries'][0]['id'])
   assert state()['sales']==g['sales'];assert state()['inquiries']==g['inquiries'][1:]
   assert state()['minute']==g['minute'];assert state()['inventory']==g['inventory']
-  page.get_by_role('button',name='거래 파토 · 0시간',exact=True).first.click()
+  page.get_by_role('button',name='거래 파토 · 행동 소모 없음',exact=True).first.click()
   page.wait_for_function("async()=>!(await ("+READ+")()).inquiries.length")
   assert state()['sales']==g['sales'];assert state()['minute']==g['minute']
   page.reload();expect(page.get_by_role('heading',name='활동',exact=True)).to_be_visible()
   assert state()['sales']==g['sales']
   for _ in range(16):
-   page.get_by_role('button',name='구매 문의 기다리기 · 1시간',exact=True).click()
+   page.get_by_role('button',name='구매 문의 기다리기 · 행동 1회',exact=True).click()
    expect(page.locator('.action-layer')).to_have_count(0)
    if page.get_by_role('heading',name='문의',exact=True).count():break
   expect(page.get_by_role('heading',name='문의',exact=True)).to_be_visible()

@@ -6,7 +6,13 @@ import {
   listingLimit,
   marketValue,
 } from '../src/domain/engine';
-import type { Command, Game } from '../src/domain/game';
+import {
+  ACTION_TICK,
+  actionsLeft,
+  dayOf,
+  type Command,
+  type Game,
+} from '../src/domain/game';
 import { RULES } from '../src/content/rules';
 import { isGame } from '../src/storage/validation';
 import { parseSave } from '../src/storage/saveRepository';
@@ -50,7 +56,7 @@ test('start, deterministic RNG, pure engine, rejected commands do not change tim
   assert.deepEqual(g, snapshot);
   assert.strictEqual(failed.game, g);
   const next = run(g, { type: 'job', id: 'flyer' });
-  assert.equal(next.minute, g.minute + 60);
+  assert.equal(next.minute, g.minute + ACTION_TICK);
   assert.equal(next.cash, 9000);
   assert.deepEqual(g, snapshot);
 });
@@ -73,18 +79,20 @@ test('satiety zero blocks consuming actions, not free meal / sleep / discard / i
   g.satiety = 0;
   assert.ok(run(g, { type: 'accept', id: g.inquiries[0].id }).cash > g.cash);
 });
-test('free meals repeat to full, fixed sleep satiety loss, sleep preserves health', () => {
+test('free meals remain repeatable across days; sleep has fixed hunger cost and preserves health', () => {
   let g = newGame(4);
   g.satiety = 0;
   g.health = 30;
-  for (let i = 0; i < 8; i++) g = run(g, { type: 'meal', id: 'free' });
-  assert.equal(g.satiety, 100);
+  for (let i = 0; i < 12; i++) g = run(g, { type: 'meal', id: 'free' });
+  assert.ok(g.satiety > 0);
+  assert.ok(g.health > 30);
+  const beforeSleep = g.satiety;
   const h = g.health;
   g = run(g, { type: 'sleep' });
-  assert.equal(g.satiety, 82);
+  assert.equal(g.satiety, Math.max(0, beforeSleep - RULES.sleepSatiety));
   assert.equal(g.health, h);
   assert.equal(g.fatigue, 100);
-  assert.equal(g.minute % 1440, 540);
+  assert.equal(g.minute % 1440, 0);
 });
 test('fatigue zero ends day, health zero is final, death cannot be healed', () => {
   let g = newGame();
@@ -262,7 +270,7 @@ test('outlet requires visit, exact fixed price, quote expiry and listed blocking
   const sale = run(g, { type: 'outletSell', id });
   assert.equal(sale.cash, cash + price);
   assert.equal(sale.inventory.length, 0);
-  g.minute += 120;
+  g.minute += ACTION_TICK * 2;
   assert.equal(execute(g, { type: 'outletSell', id }).ok, false);
   g = owned();
   g = run(g, { type: 'post', id: g.inventory[0].id, price: 99999999 });
@@ -318,7 +326,7 @@ test('expiry frees listing without disposing item; fixed capacity never grows', 
 test('conditional event chain and random market update', () => {
   let g = rich();
   g.stats.sales = 3;
-  g.minute += 180;
+  g.minute += ACTION_TICK;
   g = run(g, { type: 'wait' });
   assert.equal(g.event?.type, 'repair');
   g = run(g, { type: 'event', choice: 'yes' });
@@ -425,18 +433,18 @@ for (const seed of [1, 42, 210])
     );
   });
 
-test('every paid-time action advances whole hours, and listing wait starts after registration', () => {
-  const cases: { game: Game; command: Command; hours: number }[] = [];
-  for (const [id, hours] of [
+test('each major action costs one daily action and inquiries start after registration', () => {
+  const cases: { game: Game; command: Command; cost: number }[] = [];
+  for (const [id, cost] of [
     ['flyer', 1],
-    ['shop', 2],
-    ['warehouse', 3],
+    ['shop', 1],
+    ['warehouse', 1],
   ] as const)
-    cases.push({ game: rich(), command: { type: 'job', id }, hours });
+    cases.push({ game: rich(), command: { type: 'job', id }, cost });
   for (const id of ['free', 'rice', 'meal'])
-    cases.push({ game: rich(), command: { type: 'meal', id }, hours: 1 });
+    cases.push({ game: rich(), command: { type: 'meal', id }, cost: 1 });
   for (const type of ['treat', 'scavenge', 'refresh', 'wait'] as const)
-    cases.push({ game: rich(), command: { type }, hours: 1 });
+    cases.push({ game: rich(), command: { type }, cost: 1 });
   for (const type of ['buy', 'offer'] as const) {
     const g = rich();
     cases.push({
@@ -445,7 +453,7 @@ test('every paid-time action advances whole hours, and listing wait starts after
         type === 'offer'
           ? { type, id: g.board[0].id, price: g.board[0].offers[0] }
           : { type, id: g.board[0].id },
-      hours: type === 'offer' ? 0 : 1,
+      cost: type === 'offer' ? 0 : 1,
     });
   }
   for (const type of ['check', 'repair', 'post', 'visit', 'repay'] as const) {
@@ -460,7 +468,7 @@ test('every paid-time action advances whole hours, and listing wait starts after
           : type === 'repay'
             ? { type, amount: 1 }
             : { type, id: g.inventory[0].id };
-    cases.push({ game: g, command, hours: type === 'visit' ? 0 : 1 });
+    cases.push({ game: g, command, cost: type === 'visit' ? 0 : 1 });
   }
   let g = run(owned(), { type: 'post', id: owned().inventory[0].id, price: 1 });
   assert.equal(
@@ -470,22 +478,22 @@ test('every paid-time action advances whole hours, and listing wait starts after
   );
   assert.equal(g.sales[0].created, g.minute);
   assert.equal(g.sales[0].expires - g.minute, 48 * 60);
-  assert.equal(g.sales[0].nextCheck - g.minute, 60);
+  assert.equal(g.sales[0].nextCheck - g.minute, ACTION_TICK);
   cases.push({
     game: g,
     command: { type: 'cancel', id: g.inventory[0].id },
-    hours: 1,
+    cost: 1,
   });
   g = run(owned(), { type: 'visit', id: 'scrap' });
   cases.push({
     game: g,
     command: { type: 'outletSell', id: g.inventory[0].id },
-    hours: 1,
+    cost: 1,
   });
   for (const type of ['accept', 'reject', 'break'] as const) {
     g = pending();
     if (type !== 'accept') continue; // free chat commands are covered separately
-    cases.push({ game: g, command: { type, id: g.inquiries[0].id }, hours: 1 });
+    cases.push({ game: g, command: { type, id: g.inquiries[0].id }, cost: 1 });
   }
   for (const choice of ['yes', 'no'] as const) {
     g = rich();
@@ -493,24 +501,29 @@ test('every paid-time action advances whole hours, and listing wait starts after
       id: 'hour-event',
       type: 'deal',
       title: '제안',
-      text: '1시간',
+      text: '행동 1회',
       expires: g.minute + 480,
     };
-    cases.push({ game: g, command: { type: 'event', choice }, hours: 1 });
+    cases.push({
+      game: g,
+      command: { type: 'event', choice },
+      cost: choice === 'yes' ? 1 : 0,
+    });
   }
-  for (const { game, command, hours } of cases) {
+  for (const { game, command, cost } of cases) {
     const next = run(game, command);
     assert.equal(
       next.minute - game.minute,
-      hours * 60,
+      cost * ACTION_TICK,
       JSON.stringify(command),
     );
-    assert.equal(next.minute % 60, 0);
+    assert.equal(next.minute % ACTION_TICK, 0);
   }
 });
 
-test('hourly actions settle midnight once and legacy saves retain resources and relative deadlines', () => {
+test('legacy saves migrate once to a fresh three-action day without losing resources', () => {
   const old = run(owned(), { type: 'visit', id: 'scrap' });
+  delete old.timeMode;
   old.minute = 3 * 1440 + 23 * 60 + 45;
   old.marketDay = 4;
   old.board[0].expires = old.minute + 30;
@@ -526,9 +539,10 @@ test('hourly actions settle midnight once and legacy saves retain resources and 
   const g = migrated.game;
   assert.deepEqual(old, snapshot, 'migration is pure');
   assert.ok(isGame(g));
-  assert.equal(g.minute, 3 * 1440 + 23 * 60);
-  assert.equal(g.board[0].expires - g.minute, 30);
-  assert.equal(g.minute - g.quotes!.at, 15);
+  assert.equal(g.minute, 3 * 1440);
+  assert.equal(actionsLeft(g), 3);
+  assert.equal(g.board[0].expires - g.minute, ACTION_TICK);
+  assert.equal(g.minute - g.quotes!.at, 0);
   for (const key of [
     'cash',
     'principal',
@@ -543,7 +557,10 @@ test('hourly actions settle midnight once and legacy saves retain resources and 
     assert.equal(g[key], old[key]);
   assert.deepEqual(migrated.favoriteIds, ['favorite']);
   assert.deepEqual(parseSave(migrated), migrated, 'migration is idempotent');
-  const after = run(g, { type: 'wait' });
+  const first = run(g, { type: 'wait' });
+  assert.equal(first.interest, g.interest);
+  const second = run(first, { type: 'wait' });
+  const after = run(second, { type: 'wait' });
   assert.equal(after.minute, 4 * 1440);
   assert.equal(after.interest - g.interest, 10_000);
   assert.equal(run(after, { type: 'wait' }).interest, after.interest);
@@ -575,7 +592,7 @@ test('purchase chat and closure are free; only purchase consumes transaction tim
   const bought = run(restored, { type: 'buy', id: item.id });
   assert.equal(
     bought.minute - before.minute,
-    60,
+    ACTION_TICK,
     'chat plus exchange is one hour total',
   );
   assert.equal(bought.inventory[0].chatSettled, true);
@@ -599,7 +616,7 @@ test('purchase chat and closure are free; only purchase consumes transaction tim
   assert.equal(isGame(invalid), false);
 });
 
-test('sales chat and either side walking cost no time; completed sale takes one hour', () => {
+test('sales chat and either side walking cost no time; completed sale costs one daily action', () => {
   const base = pending();
   let continued = false,
     walked = false;
@@ -626,7 +643,10 @@ test('sales chat and either side walking cost no time; completed sale takes one 
       assert.ok(after.inquiries[0].price > q.price);
       for (const type of ['accept', 'break'] as const) {
         const ended = run(after, { type, id: q.id });
-        assert.equal(ended.minute - g.minute, type === 'accept' ? 60 : 0);
+        assert.equal(
+          ended.minute - g.minute,
+          type === 'accept' ? ACTION_TICK : 0,
+        );
         assert.equal(
           ended.inquiries.length,
           type === 'accept' ? 0 : after.inquiries.length - 1,
@@ -671,7 +691,7 @@ test('removed pre-purchase inspection is rejected atomically; legacy inspection 
     false,
     'value and hidden defects still need appraisal',
   );
-  assert.equal(bought.minute - g.minute, 60);
+  assert.equal(bought.minute - g.minute, ACTION_TICK);
 });
 
 test('acquisition cost records the exact payment, survives appraisal, and free finds cost zero', () => {
@@ -767,7 +787,7 @@ test('seller counteroffers can be accepted or countered; failed negotiation keep
   assert.deepEqual(restored, accepted);
   const sold = run(restored, { type: 'accept', id: q.id });
   assert.equal(sold.cash - base.cash, 200);
-  assert.equal(sold.minute - base.minute, 60);
+  assert.equal(sold.minute - base.minute, ACTION_TICK);
   assert.equal(sold.inventory.length, 0);
   assert.equal(sold.sales.length, 0);
   for (const price of [-1, 0, 100, 1.5, 1001, Infinity, NaN]) {
@@ -820,9 +840,9 @@ test('new buyers can inquire on the same unchanged listing after all previous ch
   assert.ok(g.inquiries.every((q) => !previous.includes(q.id)));
 });
 
-test('outlet travel at zero satiety consumes no time, stats, RNG or journal entries; actual selling still takes an hour', () => {
+test('outlet travel at zero satiety consumes no time, stats, RNG or journal entries; actual selling costs one daily action', () => {
   const original = owned();
-  original.minute = 3 * 1440 + 23 * 60;
+  original.minute = 3 * 1440 + ACTION_TICK * 2;
   original.marketDay = 4;
   original.satiety = 0;
   original.fatigue = 0;
@@ -845,12 +865,147 @@ test('outlet travel at zero satiety consumes no time, stats, RNG or journal entr
     type: 'outletSell',
     id: playable.inventory[0].id,
   });
-  assert.equal(sold.minute - playable.minute, 60);
+  assert.equal(sold.minute - playable.minute, ACTION_TICK);
   assert.equal(sold.cash - playable.cash, quote);
   assert.equal(sold.inventory.length, 0);
   assert.equal(
     sold.interest - playable.interest,
     10_000,
-    'only the actual sale crosses midnight',
+    'only the actual sale crosses a day boundary',
   );
+});
+
+test('three major actions end exactly one day and refill the next daily budget', () => {
+  let g = newGame(42);
+  const originalBoard = g.board.map((i) => i.id);
+  assert.equal(dayOf(g), 1);
+  assert.equal(actionsLeft(g), 3);
+  for (const left of [2, 1, 3]) {
+    g = run(g, { type: 'job', id: 'flyer' });
+    assert.equal(actionsLeft(g), left);
+  }
+  assert.equal(dayOf(g), 2);
+  assert.equal(g.minute, 1440);
+  assert.equal(g.cash, 27000);
+  assert.equal(g.fatigue, 100);
+  assert.equal(g.satiety, 100 - (12 + 6) * 3 - 18);
+  assert.equal(g.health, 100);
+  assert.notDeepEqual(
+    g.board.map((i) => i.id),
+    originalBoard,
+  );
+});
+
+test('manual sleep forfeits remaining actions and heavy work can end the day early', () => {
+  let g = run(newGame(), { type: 'job', id: 'flyer' });
+  assert.equal(actionsLeft(g), 2);
+  const beforeSleep = structuredClone(g);
+  g = run(g, { type: 'sleep' });
+  assert.equal(dayOf(g), dayOf(beforeSleep) + 1);
+  assert.equal(actionsLeft(g), 3);
+  assert.equal(g.satiety, beforeSleep.satiety - 18);
+  assert.equal(g.health, beforeSleep.health);
+  assert.equal(g.fatigue, 100);
+  g = newGame();
+  g = run(g, { type: 'job', id: 'warehouse' });
+  assert.equal(actionsLeft(g), 2);
+  assert.equal(g.fatigue, 46);
+  g = run(g, { type: 'job', id: 'warehouse' });
+  assert.equal(dayOf(g), 2);
+  assert.equal(actionsLeft(g), 3);
+  assert.equal(g.fatigue, 100);
+  assert.equal(g.cash, 76000);
+  assert.ok(g.logs.some((l) => l.text.includes('피로도 소진')));
+});
+
+test('third-action meal recovers after the action cost and before the overnight loss', () => {
+  const g = newGame();
+  g.minute = ACTION_TICK * 2;
+  g.satiety = 20;
+  g.health = 50;
+  const after = run(g, { type: 'meal', id: 'free' });
+  assert.equal(dayOf(after), 2);
+  assert.equal(actionsLeft(after), 3);
+  assert.equal(after.satiety, 20 - 12 + 20 - 18);
+  assert.equal(after.health, 55);
+  assert.equal(after.fatigue, 100);
+  const fed = rich();
+  fed.satiety = 70;
+  assert.equal(run(fed, { type: 'meal', id: 'meal' }).satiety, 100);
+});
+
+test('free navigation, bargaining, disposal and declining proposals never spend a daily action', () => {
+  let g = owned();
+  const before = g.minute;
+  g = run(g, { type: 'visit', id: 'scrap' });
+  g = run(g, { type: 'offer', id: g.board[0].id, price: g.board[0].offers[0] });
+  g = run(g, { type: 'closeChat', id: g.board[0].id });
+  g = run(g, { type: 'discard', id: g.inventory[0].id });
+  g.event = {
+    id: 'daily-event',
+    type: 'deal',
+    title: '제안',
+    text: '일손',
+    expires: g.minute + 1440,
+  };
+  g = run(g, { type: 'event', choice: 'no' });
+  assert.equal(g.minute, before);
+  assert.equal(actionsLeft(g), 3);
+  assert.equal(g.satiety, 100);
+  assert.equal(g.fatigue, 100);
+});
+
+test('daily interest is settled once after the third action, never per action', () => {
+  let g = newGame();
+  g.minute = 2 * 1440 + ACTION_TICK * 2;
+  g.marketDay = 3;
+  g = run(g, { type: 'wait' });
+  assert.equal(dayOf(g), 4);
+  assert.equal(g.interest, 10000);
+  g = run(g, { type: 'wait' });
+  g = run(g, { type: 'wait' });
+  assert.equal(g.interest, 10000);
+  g = run(g, { type: 'wait' });
+  assert.equal(dayOf(g), 5);
+  assert.equal(g.interest, 20000);
+});
+
+test('migration retains active listings, chats, prices and finances and refuses malformed new time grids', () => {
+  const old = pending();
+  delete old.timeMode;
+  old.minute = 9 * 1440 + 13 * 60 + 15;
+  old.marketDay = 10;
+  old.sales[0].expires = old.minute + 2880;
+  old.sales[0].nextCheck = old.minute + 30;
+  old.quotes = {
+    outlet: 'scrap',
+    at: old.minute - 15,
+    prices: { [old.inventory[0].id]: 123 },
+  };
+  const before = structuredClone(old);
+  const saved = parseSave({ version: 2, game: old, favoriteIds: ['kept'] });
+  const g = saved.game;
+  assert.deepEqual(old, before);
+  assert.equal(g.timeMode, 'daily-actions');
+  assert.equal(dayOf(g), 10);
+  assert.equal(actionsLeft(g), 3);
+  assert.deepEqual(g.inquiries, old.inquiries);
+  assert.deepEqual(g.stats, old.stats);
+  assert.equal(g.sales[0].price, old.sales[0].price);
+  assert.equal(g.sales[0].expires - g.minute, 2880);
+  assert.equal(g.sales[0].nextCheck - g.minute, ACTION_TICK);
+  assert.deepEqual(g.quotes?.prices, old.quotes.prices);
+  for (const key of [
+    'cash',
+    'principal',
+    'interest',
+    'satiety',
+    'fatigue',
+    'health',
+    'seed',
+  ] as const)
+    assert.equal(g[key], old[key]);
+  assert.deepEqual(parseSave(saved), saved);
+  assert.equal(isGame({ ...g, minute: g.minute + 1 }), false);
+  assert.equal(isGame({ ...g, timeMode: 'unknown' }), false);
 });

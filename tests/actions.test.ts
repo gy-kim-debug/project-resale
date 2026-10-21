@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { useGameStore, flushSaves } from '../src/app/store';
 import { saveRepository, type SaveData } from '../src/storage/saveRepository';
 import { newGame, execute } from '../src/domain/engine';
+import { ACTION_TICK } from '../src/domain/game';
 import {
   ACTION_DURATION_MS,
   changesBetween,
@@ -35,7 +36,7 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.equal(active.action?.duration, 750);
   assert.ok(ACTION_DURATION_MS >= 500 && ACTION_DURATION_MS <= 1000);
   assert.equal(active.action?.before.minute, before.minute);
-  assert.equal(active.action?.after.minute, before.minute + 60);
+  assert.equal(active.action?.after.minute, before.minute + ACTION_TICK);
   assert.equal(active.game!.cash, 9000);
   assert.equal(active.notice, '');
   assert.equal(await active.act({ type: 'job', id: 'flyer' }), false);
@@ -53,7 +54,7 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.ok(!('action' in writes[0]));
   assert.equal(store.getState().action, null);
   assert.equal(store.getState().changes.cash, 9000);
-  assert.equal(store.getState().changes.minute, 60);
+  assert.equal(store.getState().changes.minute, ACTION_TICK);
   assert.match(store.getState().notice, /전단 배포 완료/);
 });
 test('navigation, favorites and rejected actions do not show presentation or consume time', async () => {

@@ -1,4 +1,4 @@
-"""Outlet travel is navigation, including at zero satiety; actual sale costs an hour."""
+"""Outlet travel is navigation, including at zero satiety; actual sale costs one action."""
 import json
 import os
 from pathlib import Path
@@ -34,14 +34,14 @@ with sync_playwright() as p:
   page.wait_for_function("async()=>(await ("+READ+")()).quotes?.outlet==='scrap'")
   quote=page.evaluate(READ)['quotes']['prices'][g['inventory'][0]['id']]
   page.locator('.sheet-layer .item-row').first.click()
-  page.get_by_role('button',name='제시 가격으로 판매 확정 · 1시간',exact=True).click()
+  page.get_by_role('button',name='제시 가격으로 판매 확정 · 행동 1회',exact=True).click()
   expect(page.locator('.action-layer')).to_be_visible();expect(page.locator('.action-layer')).to_have_count(0)
   saved=page.evaluate(READ)
-  assert saved['minute']==g['minute']+60
+  assert saved['minute']==g['minute']+480
   assert saved['cash']==g['cash']+quote
   assert len(saved['inventory'])==len(g['inventory'])-1
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   assert not errors,errors
-  results.append({'width':width,'travel_zero_stats_no_layer':'PASS','quote_save_reload':'PASS','actual_sale_one_hour':'PASS'})
+  results.append({'width':width,'travel_zero_stats_no_layer':'PASS','quote_save_reload':'PASS','actual_sale_one_action':'PASS'})
   ctx.close()
  browser.close();print(json.dumps(results))

@@ -96,17 +96,20 @@ small {
   gap: 2px;
   line-height: 1.25;
 }
-.status-day,
 .header-label {
   font-size: 11px;
   color: #a9b7a1;
   font-weight: 400;
 }
-.status-clock {
-  font-size: 28px;
-  letter-spacing: 0.5px;
+.status-day {
+  font-size: 26px;
   font-weight: 700;
   color: #f0f3df;
+}
+.status-clock {
+  font-size: 13px;
+  font-weight: 500;
+  color: #c8d4be;
 }
 .header-cash {
   display: grid;

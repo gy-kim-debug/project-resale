@@ -18,9 +18,9 @@ import {
   type Route,
 } from './components/GameViews';
 import type { Game } from './domain/game';
-import { dayOf, timeOf, won } from './domain/game';
+import { dayOf, actionsLeft, won } from './domain/game';
 import { listingLimit, tier } from './domain/engine';
-import { ActionClock, ActionProgress } from './components/ActionProgress';
+import { ActionBudget, ActionProgress } from './components/ActionProgress';
 import type {
   ActionPresentation,
   Changes,
@@ -98,11 +98,13 @@ function Header({
           className={`header-time${changed('minute')}`}
         >
           {action ? (
-            <ActionClock key={action.id} action={action} />
+            <ActionBudget key={action.id} action={action} />
           ) : (
             <>
               <span className="status-day">{dayOf(g)}일째</span>{' '}
-              <strong className="status-clock">{timeOf(g)}</strong>
+              <strong className="status-clock">
+                남은 행동 {actionsLeft(g)}/3
+              </strong>
             </>
           )}
         </time>
@@ -253,7 +255,7 @@ function ActivityHome({ g, open }: { g: Game; open: (r: Route) => void }) {
           </h2>
 
           <Button onClick={() => useGameStore.getState().act({ type: 'wait' })}>
-            구매 문의 기다리기 · 1시간
+            구매 문의 기다리기 · 행동 1회
           </Button>
         </section>
       )}

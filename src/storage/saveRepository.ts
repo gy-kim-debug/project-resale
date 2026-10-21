@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 import type { Game } from '../domain/game';
 import { isGame } from './validation';
-import { alignToHour } from '../domain/time';
+import { toDailyActions } from '../domain/time';
 export interface SaveData {
   version: 2;
   game: Game;
@@ -29,7 +29,7 @@ export function parseSave(value: unknown): SaveData {
     );
   return {
     version: 2,
-    game: alignToHour(value.game),
+    game: toDailyActions(value.game),
     favoriteIds: value.favoriteIds,
   };
 }

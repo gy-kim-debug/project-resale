@@ -1,4 +1,4 @@
-/** Serializable game types. KRW uses safe integers; elapsed time uses integer minutes. */
+/** Serializable game types. KRW uses safe integers; the legacy minute field stores discrete daily action ticks. */
 export type Kind = '생활' | '디지털' | '가구' | '수집품';
 export type Condition = '양호' | '사용감' | '고장';
 export type Status = 'playing' | 'dead' | 'cleared';
@@ -58,6 +58,7 @@ export interface Event {
 }
 export interface Game {
   version: 2;
+  timeMode?: 'daily-actions';
   seed: number;
   serial: number;
   minute: number;
@@ -123,10 +124,20 @@ export interface Result {
 }
 export const won = (n: number) => `${n.toLocaleString('ko-KR')} 원`;
 export const dayOf = (g: Game) => Math.floor(g.minute / 1440) + 1;
-export const timeOf = (g: Game) =>
-  `${String(Math.floor((g.minute % 1440) / 60)).padStart(2, '0')}:${String(g.minute % 60).padStart(2, '0')}`;
+export const ACTIONS_PER_DAY = 3;
+export const ACTION_TICK = 480;
+export const actionsLeft = (g: Game) =>
+  ACTIONS_PER_DAY - Math.floor((g.minute % 1440) / ACTION_TICK);
+export const dayStatus = (g: Game) =>
+  `${dayOf(g)}일째 · 남은 행동 ${actionsLeft(g)}/${ACTIONS_PER_DAY}`;
 export const isMoney = (n: number) => Number.isSafeInteger(n) && n >= 0;
 
-/** Remaining durations round up for compatible legacy saves. */
-export const hoursText = (minutes: number) =>
-  `${Math.ceil(Math.max(0, minutes) / 60)}시간`;
+/** Durations in days and actions; no wall clock is exposed. */
+export const durationText = (ticks: number) => {
+  const actions = Math.ceil(Math.max(0, ticks) / ACTION_TICK);
+  const days = Math.floor(actions / ACTIONS_PER_DAY);
+  const rest = actions % ACTIONS_PER_DAY;
+  return days
+    ? `${days}일${rest ? ` · 행동 ${rest}회` : ''}`
+    : `행동 ${rest}회`;
+};

@@ -1,22 +1,36 @@
-import type { Game } from './game';
+import { ACTION_TICK, dayOf, type Game } from './game';
 
-/** Legacy minute-based snapshots retain resources and relative deadlines. */
-export function alignToHour(original: Game): Game {
-  const offset = original.minute % 60;
-  if (!offset) return original;
+/** One-time, pure migration of hour/minute saves. Finances, items and RNG survive. */
+export function toDailyActions(original: Game): Game {
+  if (original.timeMode === 'daily-actions') return original;
   const g = structuredClone(original);
-  const shift = (minute: number) => Math.max(0, minute - offset);
-  g.minute -= offset;
-  g.lastEvent = shift(g.lastEvent);
+  const oldNow = g.minute;
+  const now = Math.floor(oldNow / 1440) * 1440;
+  const deadline = (old: number) =>
+    Math.max(0, now + Math.ceil((old - oldNow) / ACTION_TICK) * ACTION_TICK);
+  g.minute = now;
+  g.timeMode = 'daily-actions';
+  g.marketDay = dayOf(g);
+  g.lastEvent = Math.max(
+    0,
+    now -
+      Math.floor(Math.max(0, oldNow - g.lastEvent) / ACTION_TICK) * ACTION_TICK,
+  );
   for (const item of [...g.board, ...g.inventory])
-    item.expires = shift(item.expires);
+    item.expires = deadline(item.expires);
   for (const sale of g.sales) {
-    sale.created = shift(sale.created);
-    sale.expires = shift(sale.expires);
-    sale.nextCheck = shift(sale.nextCheck);
+    sale.created = Math.min(now, deadline(sale.created));
+    sale.expires = deadline(sale.expires);
+    sale.nextCheck = Math.max(now + ACTION_TICK, deadline(sale.nextCheck));
   }
-  if (g.quotes) g.quotes.at = shift(g.quotes.at);
-  if (g.event) g.event.expires = shift(g.event.expires);
-  for (const entry of g.logs) entry.minute = shift(entry.minute);
+  if (g.quotes)
+    g.quotes = oldNow - g.quotes.at >= 120 ? null : { ...g.quotes, at: now };
+  if (g.event) {
+    g.event.expires = deadline(g.event.expires);
+    g.event.text =
+      g.event.type === 'repair'
+        ? '정비 교육을 제안합니다. 5,000원 · 행동 1회.'
+        : '이사 정리 일손을 구합니다. 보상 15,000원 · 행동 1회.';
+  }
   return g;
 }

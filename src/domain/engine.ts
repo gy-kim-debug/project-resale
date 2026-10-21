@@ -1,5 +1,6 @@
 import type { Command, Game, Item, Result, Kind } from './game';
-import { dayOf, isMoney, won } from './game';
+import { dayOf, isMoney, won, ACTION_TICK } from './game';
+import { toDailyActions } from './time';
 import {
   CATALOG,
   FOODS,
@@ -160,15 +161,18 @@ function daily(g: Game, before: number) {
     log(g, `시장 변화: 오늘은 ${g.trend} 수요가 높습니다.`);
   }
 }
-function sleep(g: Game, automatic = false) {
-  const before = g.minute;
-  g.minute = (Math.floor(g.minute / 1440) + 1) * 1440 + 540;
+function endDay(
+  g: Game,
+  before: number,
+  reason: 'sleep' | 'fatigue' | 'budget',
+) {
+  g.minute = (Math.floor(before / 1440) + 1) * 1440;
   g.satiety = clamp(g.satiety - RULES.sleepSatiety);
   g.fatigue = 100;
   daily(g, before);
   log(
     g,
-    `${automatic ? '피로도 소진으로 하루 종료.' : '수면 완료.'} 다음 날 아침, 포만감 -${RULES.sleepSatiety} · 피로도 100. 체력은 유지됩니다.`,
+    `${reason === 'fatigue' ? '피로도 소진으로' : reason === 'budget' ? '오늘의 행동을 모두 마쳐' : '수면으로'} 하루 종료. 포만감 -${RULES.sleepSatiety} · 피로도 100.`,
   );
   board(g);
 }
@@ -184,7 +188,7 @@ function expire(g: Game) {
     );
   g.sales = g.sales.filter((s) => !expired.some((e) => e.id === s.id));
   g.board = g.board.filter((i) => i.expires > g.minute);
-  if (g.quotes && g.minute - g.quotes.at >= 120) g.quotes = null;
+  if (g.quotes && g.minute - g.quotes.at >= ACTION_TICK * 2) g.quotes = null;
   if (g.event && g.event.expires <= g.minute) {
     log(g, '특별 제안이 만료됐습니다.');
     g.event = null;
@@ -194,7 +198,7 @@ function inquiries(g: Game) {
   if (g.inquiries.length || g.status !== 'playing') return;
   for (const sale of g.sales) {
     if (sale.nextCheck > g.minute) continue;
-    sale.nextCheck = g.minute + 60;
+    sale.nextCheck = g.minute + ACTION_TICK;
     const item = g.inventory.find((i) => i.id === sale.itemId);
     if (!item) continue;
     const value = marketValue(g, item);
@@ -226,14 +230,15 @@ function inquiries(g: Game) {
   }
 }
 function event(g: Game) {
-  if (g.event || g.minute - g.lastEvent < 180 || g.status !== 'playing') return;
+  if (g.event || g.minute - g.lastEvent < ACTION_TICK || g.status !== 'playing')
+    return;
   if (g.stats.sales >= 3 && g.eventStage === 0) {
     g.eventStage = 1;
     g.event = {
       id: id(g),
       type: 'repair',
       title: '수리 전문가의 연락',
-      text: '작은 거래들을 지켜봤다며 정비 교육을 제안합니다. 5,000원 · 1시간. 수리 경험 +4.',
+      text: '작은 거래들을 지켜봤다며 정비 교육을 제안합니다. 5,000원 · 행동 1회.',
       expires: g.minute + 2880,
     };
     g.lastEvent = g.minute;
@@ -249,43 +254,46 @@ function event(g: Game) {
       id: id(g),
       type: 'deal',
       title: '이사 정리 일손 제안',
-      text: '급히 일손을 구하는 이웃입니다. 1시간 · 포만감 추가 8 · 피로도 추가 5, 보상 15,000원.',
-      expires: g.minute + 480,
+      text: '급히 일손을 구하는 이웃입니다. 보상 15,000원 · 행동 1회.',
+      expires: g.minute + 1440,
     };
     g.lastEvent = g.minute;
     log(g, '이웃에게 시간 제한이 있는 제안이 왔습니다.');
   }
 }
-/** Advance only on commands. No wall-clock/offline progression. */
+/** Each major action spends one of three daily actions. No offline progression. */
 function advance(
   g: Game,
-  hours: number,
+  actions: number,
   hungerExtra = 0,
   fatigueExtra = 0,
   recovery = false,
   generate = true,
+  gains?: { satiety?: number; health?: number },
 ) {
-  const minutes = hours * 60;
   const before = g.minute;
-  g.minute += minutes;
-  g.hungerRemainder += minutes * 3;
-  const hunger = Math.floor(g.hungerRemainder / 60);
-  g.hungerRemainder %= 60;
-  g.fatigueRemainder += minutes * 4;
-  const fatigue = Math.floor(g.fatigueRemainder / 60);
-  g.fatigueRemainder %= 60;
-  if (!recovery && g.satiety <= hunger + hungerExtra) {
-    g.health = clamp(g.health - hours * 4);
+  g.minute += actions * ACTION_TICK;
+  const hunger = RULES.actionSatiety * actions + hungerExtra;
+  const fatigue = RULES.actionFatigue * actions + fatigueExtra;
+  if (!recovery && g.satiety <= hunger) {
+    g.health = clamp(g.health - RULES.emptySatietyDamage);
     log(g, '활동 중 포만감이 바닥나 체력이 감소했습니다.');
   }
-  g.satiety = clamp(g.satiety - hunger - hungerExtra);
-  g.fatigue = clamp(g.fatigue - fatigue - fatigueExtra);
-  daily(g, before);
+  g.satiety = clamp(g.satiety - hunger);
+  g.fatigue = clamp(g.fatigue - fatigue);
+  if (gains) {
+    g.satiety = clamp(g.satiety + (gains.satiety ?? 0));
+    g.health = clamp(g.health + (gains.health ?? 0));
+  }
   if (g.health === 0) {
+    daily(g, before);
     g.status = 'dead';
     g.inquiries = [];
     log(g, '체력이 0이 되어 사망했습니다. 이 이야기는 끝났습니다.');
-  } else if (g.fatigue === 0) sleep(g, true);
+  } else if (g.fatigue === 0) endDay(g, before, 'fatigue');
+  else if (dayOf(g) > Math.floor(before / 1440) + 1)
+    endDay(g, before, 'budget');
+  else daily(g, before);
   expire(g);
   if (generate) inquiries(g);
   event(g);
@@ -325,9 +333,10 @@ function preItem(g: Game, itemId: string) {
 export function newGame(seed = 1): Game {
   const g: Game = {
     version: 2,
+    timeMode: 'daily-actions',
     seed: seed >>> 0,
     serial: 0,
-    minute: 540,
+    minute: 0,
     status: 'playing',
     cash: 0,
     principal: RULES.debt,
@@ -357,7 +366,7 @@ export function newGame(seed = 1): Game {
     logs: [],
     event: null,
     eventStage: 0,
-    lastEvent: 540,
+    lastEvent: 0,
   };
   board(g);
   log(g, '현금 0원, 채무 100억 원.');
@@ -365,7 +374,7 @@ export function newGame(seed = 1): Game {
 }
 export function execute(original: Game, command: Command): Result {
   // Copy first; any rejected/invalid command leaves all state and RNG unchanged.
-  const g = structuredClone(original);
+  const g = structuredClone(toDailyActions(original));
   try {
     if (g.status !== 'playing') throw Error('종료된 게임입니다.');
     if (
@@ -382,7 +391,7 @@ export function execute(original: Game, command: Command): Result {
         money(g, j.reward);
         message = `${j.title} 완료. ${won(j.reward)}을 받았습니다.`;
         log(g, message);
-        advance(g, j.hours, j.satiety, j.fatigue);
+        advance(g, j.actions, j.satiety, j.fatigue);
         break;
       }
       case 'meal': {
@@ -390,9 +399,10 @@ export function execute(original: Game, command: Command): Result {
         if (!f) throw Error('없는 음식입니다.');
         affordable(g, f.cost);
         money(g, -f.cost);
-        advance(g, f.hours, 0, 0, true);
-        g.satiety = clamp(g.satiety + f.satiety);
-        g.health = clamp(g.health + f.health);
+        advance(g, f.actions, 0, 0, true, true, {
+          satiety: f.satiety,
+          health: f.health,
+        });
         message = `${f.title}: 포만감 +${f.satiety} · 체력 +${f.health}.`;
         log(g, message);
         break;
@@ -400,17 +410,16 @@ export function execute(original: Game, command: Command): Result {
       case 'treat':
         affordable(g, 10_000);
         money(g, -10_000);
-        advance(g, 1, 0, 0, true);
-        g.health = clamp(g.health + 60);
+        advance(g, 1, 0, 0, true, true, { health: 60 });
         message = '치료 완료. 체력 +60.';
         log(g, message);
         break;
       case 'sleep':
-        sleep(g);
+        endDay(g, g.minute, 'sleep');
         expire(g);
         inquiries(g);
         event(g);
-        message = '다음 날 아침입니다.';
+        message = '다음 날입니다.';
         break;
       case 'scavenge': {
         hunger(g);
@@ -441,7 +450,7 @@ export function execute(original: Game, command: Command): Result {
       case 'wait':
         hunger(g);
         advance(g, 1);
-        message = '1시간이 지났습니다.';
+        message = '기다리기를 마쳤습니다.';
         log(g, message);
         break;
       case 'offer': {
@@ -578,9 +587,9 @@ export function execute(original: Game, command: Command): Result {
           id: id(g),
           itemId: command.id,
           price: command.price,
-          created: g.minute + 60,
-          expires: g.minute + 60 + 2880,
-          nextCheck: g.minute + 120,
+          created: g.minute + ACTION_TICK,
+          expires: g.minute + ACTION_TICK + 2880,
+          nextCheck: g.minute + ACTION_TICK * 2,
         };
         g.sales.push(sale);
         message = `판매 글 등록: ${won(command.price)}.`;
@@ -711,7 +720,11 @@ export function execute(original: Game, command: Command): Result {
         unlisted(g, i.id);
         hunger(g);
         const quote = g.quotes;
-        if (!quote || g.minute - quote.at >= 120 || !quote.prices[i.id])
+        if (
+          !quote ||
+          g.minute - quote.at >= ACTION_TICK * 2 ||
+          !quote.prices[i.id]
+        )
           throw Error('유효한 매각 견적이 없습니다.');
         const price = quote.prices[i.id];
         money(g, price);
@@ -753,7 +766,6 @@ export function execute(original: Game, command: Command): Result {
           g.event = null;
           message = '특별 제안을 거절했습니다.';
           log(g, message);
-          advance(g, 1, 0, 0, true);
           break;
         }
         hunger(g);

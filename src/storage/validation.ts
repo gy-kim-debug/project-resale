@@ -45,6 +45,7 @@ export function isGame(v: unknown): v is Game {
   if (
     !record(v) ||
     v.version !== 2 ||
+    (v.timeMode !== undefined && v.timeMode !== 'daily-actions') ||
     !['playing', 'dead', 'cleared'].includes(String(v.status))
   )
     return false;
@@ -61,6 +62,8 @@ export function isGame(v: unknown): v is Game {
       (k) => integer(v[k]),
     )
   )
+    return false;
+  if (v.timeMode === 'daily-actions' && Number(v.minute) % 480 !== 0)
     return false;
   if (
     !integer(v.hungerRemainder, 59) ||
