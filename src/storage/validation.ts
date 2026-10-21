@@ -31,9 +31,7 @@ function item(v: unknown): v is Item {
     ['base', 'value', 'price', 'expires'].every((k) =>
       integer(v[k], RULES.maxMoney),
     ) &&
-    ['inspected', 'checked', 'repaired'].every(
-      (k) => typeof v[k] === 'boolean',
-    ) &&
+    ['checked', 'repaired'].every((k) => typeof v[k] === 'boolean') &&
     Array.isArray(v.offers) &&
     v.offers.length <= 3 &&
     v.offers.every((p) => integer(p, RULES.maxMoney)) &&

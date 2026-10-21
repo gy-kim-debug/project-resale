@@ -372,19 +372,10 @@ export function ListingView({
       </p>
       <p className="lead">{item.description}</p>
       <Details>
-        <p>{item.inspected ? `상태: ${item.condition}` : '상태 미확인'}</p>
         <p>매물 유효 시간: {hoursText(item.expires - g.minute)} 남음</p>
       </Details>
       <Button onClick={() => toggle(item.id)}>
         {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
-      </Button>
-      <Button
-        disabled={item.inspected}
-        onClick={() => act({ type: 'inspect', id: item.id })}
-      >
-        {item.inspected
-          ? '구매 전 상태 확인 완료'
-          : `구매 전 외관·작동 확인 · 1시간${item.kind === '디지털' ? ' · 200원' : ' · 0원'}`}
       </Button>
       {item.price > 0 && (
         <section className="card">
@@ -420,7 +411,7 @@ export function ListingView({
                 ))}
               {item.chat && !item.chatSettled && (
                 <Button onClick={() => act({ type: 'closeChat', id: item.id })}>
-                  거래하지 않고 흥정 종료 · 1시간
+                  거래하지 않고 흥정 종료 · 0시간
                 </Button>
               )}
               {item.chatSettled && <p className="chat-ended">대화 종료</p>}
@@ -477,13 +468,12 @@ export function OwnedView({
         {item.kind} · {sale ? '판매 등록 중' : '보관 중'}
       </p>
       <Details>
+        <p>상태: {item.condition}</p>
         {item.checked ? (
           <>
             <p>실제 가치 {won(item.value)}</p>
             <p>현재 시장 기준 {won(marketValue(g, item))}</p>
-            <p>
-              상태: {item.condition} · {item.defect}
-            </p>
+            <p>{item.defect}</p>
           </>
         ) : (
           <p>가치 미확인</p>
@@ -628,7 +618,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
             <p>
               {item?.title} · 등록 {won(sale?.price ?? 0)}
             </p>
-            <p className="chat-cost">대화 0시간 · 종료 1시간</p>
+            <p className="chat-cost">흥정 · 0시간</p>
             <TradeChat
               name={q.name}
               messages={
@@ -644,7 +634,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
               수락하고 거래 · 1시간
             </Button>
             <Button onClick={() => act({ type: 'reject', id: q.id })}>
-              거절 · 종료 시 1시간
+              거절 · 0시간
             </Button>
           </section>
         );
@@ -653,7 +643,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
         danger
         onClick={() => act({ type: 'break', id: g.inquiries[0].id })}
       >
-        거래 파토 · 1시간
+        거래 파토 · 0시간
       </Button>
     </>
   );
@@ -921,7 +911,7 @@ export function RouteView({
             제안 수락 · 1시간
           </Button>
           <Button onClick={() => act({ type: 'event', choice: 'no' })}>
-            거절 · 종료 시 1시간
+            거절 · 0시간
           </Button>
         </>
       ) : (

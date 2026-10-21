@@ -89,12 +89,21 @@ export const useGameStore = create<State>((set, get) => ({
       return false;
     }
     clearTimeout(highlightTimer);
-    // Chat replies update immediately; time is settled only when the conversation ends.
+    // Chat replies update immediately; only completed transactions advance time.
     if (
-      ['offer', 'reject'].includes(command.type) &&
+      ['offer', 'reject', 'break', 'closeChat'].includes(command.type) &&
       result.game.minute === g.minute
     ) {
-      set({ game: result.game, notice: '', ok: true, changes: {} });
+      set({
+        game: result.game,
+        notice:
+          command.type === 'offer' ||
+          (command.type === 'reject' && result.game.inquiries.length)
+            ? ''
+            : result.message,
+        ok: true,
+        changes: {},
+      });
       get().save();
       return true;
     }

@@ -101,7 +101,7 @@ test('date boundaries and changed fields use actual engine deltas', () => {
   });
 });
 
-test('chat replies save immediately with no loading layer; closing chat presents one hour exactly once', async () => {
+test('chat replies and closure save immediately without time or loading', async () => {
   setup();
   const s = useGameStore;
   const g = s.getState().game!;
@@ -116,8 +116,8 @@ test('chat replies save immediately with no loading layer; closing chat presents
   await flushSaves();
   assert.equal(writes.at(-1)?.game.board[0].chat?.length, 3);
   const completion = s.getState().act({ type: 'closeChat', id: i.id });
-  assert.equal(s.getState().action?.after.minute, g.minute + 60);
+  assert.equal(s.getState().action, null);
   assert.equal(await s.getState().act({ type: 'closeChat', id: i.id }), false);
   assert.equal(await completion, true);
-  assert.equal(s.getState().game!.minute, g.minute + 60);
+  assert.equal(s.getState().game!.minute, g.minute);
 });

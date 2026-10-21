@@ -16,7 +16,6 @@ export interface Item {
   value: number;
   condition: Condition;
   defect: string;
-  inspected: boolean;
   checked: boolean;
   repaired: boolean;
   price: number;
@@ -100,7 +99,6 @@ export type Command =
   | { type: 'scavenge' }
   | { type: 'refresh' }
   | { type: 'wait' }
-  | { type: 'inspect'; id: string }
   | { type: 'offer'; id: string; price: number }
   | { type: 'buy'; id: string }
   | { type: 'closeChat'; id: string }

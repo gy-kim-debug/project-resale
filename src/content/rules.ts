@@ -88,7 +88,7 @@ export const CATALOG = [
   {
     title: '기계식 키보드',
     kind: '디지털',
-    description: '사용하던 물건입니다. 상태 확인 후 결정해주세요.',
+    description: '사용하던 물건입니다. 보관 중이라 판매합니다.',
   },
   {
     title: '원목 의자',
@@ -103,7 +103,7 @@ export const CATALOG = [
   {
     title: '카메라 장비',
     kind: '디지털',
-    description: '구성품은 모두 있습니다. 작동 상태는 직접 확인을 권합니다.',
+    description: '구성품은 모두 있습니다. 사용 이력이 있습니다.',
   },
   {
     title: '한정판 소장품',

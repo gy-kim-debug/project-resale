@@ -39,7 +39,6 @@ export function actionLabel(command: Command): string {
     scavenge: '물건을 찾는 중…',
     refresh: '새 매물을 찾는 중…',
     wait: '기다리는 중…',
-    inspect: '상태를 확인하는 중…',
     offer: '가격을 제안하는 중…',
     buy: '물품을 받는 중…',
     closeChat: '흥정을 마무리하는 중…',

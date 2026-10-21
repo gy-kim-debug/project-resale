@@ -99,7 +99,6 @@ function makeItem(g: Game, base: number, free = false): Item {
             : multiplier > 1
               ? '희귀한 구성·보존 가치가 확인됐습니다.'
               : '특별한 결함은 발견되지 않았습니다.',
-    inspected: false,
     checked: false,
     repaired: false,
     price,
@@ -441,19 +440,6 @@ export function execute(original: Game, command: Command): Result {
         message = '1시간이 지났습니다.';
         log(g, message);
         break;
-      case 'inspect': {
-        const i = preItem(g, command.id);
-        if (i.inspected) throw Error('이미 확인한 매물입니다.');
-        hunger(g);
-        const cost = i.kind === '디지털' ? 200 : 0;
-        affordable(g, cost);
-        money(g, -cost);
-        i.inspected = true;
-        message = `외관·작동 확인: ${i.condition}. 확인비 ${won(cost)}.`;
-        log(g, message);
-        advance(g, 1);
-        break;
-      }
       case 'offer': {
         const i = preItem(g, command.id);
         if (
@@ -493,7 +479,6 @@ export function execute(original: Game, command: Command): Result {
         i.chatSettled = true;
         message = '흥정을 마쳤습니다.';
         log(g, message);
-        advance(g, 1, 0, 0, true);
         break;
       }
       case 'buy': {
@@ -630,10 +615,8 @@ export function execute(original: Game, command: Command): Result {
           { speaker: 'other', text: `${won(q.price)}에 거래할 수 있을까요?` },
         ];
         q.chat.push({ speaker: 'player', text: '그 가격에는 어렵습니다.' });
-        let ended = false;
         if (q.rounds >= 2 || q.price >= q.max || roll(g) < 0.3) {
           finishSale(g, q.saleId);
-          ended = true;
           message =
             '구매자가 거래를 파토냈습니다. 판매 글과 다른 문의가 모두 종료됐습니다.';
         } else {
@@ -649,7 +632,6 @@ export function execute(original: Game, command: Command): Result {
           message = `구매자가 ${won(q.price)}으로 다시 제안했습니다.`;
         }
         log(g, message);
-        if (ended) advance(g, 1, 0, 0, true, false);
         break;
       }
       case 'break': {
@@ -658,7 +640,6 @@ export function execute(original: Game, command: Command): Result {
         finishSale(g, q.saleId);
         message = '거래를 파토냈습니다. 판매 글과 모든 문의가 종료됐습니다.';
         log(g, message);
-        advance(g, 1, 0, 0, true, false);
         break;
       }
       case 'visit': {
@@ -746,6 +727,8 @@ export function execute(original: Game, command: Command): Result {
         advance(g, 1, e.type === 'deal' ? 8 : 0, e.type === 'deal' ? 5 : 0);
         break;
       }
+      default:
+        throw Error('지원하지 않는 행동입니다.');
     }
     return { game: g, ok: true, message };
   } catch (e) {

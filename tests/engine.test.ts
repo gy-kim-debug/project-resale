@@ -384,14 +384,17 @@ for (const seed of [1, 42, 210])
         continue;
       }
       const affordable = g.board
-        .filter((i) => i.price > 0 && i.price <= g.cash * 0.6)
+        .filter(
+          (i) =>
+            i.price > 0 &&
+            i.price <= g.cash * 0.6 &&
+            i.negotiation !== 'rejected',
+        )
         .sort((a, b) => b.price - a.price);
-      const candidate = affordable.find(
-        (i) => !i.inspected || i.condition === '양호',
-      );
-      // Only use condition after paying the inspection action, never hidden value.
-      if (candidate && !candidate.inspected)
-        step({ type: 'inspect', id: candidate.id });
+      const candidate = affordable[0];
+      // Use only public prices and seller replies before buying; condition is hidden.
+      if (candidate?.negotiation === 'none')
+        step({ type: 'offer', id: candidate.id, price: candidate.offers[0] });
       else if (candidate) step({ type: 'buy', id: candidate.id });
       else if (g.cash < 35000) step({ type: 'job', id: 'shop' });
       else step({ type: 'refresh' });
@@ -426,7 +429,7 @@ test('every paid-time action advances whole hours, and listing wait starts after
     cases.push({ game: rich(), command: { type: 'meal', id }, hours: 1 });
   for (const type of ['treat', 'scavenge', 'refresh', 'wait'] as const)
     cases.push({ game: rich(), command: { type }, hours: 1 });
-  for (const type of ['inspect', 'buy', 'offer'] as const) {
+  for (const type of ['buy', 'offer'] as const) {
     const g = rich();
     cases.push({
       game: g,
@@ -473,7 +476,7 @@ test('every paid-time action advances whole hours, and listing wait starts after
   });
   for (const type of ['accept', 'reject', 'break'] as const) {
     g = pending();
-    if (type === 'reject') continue; // stochastic termination has its own settlement test
+    if (type !== 'accept') continue; // free chat commands are covered separately
     cases.push({ game: g, command: { type, id: g.inquiries[0].id }, hours: 1 });
   }
   for (const choice of ['yes', 'no'] as const) {
@@ -538,7 +541,7 @@ test('hourly actions settle midnight once and legacy saves retain resources and 
   assert.equal(run(after, { type: 'wait' }).interest, after.interest);
 });
 
-test('purchase chat pauses time and survival until buy or explicit chat closure settles once', () => {
+test('purchase chat and closure are free; only purchase consumes transaction time', () => {
   const before = rich();
   const item = before.board[0];
   const chat = run(before, {
@@ -569,7 +572,7 @@ test('purchase chat pauses time and survival until buy or explicit chat closure 
   );
   assert.equal(bought.inventory[0].chatSettled, true);
   const closed = run(restored, { type: 'closeChat', id: item.id });
-  assert.equal(closed.minute - before.minute, 60);
+  assert.equal(closed.minute, before.minute);
   assert.equal(closed.board[0].chatSettled, true);
   assert.equal(execute(closed, { type: 'closeChat', id: item.id }).ok, false);
   const hungry = structuredClone(before);
@@ -588,7 +591,7 @@ test('purchase chat pauses time and survival until buy or explicit chat closure 
   assert.equal(isGame(invalid), false);
 });
 
-test('sales chat counteroffers cost no time; acceptance, player break and buyer walk each settle once', () => {
+test('sales chat and either side walking cost no time; completed sale takes one hour', () => {
   const base = pending();
   let continued = false,
     walked = false;
@@ -615,13 +618,13 @@ test('sales chat counteroffers cost no time; acceptance, player break and buyer 
       assert.ok(after.inquiries[0].price > q.price);
       for (const type of ['accept', 'break'] as const) {
         const ended = run(after, { type, id: q.id });
-        assert.equal(ended.minute - g.minute, 60);
+        assert.equal(ended.minute - g.minute, type === 'accept' ? 60 : 0);
         assert.equal(ended.inquiries.length, 0);
         assert.equal(execute(ended, { type, id: q.id }).ok, false);
       }
     } else {
       walked = true;
-      assert.equal(after.minute - g.minute, 60);
+      assert.equal(after.minute, g.minute);
       assert.equal(after.sales.length, 0);
     }
   }
@@ -629,4 +632,31 @@ test('sales chat counteroffers cost no time; acceptance, player break and buyer 
   const old = structuredClone(base);
   delete old.inquiries[0].chat;
   assert.ok(isGame(old), 'old v2 saves do not require chat histories');
+});
+
+test('removed pre-purchase inspection is rejected atomically; legacy inspection flag remains loadable', () => {
+  const g = rich();
+  const snapshot = structuredClone(g);
+  const oldCommand = {
+    type: 'inspect',
+    id: g.board[0].id,
+  } as unknown as Command;
+  const result = execute(g, oldCommand);
+  assert.equal(result.ok, false);
+  assert.strictEqual(result.game, g);
+  assert.deepEqual(g, snapshot);
+  const legacy = JSON.parse(
+    JSON.stringify({ version: 2, game: g, favoriteIds: [] }),
+  );
+  legacy.game.board[0].inspected = true;
+  const restored = parseSave(legacy).game;
+  assert.equal(restored.cash, g.cash);
+  const bought = run(restored, { type: 'buy', id: restored.board[0].id });
+  assert.equal(bought.inventory[0].condition, g.board[0].condition);
+  assert.equal(
+    bought.inventory[0].checked,
+    false,
+    'value and hidden defects still need appraisal',
+  );
+  assert.equal(bought.minute - g.minute, 60);
 });

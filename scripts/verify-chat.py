@@ -15,6 +15,8 @@ with sync_playwright() as p:
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for()
   def load(name,seed=None):
    data=json.loads(Path('work/'+name+'.json').read_text())
+   if name=='rich':
+    data['game']['board'][0]['inspected']=True # legacy saves must not reveal pre-purchase condition
    if seed is not None:
     data['game']['seed']=seed
     data['game']['inquiries'][0].update(price=100,max=1000,rounds=0,chat=[{'speaker':'other','text':'100 원에 거래할 수 있을까요?'}])
@@ -27,6 +29,8 @@ with sync_playwright() as p:
    page.get_by_role('button',name='판매자와 채팅',exact=True).click()
   start=load('rich');purchase_chat()
   expect(page.get_by_role('log')).to_be_visible()
+  expect(page.get_by_role('button',name='구매 전',exact=False)).to_have_count(0)
+  expect(page.get_by_text('상태:',exact=False)).to_have_count(0)
   page.get_by_role('button',name=' 제안 · 0시간').first.click()
   assert page.locator('.action-layer').count()==0
   expect(page.locator('.chat-message')).to_have_count(3)
@@ -41,11 +45,12 @@ with sync_playwright() as p:
   assert read()['minute']==start['minute']+60
   assert read()['inventory'][0]['chatSettled']
   start=load('rich');purchase_chat();page.get_by_role('button',name=' 제안 · 0시간').first.click()
-  page.get_by_role('button',name='거래하지 않고 흥정 종료 · 1시간',exact=True).click();expect(page.locator('.action-layer')).to_be_visible();settled()
-  assert read()['minute']==start['minute']+60
+  page.get_by_role('button',name='거래하지 않고 흥정 종료 · 0시간',exact=True).click();settled()
+  page.wait_for_function("async()=>(await ("+READ+")()).board[0].chatSettled")
+  assert read()['minute']==start['minute']
   expect(page.get_by_text('대화 종료',exact=True)).to_be_visible()
   start=load('pending',1000)
-  page.get_by_role('button',name='거절 · 종료 시 1시간',exact=True).first.click()
+  page.get_by_role('button',name='거절 · 0시간',exact=True).first.click()
   assert page.locator('.action-layer').count()==0
   expect(page.get_by_role('log').first.locator('.chat-message')).to_have_count(3)
   page.wait_for_function("async()=>(await ("+READ+")()).inquiries[0].rounds===1")
@@ -57,11 +62,12 @@ with sync_playwright() as p:
   assert read()['minute']==start['minute']+60
   for ending in ['walk','break']:
    start=load('pending',1)
-   name='거절 · 종료 시 1시간' if ending=='walk' else '거래 파토 · 1시간'
-   page.get_by_role('button',name=name,exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible();settled()
-   assert read()['minute']==start['minute']+60
+   name='거절 · 0시간' if ending=='walk' else '거래 파토 · 0시간'
+   page.get_by_role('button',name=name,exact=True).first.click();settled()
+   page.wait_for_function("async()=>!(await ("+READ+")()).inquiries.length")
+   assert read()['minute']==start['minute']
    assert not read()['inquiries']
   assert not errors,errors
-  results.append({'width':width,'purchase_chat_reload':'PASS','counteroffer_reload':'PASS','buy_accept_break_walk_one_hour':'PASS'})
+  results.append({'width':width,'purchase_chat_reload':'PASS','counteroffer_reload':'PASS','purchase_sale_one_hour':'PASS','chat_close_break_walk_zero_time':'PASS'})
   context.close()
  browser.close();print(json.dumps(results))
