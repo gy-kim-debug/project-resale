@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { useGameStore } from '../app/store';
-import type { Game, Item, Command, Kind } from '../domain/game';
+import { useGameStore, type Act } from '../app/store';
+import type { Game, Item, Kind } from '../domain/game';
 import { won, dayOf, timeOf } from '../domain/game';
 import {
   level,
@@ -201,13 +201,7 @@ export function InventoryView({ g, open }: { g: Game; open: Open }) {
     </>
   );
 }
-export function DebtView({
-  g,
-  act,
-}: {
-  g: Game;
-  act: (c: Command) => boolean;
-}) {
+export function DebtView({ g, act }: { g: Game; act: Act }) {
   return (
     <>
       <h1>채무</h1>
@@ -254,13 +248,7 @@ export function DebtView({
     </>
   );
 }
-export function ShopView({
-  g,
-  act,
-}: {
-  g: Game;
-  act: (c: Command) => boolean;
-}) {
+export function ShopView({ g, act }: { g: Game; act: Act }) {
   return (
     <>
       <h1>상점</h1>
@@ -361,7 +349,7 @@ export function ListingView({
 }: {
   g: Game;
   item: Item;
-  act: (c: Command) => boolean;
+  act: Act;
 }) {
   const favorites = useGameStore((s) => s.favoriteIds);
   const toggle = useGameStore((s) => s.toggleFavorite);
@@ -448,7 +436,7 @@ export function OwnedView({
 }: {
   g: Game;
   item: Item;
-  act: (c: Command) => boolean;
+  act: Act;
   open: Open;
 }) {
   const sale = g.sales.find((s) => s.itemId === item.id);
@@ -528,13 +516,7 @@ export function OwnedView({
     </>
   );
 }
-export function OutletView({
-  g,
-  act,
-}: {
-  g: Game;
-  act: (c: Command) => boolean;
-}) {
+export function OutletView({ g, act }: { g: Game; act: Act }) {
   const outlet = OUTLETS.find((o) => o.id === g.quotes?.outlet);
   const [selected, setSelected] = useState<string | null>(null);
   const item = g.inventory.find((i) => i.id === selected);
@@ -604,13 +586,7 @@ export function OutletView({
     </>
   );
 }
-export function InquiriesView({
-  g,
-  act,
-}: {
-  g: Game;
-  act: (c: Command) => boolean;
-}) {
+export function InquiriesView({ g, act }: { g: Game; act: Act }) {
   return (
     <>
       {g.inquiries.map((q) => {
@@ -739,7 +715,7 @@ export function RouteView({
   route: Route;
   g: Game;
   open: Open;
-  act: (c: Command) => boolean;
+  act: Act;
 }) {
   const item = g.inventory.find((i) => i.id === route.id);
   const listing = g.board.find((i) => i.id === route.id);

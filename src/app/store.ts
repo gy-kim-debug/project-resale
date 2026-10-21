@@ -6,6 +6,15 @@ import {
   parseSave,
   type SaveData,
 } from '../storage/saveRepository';
+import {
+  ACTION_DURATION_MS,
+  HIGHLIGHT_DURATION_MS,
+  actionLabel,
+  changesBetween,
+  type ActionPresentation,
+  type Changes,
+} from './actionPresentation';
+export type Act = (command: Command) => Promise<boolean>;
 export type Tab = '내 정보' | '채무' | '활동' | '보관함' | '상점';
 interface State {
   game: Game | null;
@@ -18,7 +27,10 @@ interface State {
   favoriteIds: string[];
   tab: Tab;
   hydrate(): Promise<void>;
-  act(command: Command): boolean;
+  action: ActionPresentation | null;
+  changes: Changes;
+  actionId: number;
+  act: Act;
   setTab(tab: Tab): void;
   toggleFavorite(id: string): void;
   dismiss(): void;
@@ -27,6 +39,8 @@ interface State {
   startOver(): void;
 }
 let queue = Promise.resolve();
+let highlightTimer: ReturnType<typeof setTimeout> | undefined;
+let actionFinished: Promise<boolean> = Promise.resolve(false);
 let hydration: Promise<void> | null = null;
 const seed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 export const useGameStore = create<State>((set, get) => ({
@@ -39,6 +53,9 @@ export const useGameStore = create<State>((set, get) => ({
   ok: true,
   favoriteIds: [],
   tab: '활동',
+  action: null,
+  changes: {},
+  actionId: 0,
   hydrate() {
     if (get().ready) return Promise.resolve();
     if (hydration) return hydration;
@@ -62,20 +79,55 @@ export const useGameStore = create<State>((set, get) => ({
     })();
     return hydration;
   },
-  act(command) {
-    const g = get().game;
-    if (!g || !get().ready) return false;
+  async act(command) {
+    const current = get();
+    const g = current.game;
+    if (!g || !current.ready || current.action) return false;
     const result = execute(g, command);
-    set({ game: result.game, notice: result.message, ok: result.ok });
-    if (result.ok) get().save();
-    return result.ok;
+    if (!result.ok) {
+      set({ notice: result.message, ok: false });
+      return false;
+    }
+    clearTimeout(highlightTimer);
+    const id = current.actionId + 1;
+    // Commit and save once before presentation: reload cannot lose or replay an action.
+    set({
+      game: result.game,
+      notice: '',
+      ok: true,
+      changes: {},
+      actionId: id,
+      action: {
+        id,
+        label: actionLabel(command),
+        before: g,
+        after: result.game,
+        duration: ACTION_DURATION_MS,
+      },
+    });
+    get().save();
+    actionFinished = new Promise<boolean>((resolve) => {
+      setTimeout(() => {
+        set({
+          action: null,
+          notice: result.message,
+          changes: changesBetween(g, result.game),
+        });
+        highlightTimer = setTimeout(
+          () => set({ changes: {} }),
+          HIGHLIGHT_DURATION_MS,
+        );
+        resolve(true);
+      }, ACTION_DURATION_MS);
+    });
+    return actionFinished;
   },
   setTab(tab) {
-    if (get().game?.inquiries.length) return;
+    if (get().action || get().game?.inquiries.length) return;
     set({ tab, notice: '' });
   },
   toggleFavorite(id) {
-    if (!get().ready) return;
+    if (!get().ready || get().action) return;
     const ids = get().favoriteIds;
     set({
       favoriteIds: ids.includes(id)
@@ -102,9 +154,12 @@ export const useGameStore = create<State>((set, get) => ({
       );
   },
   importSave(raw) {
+    if (get().action) return false;
     try {
       const data = parseSave(JSON.parse(raw));
+      clearTimeout(highlightTimer);
       set({
+        changes: {},
         game: data.game,
         favoriteIds: data.favoriteIds,
         tab: '활동',
@@ -124,6 +179,9 @@ export const useGameStore = create<State>((set, get) => ({
     }
   },
   startOver() {
+    if (get().action) return;
+    clearTimeout(highlightTimer);
+    set({ changes: {} });
     set({
       game: newGame(seed()),
       favoriteIds: [],
@@ -138,5 +196,6 @@ export const useGameStore = create<State>((set, get) => ({
 }));
 
 export async function flushSaves() {
+  await actionFinished;
   await queue;
 }

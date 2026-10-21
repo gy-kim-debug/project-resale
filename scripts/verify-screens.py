@@ -19,7 +19,9 @@ with sync_playwright() as pw:
         page.goto(BASE)
         page.get_by_role('heading',name='활동',exact=True).wait_for()
         nav=page.get_by_role('navigation',name='주요 메뉴')
-        def click(name): page.get_by_role('button',name=name,exact=True).click()
+        def click(name):
+            page.get_by_role('button',name=name,exact=True).click()
+            expect(page.locator('.action-layer')).to_have_count(0)
         def tab(name): nav.get_by_role('button',name=name,exact=True).click()
         def activity(name): page.locator('.activity-grid').get_by_role('button',name=name,exact=True).click()
         def layout():

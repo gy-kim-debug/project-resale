@@ -713,3 +713,98 @@ html {
   scroll-padding-top: 12px;
   scroll-padding-bottom: 160px;
 }
+
+.action-layer {
+  position: fixed;
+  inset: var(--header-height) 0 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  background: #0b100dea;
+  padding: 24px;
+  outline: none;
+  touch-action: none;
+}
+.action-progress {
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+}
+.action-progress h2 {
+  color: #e0e8cb;
+  font-size: 17px;
+  font-weight: 500;
+}
+.action-time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: #b4c59c;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.action-time time {
+  white-space: nowrap;
+}
+.action-progress-track {
+  width: 100%;
+  height: 4px;
+  margin-top: 24px;
+  overflow: hidden;
+  background: #34402d;
+  border-radius: 4px;
+}
+.action-progress-track span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #d0dfa7;
+  transform-origin: left;
+  animation: action-fill var(--action-duration) linear both;
+}
+.stat-changed {
+  border-radius: 3px;
+  animation: stat-flash 1.4s ease-out both;
+}
+.stat-rise {
+  --stat-flash: #b9d88755;
+}
+.stat-fall {
+  --stat-flash: #efaa7a55;
+}
+@keyframes action-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes stat-flash {
+  0%,
+  28% {
+    background: var(--stat-flash, #bed39355);
+  }
+  100% {
+    background: transparent;
+  }
+}
+@media (min-width: 481px) {
+  .action-layer {
+    left: 50%;
+    transform: translateX(-50%);
+    width: 480px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-progress-track span {
+    animation: none;
+    transform: scaleX(1);
+  }
+  .stat-changed {
+    animation: none;
+    background: var(--stat-flash, #bed39355);
+  }
+}

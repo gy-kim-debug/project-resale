@@ -20,6 +20,12 @@ import {
 import type { Game } from './domain/game';
 import { dayOf, timeOf, won } from './domain/game';
 import { listingLimit, tier } from './domain/engine';
+import { ActionClock, ActionProgress } from './components/ActionProgress';
+import type {
+  ActionPresentation,
+  Changes,
+  ChangeKey,
+} from './app/actionPresentation';
 import { TIERS } from './content/rules';
 
 const nav: { tab: Tab; icon: IconName }[] = [
@@ -34,7 +40,21 @@ const groups: { title: string; activities: Route['kind'][] }[] = [
   { title: '거래', activities: ['장터', '매각처'] },
   { title: '회복', activities: ['식사', '수면', '치료'] },
 ];
-function Header({ g }: { g: Game }) {
+function Header({
+  g,
+  action,
+  changes,
+  actionId,
+}: {
+  g: Game;
+  action: ActionPresentation | null;
+  changes: Changes;
+  actionId: number;
+}) {
+  const changed = (key: ChangeKey) =>
+    changes[key]
+      ? ` stat-changed ${changes[key]! > 0 ? 'stat-rise' : 'stat-fall'}`
+      : '';
   const ref = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const node = ref.current;
@@ -52,22 +72,31 @@ function Header({ g }: { g: Game }) {
   return (
     <header className="status-header" ref={ref}>
       <div className="status-top">
-        <time>
-          {dayOf(g)}일째 {timeOf(g)}
+        <time key={`time-${actionId}`} className={changed('minute')}>
+          {action ? (
+            <ActionClock key={action.id} action={action} />
+          ) : (
+            <>
+              {dayOf(g)}일째 {timeOf(g)}
+            </>
+          )}
         </time>
-        <span>
+        <span key={`cash-${actionId}`} className={changed('cash')}>
           현금 <b>{won(g.cash)}</b>
         </span>
       </div>
       <div className="vitals">
         {(
           [
-            { name: '포만감', value: g.satiety, icon: 'food' },
-            { name: '체력', value: g.health, icon: 'heart' },
-            { name: '피로도', value: g.fatigue, icon: 'moon' },
+            { name: '포만감', value: g.satiety, icon: 'food', key: 'satiety' },
+            { name: '체력', value: g.health, icon: 'heart', key: 'health' },
+            { name: '피로도', value: g.fatigue, icon: 'moon', key: 'fatigue' },
           ] as const
         ).map((s) => (
-          <div className={`vital ${s.value <= 20 ? 'low' : ''}`} key={s.name}>
+          <div
+            className={`vital ${s.value <= 20 ? 'low' : ''}${changed(s.key)}`}
+            key={`${s.key}-${actionId}`}
+          >
             <div>
               <Icon name={s.icon} size={14} />
               <span>{s.name}</span>
@@ -77,7 +106,7 @@ function Header({ g }: { g: Game }) {
           </div>
         ))}
       </div>
-      <div className="header-debt">
+      <div key={`debt-${actionId}`} className={`header-debt${changed('debt')}`}>
         <span>남은 채무</span>
         <strong>{won(g.principal + g.interest)}</strong>
       </div>
@@ -229,8 +258,8 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [state.tab]);
   const open = (r: Route) => setRoutes((prev) => [...prev, r]);
-  function act(c: Parameters<typeof state.act>[0]) {
-    const ok = state.act(c);
+  async function act(c: Parameters<typeof state.act>[0]) {
+    const ok = await state.act(c);
     if (
       ok &&
       ['accept', 'break', 'reject'].includes(c.type) &&
@@ -251,122 +280,146 @@ export default function App() {
     );
   return (
     <div className="app-shell">
-      <Header g={g} />
-      <div className="base-content" inert={shownRoutes.length > 0 || over}>
-        <main>
-          {state.tab === '활동' ? (
-            <ActivityHome g={g} open={open} />
-          ) : state.tab === '내 정보' ? (
-            <InfoView g={g} />
-          ) : state.tab === '채무' ? (
-            <DebtView g={g} act={act} />
-          ) : state.tab === '보관함' ? (
-            <InventoryView g={g} open={open} />
-          ) : (
-            <ShopView g={g} act={act} />
-          )}
-          {state.notice && !shownRoutes.length && !over && (
-            <div
-              className={`result page-result ${state.ok ? '' : 'error'}`}
-              role="status"
-            >
-              <p>{state.notice}</p>
-              <button onClick={state.dismiss} aria-label="결과 안내 닫기">
-                확인
+      <Header
+        g={state.action?.before ?? g}
+        action={state.action}
+        changes={state.changes}
+        actionId={state.actionId}
+      />
+      <div
+        className="game-scene"
+        aria-busy={!!state.action}
+        inert={!!state.action}
+        aria-hidden={state.action ? true : undefined}
+      >
+        <div className="base-content" inert={shownRoutes.length > 0 || over}>
+          <main>
+            {state.tab === '활동' ? (
+              <ActivityHome g={g} open={open} />
+            ) : state.tab === '내 정보' ? (
+              <InfoView g={g} />
+            ) : state.tab === '채무' ? (
+              <DebtView g={g} act={act} />
+            ) : state.tab === '보관함' ? (
+              <InventoryView g={g} open={open} />
+            ) : (
+              <ShopView g={g} act={act} />
+            )}
+            {state.notice && !shownRoutes.length && !over && (
+              <div
+                className={`result page-result ${state.ok ? '' : 'error'}`}
+                role="status"
+              >
+                <p>{state.notice}</p>
+                <button onClick={state.dismiss} aria-label="결과 안내 닫기">
+                  확인
+                </button>
+              </div>
+            )}
+            <footer className="utility-links">
+              <button onClick={() => open({ kind: '기록' })}>진행 기록</button>
+              <button onClick={() => open({ kind: '저장 관리' })}>
+                저장 관리
               </button>
-            </div>
-          )}
-          <footer className="utility-links">
-            <button onClick={() => open({ kind: '기록' })}>진행 기록</button>
-            <button onClick={() => open({ kind: '저장 관리' })}>
-              저장 관리
-            </button>
-            <small>
-              {state.saving
-                ? '저장 중…'
-                : state.saveError
-                  ? '저장 확인 필요'
-                  : '이 기기에 자동 저장'}
-            </small>
-          </footer>
-        </main>
-        <nav className="bottom-nav" aria-label="주요 메뉴">
-          {nav.map((n) => (
-            <button
-              key={n.tab}
-              className={n.tab === '활동' ? 'home-tab' : ''}
-              aria-current={n.tab === state.tab ? 'page' : undefined}
-              onClick={() => state.setTab(n.tab)}
-              disabled={pending}
-            >
-              <span className="nav-icon">
-                <Icon name={n.icon} size={n.tab === '활동' ? 25 : 21} />
-              </span>
-              <span>{n.tab}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-      {shownRoutes.length > 0 && !over && (
-        <Sheet
-          routes={shownRoutes}
-          locked={pending}
-          onBack={() => setRoutes((prev) => prev.slice(0, -1))}
-          onClose={close}
-        >
-          {state.saveError && shownRoutes.at(-1)?.kind === '저장 관리' && (
-            <p className="warning">{state.saveError}</p>
-          )}
-          <RouteView
-            key={`${shownRoutes[shownRoutes.length - 1].kind}-${shownRoutes[shownRoutes.length - 1].id ?? ''}`}
-            route={shownRoutes[shownRoutes.length - 1]}
-            g={g}
-            open={open}
-            act={act}
-          />
-          {state.notice && (
-            <div className={`result ${state.ok ? '' : 'error'}`} role="status">
-              <p>{state.notice}</p>
-              <button onClick={state.dismiss} aria-label="결과 안내 닫기">
-                확인
+              <small>
+                {state.saving
+                  ? '저장 중…'
+                  : state.saveError
+                    ? '저장 확인 필요'
+                    : '이 기기에 자동 저장'}
+              </small>
+            </footer>
+          </main>
+          <nav className="bottom-nav" aria-label="주요 메뉴">
+            {nav.map((n) => (
+              <button
+                key={n.tab}
+                className={n.tab === '활동' ? 'home-tab' : ''}
+                aria-current={n.tab === state.tab ? 'page' : undefined}
+                onClick={() => state.setTab(n.tab)}
+                disabled={pending}
+              >
+                <span className="nav-icon">
+                  <Icon name={n.icon} size={n.tab === '활동' ? 25 : 21} />
+                </span>
+                <span>{n.tab}</span>
               </button>
-            </div>
-          )}
-        </Sheet>
-      )}
-      {state.saveError && shownRoutes.at(-1)?.kind !== '저장 관리' && (
-        <aside className="storage-error" role="alert">
-          <p>{state.saveError}</p>
-          <Button
-            onClick={() => {
-              setRoutes([{ kind: '저장 관리' }]);
-            }}
-          >
-            백업·저장 관리 열기
-          </Button>
-        </aside>
-      )}
-      {over && (
-        <div className="end-overlay">
-          <section role="dialog" aria-modal="true" aria-labelledby="end-title">
-            <p className="eyebrow">
-              {g.status === 'dead' ? '사망 · 게임 종료' : '채무 전액 상환'}
-            </p>
-            <h1 id="end-title">
-              {g.status === 'dead' ? '이 이야기는 여기까지.' : '드디어, 자유.'}
-            </h1>
-            <p>
-              {dayOf(g)}일 동안 거래 {g.stats.sales}회 · 누적 상환{' '}
-              {won(g.stats.repaid)}
-            </p>
-            <p>
-              {g.status === 'dead'
-                ? '사망한 진행은 되살릴 수 없습니다. 새 게임은 별개의 시작입니다.'
-                : '원금과 발생한 이자를 모두 갚았습니다.'}
-            </p>
-            <StorageView />
-          </section>
+            ))}
+          </nav>
         </div>
+        {shownRoutes.length > 0 && !over && (
+          <Sheet
+            routes={shownRoutes}
+            locked={pending}
+            onBack={() => setRoutes((prev) => prev.slice(0, -1))}
+            onClose={close}
+          >
+            {state.saveError && shownRoutes.at(-1)?.kind === '저장 관리' && (
+              <p className="warning">{state.saveError}</p>
+            )}
+            <RouteView
+              key={`${shownRoutes[shownRoutes.length - 1].kind}-${shownRoutes[shownRoutes.length - 1].id ?? ''}`}
+              route={shownRoutes[shownRoutes.length - 1]}
+              g={g}
+              open={open}
+              act={act}
+            />
+            {state.notice && (
+              <div
+                className={`result ${state.ok ? '' : 'error'}`}
+                role="status"
+              >
+                <p>{state.notice}</p>
+                <button onClick={state.dismiss} aria-label="결과 안내 닫기">
+                  확인
+                </button>
+              </div>
+            )}
+          </Sheet>
+        )}
+        {state.saveError && shownRoutes.at(-1)?.kind !== '저장 관리' && (
+          <aside className="storage-error" role="alert">
+            <p>{state.saveError}</p>
+            <Button
+              onClick={() => {
+                setRoutes([{ kind: '저장 관리' }]);
+              }}
+            >
+              백업·저장 관리 열기
+            </Button>
+          </aside>
+        )}
+        {over && (
+          <div className="end-overlay">
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="end-title"
+            >
+              <p className="eyebrow">
+                {g.status === 'dead' ? '사망 · 게임 종료' : '채무 전액 상환'}
+              </p>
+              <h1 id="end-title">
+                {g.status === 'dead'
+                  ? '이 이야기는 여기까지.'
+                  : '드디어, 자유.'}
+              </h1>
+              <p>
+                {dayOf(g)}일 동안 거래 {g.stats.sales}회 · 누적 상환{' '}
+                {won(g.stats.repaid)}
+              </p>
+              <p>
+                {g.status === 'dead'
+                  ? '사망한 진행은 되살릴 수 없습니다. 새 게임은 별개의 시작입니다.'
+                  : '원금과 발생한 이자를 모두 갚았습니다.'}
+              </p>
+              <StorageView />
+            </section>
+          </div>
+        )}
+      </div>
+      {state.action && (
+        <ActionProgress key={state.action.id} action={state.action} />
       )}
     </div>
   );
