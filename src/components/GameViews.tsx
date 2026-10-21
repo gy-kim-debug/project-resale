@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { ItemArt } from './ItemArt';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, Kind } from '../domain/game';
 import { won, dayOf, timeOf } from '../domain/game';
@@ -116,7 +117,8 @@ export function ItemRow({
 }) {
   return (
     <button className="item-row" onClick={onClick}>
-      <span>
+      <ItemArt item={item} />
+      <span className="item-row-label">
         <strong>{item.title}</strong>
         <small>
           {item.kind} · {detail}
@@ -357,6 +359,7 @@ export function ListingView({
   const price = item.negotiatedPrice ?? item.price;
   return (
     <>
+      <ItemArt item={item} large />
       <h2>{item.title}</h2>
       <p className="item-price">
         {item.price === 0 ? '무료나눔' : won(item.price)}
@@ -443,6 +446,7 @@ export function OwnedView({
   const [discard, setDiscard] = useState(false);
   return (
     <>
+      <ItemArt item={item} large />
       <h2>{item.title}</h2>
       <p>
         {item.kind} · {sale ? '판매 등록 중' : '보관 중'}
@@ -549,7 +553,8 @@ export function OutletView({ g, act }: { g: Game; act: Act }) {
                 }
                 onClick={() => setSelected(i.id)}
               >
-                <span>
+                <ItemArt item={i} />
+                <span className="item-row-label">
                   <strong>{i.title}</strong>
                   <small>
                     {g.sales.some((s) => s.itemId === i.id)
@@ -595,6 +600,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
         return (
           <section className="card" key={q.id}>
             <h2>{q.name}</h2>
+            {item && <ItemArt item={item} />}
             <p>
               {item?.title} · 등록 {won(sale?.price ?? 0)}
             </p>
@@ -763,6 +769,7 @@ export function RouteView({
           </>
         ) : (
           <>
+            <ItemArt item={item} large />
             <h2>{item.title}</h2>
             <p className="lead">
               등록 15분 · {g.sales.length}/{listingLimit(g)}개 등록 중

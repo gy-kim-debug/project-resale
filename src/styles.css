@@ -808,3 +808,35 @@ html {
     background: var(--stat-flash, #bed39355);
   }
 }
+
+.item-art {
+  display: grid;
+  place-items: center;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  background: #283127;
+  border: 1px solid #64715442;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.item-art svg {
+  display: block;
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+.item-art-large {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 24px;
+  background: #293128;
+}
+.item-art-large svg {
+  width: 160px;
+  height: 160px;
+}
+.item-row .item-row-label {
+  flex: 1;
+  min-width: 0;
+}
