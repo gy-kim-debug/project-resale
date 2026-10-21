@@ -25,7 +25,8 @@ export function ActionClock({ action }: { action: ActionPresentation }) {
   const clock = { ...action.before, minute };
   return (
     <>
-      {dayOf(clock)}일째 {timeOf(clock)}
+      <span className="status-day">{dayOf(clock)}일째</span>{' '}
+      <strong className="status-clock">{timeOf(clock)}</strong>
     </>
   );
 }

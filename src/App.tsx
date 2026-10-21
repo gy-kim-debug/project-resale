@@ -71,18 +71,27 @@ function Header({
   }, []);
   return (
     <header className="status-header" ref={ref}>
-      <div className="status-top">
-        <time key={`time-${actionId}`} className={changed('minute')}>
+      <div
+        className={`status-top${g.cash >= 1_000_000_000 ? ' status-top-wide' : ''}`}
+      >
+        <time
+          key={`time-${actionId}`}
+          className={`header-time${changed('minute')}`}
+        >
           {action ? (
             <ActionClock key={action.id} action={action} />
           ) : (
             <>
-              {dayOf(g)}일째 {timeOf(g)}
+              <span className="status-day">{dayOf(g)}일째</span>{' '}
+              <strong className="status-clock">{timeOf(g)}</strong>
             </>
           )}
         </time>
-        <span key={`cash-${actionId}`} className={changed('cash')}>
-          현금 <b>{won(g.cash)}</b>
+        <span
+          key={`cash-${actionId}`}
+          className={`header-cash${changed('cash')}`}
+        >
+          <span className="header-label">현금</span> <b>{won(g.cash)}</b>
         </span>
       </div>
       <div className="vitals">

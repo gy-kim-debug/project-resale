@@ -86,19 +86,54 @@ small {
   font-variant-numeric: tabular-nums;
 }
 .status-top {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 16px;
+  align-items: end;
+}
+.status-top .header-time {
+  display: grid;
+  gap: 2px;
+  line-height: 1.25;
+}
+.status-day,
+.header-label {
+  font-size: 11px;
+  color: #a9b7a1;
+  font-weight: 400;
+}
+.status-clock {
+  font-size: 28px;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #f0f3df;
+}
+.header-cash {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  text-align: right;
+  line-height: 1.3;
+}
+.header-cash b {
+  font-size: clamp(20px, 5.8vw, 25px);
+  font-weight: 650;
+  color: #e1edb5;
+  overflow-wrap: anywhere;
+}
+.status-top-wide {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.status-top-wide .header-cash {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  flex-wrap: wrap;
-  align-items: center;
+  gap: 10px;
 }
-.status-top time {
-  color: #b2bcac;
-}
-.status-top b {
-  font-size: 13px;
-  color: #e6e7d8;
+.status-top-wide .header-cash b {
+  min-width: 0;
+  font-size: clamp(18px, 5.2vw, 24px);
 }
 .vitals {
   display: grid;
