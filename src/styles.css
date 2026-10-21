@@ -916,3 +916,75 @@ html {
   font-size: 12px;
   color: #aab5a1;
 }
+
+.item-comparison {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.comparison-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+.comparison-label {
+  color: #aab5a1;
+}
+.comparison-row b {
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.comparison-row .comparison-gain {
+  color: #c6df9e;
+}
+.comparison-row .comparison-loss {
+  color: #eca59b;
+}
+.comparison-compact {
+  border: 0;
+  padding: 0;
+  margin: 10px 0 0;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.header-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  margin: -8px -6px 4px 0;
+}
+.header-tools button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #c8d4be;
+}
+.header-tools button:active {
+  background: #2c3925;
+}
+.header-tools button:disabled {
+  opacity: 0.35;
+}
+.mail-dot {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e1edb5;
+}

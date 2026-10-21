@@ -421,6 +421,7 @@ export function execute(original: Game, command: Command): Result {
           found.value < 1000
             ? `수집한 ${found.kind === '수집품' ? '낡은 소품' : '생활 잡화'}`
             : found.title;
+        found.acquiredFor = 0;
         g.inventory.push(found);
         message = `${found.title} 발견.`;
         log(g, message);
@@ -490,6 +491,7 @@ export function execute(original: Game, command: Command): Result {
         money(g, -cost);
         const received = {
           ...item,
+          acquiredFor: cost,
           chat: item.chat ? [...item.chat] : undefined,
         };
         if (received.chat && !received.chatSettled) {

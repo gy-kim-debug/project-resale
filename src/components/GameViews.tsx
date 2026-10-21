@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ItemArt } from './ItemArt';
+import { ItemComparison } from './ItemComparison';
 import { TradeChat } from './TradeChat';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, Kind } from '../domain/game';
@@ -29,7 +30,9 @@ export type Route = {
     | '문의'
     | '특별 제안'
     | '기록'
-    | '저장 관리';
+    | '저장 관리'
+    | '우편함'
+    | '설정';
   id?: string;
 };
 export type Open = (r: Route) => void;
@@ -110,10 +113,12 @@ export function AmountForm({
 export function ItemRow({
   item,
   detail,
+  comparison,
   onClick,
 }: {
   item: Item;
   detail: string;
+  comparison?: ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -124,6 +129,7 @@ export function ItemRow({
         <small>
           {item.kind} · {detail}
         </small>
+        {comparison}
       </span>
       <span aria-hidden="true">›</span>
     </button>
@@ -190,9 +196,10 @@ export function InventoryView({ g, open }: { g: Game; open: Open }) {
               g.sales.some((s) => s.itemId === i.id)
                 ? '판매 등록 중'
                 : i.checked
-                  ? `확인 가치 ${won(i.value)}`
+                  ? '가치 확인 완료'
                   : '가치 미확인'
             }
+            comparison={<ItemComparison g={g} item={i} compact />}
             onClick={() => open({ kind: '물품', id: i.id })}
           />
         ))
@@ -467,12 +474,12 @@ export function OwnedView({
       <p>
         {item.kind} · {sale ? '판매 등록 중' : '보관 중'}
       </p>
+      <ItemComparison g={g} item={item} />
       <Details>
         <p>상태: {item.condition}</p>
         {item.checked ? (
           <>
             <p>실제 가치 {won(item.value)}</p>
-            <p>현재 시장 기준 {won(marketValue(g, item))}</p>
             <p>{item.defect}</p>
           </>
         ) : (
@@ -911,11 +918,39 @@ export function RouteView({
             제안 수락 · 1시간
           </Button>
           <Button onClick={() => act({ type: 'event', choice: 'no' })}>
-            거절 · 0시간
+            거절 · 1시간
           </Button>
         </>
       ) : (
         <p>현재 특별 제안이 없습니다.</p>
+      );
+    case '우편함':
+      return (
+        <>
+          {g.event && (
+            <Button onClick={() => open({ kind: '특별 제안' })}>
+              {g.event.title}
+            </Button>
+          )}
+          <h2>최근 알림</h2>
+          <ol className="journal">
+            {g.logs.slice(0, 20).map((l) => (
+              <li key={l.id}>
+                <small>
+                  {dayOf({ ...g, minute: l.minute })}일째{' '}
+                  {timeOf({ ...g, minute: l.minute })}
+                </small>
+                <p>{l.text}</p>
+              </li>
+            ))}
+          </ol>
+        </>
+      );
+    case '설정':
+      return (
+        <Button onClick={() => open({ kind: '저장 관리' })}>
+          저장·백업 관리
+        </Button>
       );
     case '기록':
       return (

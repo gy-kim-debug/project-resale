@@ -24,6 +24,7 @@ function item(v: unknown): v is Item {
     ['id', 'title', 'seller', 'description', 'defect'].every((k) =>
       text(v[k]),
     ) &&
+    (v.acquiredFor === undefined || integer(v.acquiredFor, RULES.maxMoney)) &&
     chat(v.chat) &&
     (v.chatSettled === undefined || typeof v.chatSettled === 'boolean') &&
     kind(v.kind) &&

@@ -23,6 +23,7 @@ with sync_playwright() as p:
         expect(page.locator('.action-time')).to_contain_text('1일째 10:00')
         expect(page.locator('.status-top')).to_contain_text('현금 0 원')
         assert page.locator('.game-scene').get_attribute('inert') is not None
+        assert page.locator('.header-tools button:disabled').count()==2
         assert page.evaluate('document.activeElement.classList.contains("action-layer")')
         page.keyboard.press('Escape');page.keyboard.press('Tab')
         expect(page.locator('.action-layer')).to_be_visible()

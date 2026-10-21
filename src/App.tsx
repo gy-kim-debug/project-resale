@@ -45,11 +45,13 @@ function Header({
   action,
   changes,
   actionId,
+  onOpen,
 }: {
   g: Game;
   action: ActionPresentation | null;
   changes: Changes;
   actionId: number;
+  onOpen: (kind: '우편함' | '설정') => void;
 }) {
   const changed = (key: ChangeKey) =>
     changes[key]
@@ -71,6 +73,23 @@ function Header({
   }, []);
   return (
     <header className="status-header" ref={ref}>
+      <div className="header-tools" aria-label="빠른 메뉴">
+        <button
+          aria-label="우편함"
+          disabled={!!action || !!g.inquiries.length || g.status !== 'playing'}
+          onClick={() => onOpen('우편함')}
+        >
+          <Icon name="mail" size={21} />
+          {g.event && <span className="mail-dot" aria-hidden="true" />}
+        </button>
+        <button
+          aria-label="설정"
+          disabled={!!action || !!g.inquiries.length || g.status !== 'playing'}
+          onClick={() => onOpen('설정')}
+        >
+          <Icon name="settings" size={21} />
+        </button>
+      </div>
       <div
         className={`status-top${g.cash >= 1_000_000_000 ? ' status-top-wide' : ''}`}
       >
@@ -294,6 +313,11 @@ export default function App() {
         action={state.action}
         changes={state.changes}
         actionId={state.actionId}
+        onOpen={(kind) => {
+          if (state.action || pending || over) return;
+          setRoutes([{ kind }]);
+          state.dismiss();
+        }}
       />
       <div
         className="game-scene"

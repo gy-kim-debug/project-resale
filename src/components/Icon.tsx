@@ -19,8 +19,13 @@ export type IconName =
   | 'keyboard'
   | 'box'
   | 'chair'
-  | 'camera';
+  | 'camera'
+  | 'mail'
+  | 'settings';
 const paths: Record<IconName, string> = {
+  mail: 'M3 5h18v14H3V5Zm0 1 9 7 9-7',
+  settings:
+    'M10 2h4l1 3 3 1 3 3-2 3 2 3-3 3-3 1-1 3h-4l-1-3-3-1-3-3 2-3-2-3 3-3 3-1 1-3Zm2 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z',
   user: 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM4 21v-2a8 8 0 0 1 16 0v2',
   activity: 'm13 2-9 12h7l-1 8 10-12h-7l0-8Z',
   home: 'm3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9',

@@ -107,3 +107,5 @@
 ## 미정 사항
 
 각 항목의 미정 규칙은 해당 문서에 적혀 있다. 전체 검토 범위는 [미정 사항](OPEN_QUESTIONS.md)에서 확인한다.
+
+- [보관함 매입가·현재 가치 비교](inventory/VALUE_COMPARISON.md)

@@ -51,7 +51,7 @@ with sync_playwright() as pw:
         click('닫기');activity('물건 수집');click('물건 수집하기');click('닫기');tab('보관함')
         page.locator('.item-row').first.click();expect(page.get_by_text('가치 미확인',exact=True)).to_be_visible()
         page.get_by_role('button',name='가치 확인 ·',exact=False).click()
-        expect(page.get_by_text('현재 시장 기준',exact=False)).to_be_visible()
+        expect(page.locator('.sheet-layer .item-comparison [data-field=value]')).not_to_contain_text('미확인')
         click('장터에 판매 등록');page.get_by_label('판매 가격 (원)').fill('1');click('판매 글 등록 확정')
         expect(page.get_by_label('판매 가격 (원)')).to_have_count(0)
         for _ in range(8):

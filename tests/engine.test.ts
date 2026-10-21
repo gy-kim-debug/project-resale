@@ -10,6 +10,7 @@ import type { Command, Game } from '../src/domain/game';
 import { RULES } from '../src/content/rules';
 import { isGame } from '../src/storage/validation';
 import { parseSave } from '../src/storage/saveRepository';
+import { acquisitionCost, compareItem } from '../src/domain/inventory';
 function run(g: Game, c: Command) {
   const r = execute(g, c);
   assert.ok(r.ok, r.message);
@@ -659,4 +660,66 @@ test('removed pre-purchase inspection is rejected atomically; legacy inspection 
     'value and hidden defects still need appraisal',
   );
   assert.equal(bought.minute - g.minute, 60);
+});
+
+test('acquisition cost records the exact payment, survives appraisal, and free finds cost zero', () => {
+  let g = rich();
+  const item = g.board[0];
+  g = run(g, { type: 'offer', id: item.id, price: item.offers[1] });
+  const expected = g.board[0].negotiatedPrice ?? item.price;
+  const before = g.cash;
+  g = run(g, { type: 'buy', id: item.id });
+  assert.equal(g.inventory[0].acquiredFor, expected);
+  assert.equal(before - g.cash, expected);
+  assert.deepEqual(compareItem(g, g.inventory[0]), {
+    cost: expected,
+    value: null,
+    difference: null,
+  });
+  g = run(g, { type: 'check', id: item.id });
+  assert.equal(acquisitionCost(g.inventory[0]), expected);
+  assert.equal(
+    compareItem(g, g.inventory[0]).value,
+    marketValue(g, g.inventory[0]),
+  );
+  const found = run(rich(), { type: 'scavenge' });
+  assert.equal(found.inventory[0].acquiredFor, 0);
+  assert.equal(acquisitionCost(found.inventory[0]), 0);
+  const free = rich();
+  free.board[0].price = 0;
+  free.board[0].negotiatedPrice = null;
+  assert.equal(
+    run(free, { type: 'buy', id: free.board[0].id }).inventory[0].acquiredFor,
+    0,
+  );
+});
+
+test('inventory comparison follows market changes and safely reads legacy costs without revealing unchecked values', () => {
+  const g = owned();
+  const item = g.inventory[0];
+  item.acquiredFor = 1000;
+  const first = compareItem(g, item);
+  g.marketFactor += 20;
+  const updated = compareItem(g, item);
+  assert.equal(updated.cost, first.cost);
+  assert.equal(updated.value, marketValue(g, item));
+  assert.equal(updated.difference, updated.value! - 1000);
+  assert.notEqual(updated.value, first.value);
+  delete item.acquiredFor;
+  item.negotiatedPrice = 700;
+  assert.equal(acquisitionCost(item), 700);
+  item.negotiatedPrice = null;
+  assert.equal(acquisitionCost(item), item.price);
+  item.acquiredFor = 0;
+  assert.equal(acquisitionCost(item), 0);
+  item.checked = false;
+  assert.equal(compareItem(g, item).value, null);
+  assert.ok(isGame(g));
+  for (const invalid of [-1, 1.5, Number.MAX_SAFE_INTEGER, '1000']) {
+    const bad = structuredClone(g) as unknown as {
+      inventory: { acquiredFor: unknown }[];
+    };
+    bad.inventory[0].acquiredFor = invalid;
+    assert.equal(isGame(bad), false);
+  }
 });

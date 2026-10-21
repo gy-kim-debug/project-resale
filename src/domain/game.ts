@@ -7,6 +7,7 @@ export interface ChatMessage {
   text: string;
 }
 export interface Item {
+  acquiredFor?: number;
   chat?: ChatMessage[];
   chatSettled?: boolean;
   id: string;

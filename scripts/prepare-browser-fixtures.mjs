@@ -43,3 +43,24 @@ for (const [name, game] of Object.entries({
     'work/' + name + '.json',
     JSON.stringify({ version: 2, game, favoriteIds: [] }),
   );
+
+// Real purchases for acquisition-cost and appraisal UI checks.
+let comparison = newGame(31);
+comparison.cash = 100_000;
+comparison.stats.peakCash = comparison.cash;
+for (let n = 0; n < 3; n++) {
+  const id = comparison.board[0].id;
+  comparison = execute(comparison, {
+    type: 'offer',
+    id,
+    price: comparison.board[0].offers[1],
+  }).game;
+  comparison = execute(comparison, { type: 'buy', id }).game;
+  if (n !== 1) comparison = execute(comparison, { type: 'check', id }).game;
+}
+// Keep one old snapshot shape to verify fallback to its actual agreement.
+delete comparison.inventory[2].acquiredFor;
+await writeFile(
+  'work/inventory-comparison.json',
+  JSON.stringify({ version: 2, game: comparison, favoriteIds: [] }),
+);

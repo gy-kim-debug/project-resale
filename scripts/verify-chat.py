@@ -1,4 +1,4 @@
-"""Chat pauses game time; every ending settles one hour. Production browser QA."""
+"""Bargaining and ending are free; only completed transactions take an hour. Production browser QA."""
 import json
 import os
 from pathlib import Path
