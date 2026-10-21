@@ -89,9 +89,9 @@ export const useGameStore = create<State>((set, get) => ({
       return false;
     }
     clearTimeout(highlightTimer);
-    // Chat replies update immediately; only completed transactions advance time.
+    // Navigation and chat replies update immediately, without action presentation.
     if (
-      ['offer', 'reject', 'counter', 'break', 'closeChat'].includes(
+      ['offer', 'reject', 'counter', 'break', 'closeChat', 'visit'].includes(
         command.type,
       ) &&
       result.game.minute === g.minute
@@ -100,6 +100,7 @@ export const useGameStore = create<State>((set, get) => ({
         game: result.game,
         notice:
           command.type === 'offer' ||
+          command.type === 'visit' ||
           ((command.type === 'reject' || command.type === 'counter') &&
             result.game.inquiries.some((q) => q.id === command.id))
             ? ''

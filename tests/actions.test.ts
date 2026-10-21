@@ -145,3 +145,21 @@ test('seller counteroffers are saved immediately without presentation or transfe
   assert.equal(useGameStore.getState().game!.inventory.length, 1);
   assert.equal(useGameStore.getState().game!.cash, g.cash);
 });
+
+test('outlet navigation updates and saves quotes immediately without action layer or result notice', async () => {
+  setup();
+  const g = structuredClone(useGameStore.getState().game!);
+  g.satiety = 0;
+  useGameStore.setState({ game: g });
+  assert.equal(
+    await useGameStore.getState().act({ type: 'visit', id: 'scrap' }),
+    true,
+  );
+  assert.equal(useGameStore.getState().action, null);
+  assert.equal(useGameStore.getState().notice, '');
+  assert.equal(useGameStore.getState().game!.minute, g.minute);
+  assert.equal(useGameStore.getState().game!.satiety, 0);
+  await flushSaves();
+  assert.equal(writes.at(-1)?.game.quotes?.outlet, 'scrap');
+  assert.deepEqual(writes.at(-1)?.game.logs, g.logs);
+});

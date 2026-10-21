@@ -76,7 +76,7 @@ with sync_playwright() as pw:
         page.get_by_role('button',name=' 제안',exact=False).first.click()
         page.get_by_role('button',name='구매 내용 확인',exact=False).click();click('지불·수령 확정')
         click('받은 물품 확인');expect(page.get_by_text('상태:',exact=False)).to_be_visible();layout();page.screenshot(path=f'work/playable-item-{width}.png',full_page=True)
-        click('매각처 방문');page.get_by_role('button',name='고물상 방문 · 1시간',exact=True).click()
+        click('매각처 방문');page.get_by_role('button',name='고물상 방문',exact=True).click()
         page.locator('.item-row').first.click();click('제시 가격으로 판매 확정')
         while page.get_by_role('button',name='← 뒤로',exact=True).count():click('← 뒤로')
         click('닫기')

@@ -558,7 +558,7 @@ export function OutletView({ g, act }: { g: Game; act: Act }) {
             act({ type: 'visit', id: o.id });
           }}
         >
-          {o.title} 방문 · 1시간
+          {o.title} 방문
         </Button>
       ))}
       {g.quotes && outlet && (

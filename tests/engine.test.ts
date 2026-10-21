@@ -62,7 +62,6 @@ test('satiety zero blocks consuming actions, not free meal / sleep / discard / i
     { type: 'scavenge' },
     { type: 'refresh' },
     { type: 'check', id: g.inventory[0].id },
-    { type: 'visit', id: 'scrap' },
   ] as Command[])
     assert.equal(execute(g, c).ok, false);
   const healed = run(g, { type: 'meal', id: 'free' });
@@ -461,7 +460,7 @@ test('every paid-time action advances whole hours, and listing wait starts after
           : type === 'repay'
             ? { type, amount: 1 }
             : { type, id: g.inventory[0].id };
-    cases.push({ game: g, command, hours: 1 });
+    cases.push({ game: g, command, hours: type === 'visit' ? 0 : 1 });
   }
   let g = run(owned(), { type: 'post', id: owned().inventory[0].id, price: 1 });
   assert.equal(
@@ -819,4 +818,39 @@ test('new buyers can inquire on the same unchanged listing after all previous ch
   assert.equal(g.sales[0].price, sale.price);
   assert.equal(g.sales[0].expires, sale.expires);
   assert.ok(g.inquiries.every((q) => !previous.includes(q.id)));
+});
+
+test('outlet travel at zero satiety consumes no time, stats, RNG or journal entries; actual selling still takes an hour', () => {
+  const original = owned();
+  original.minute = 3 * 1440 + 23 * 60;
+  original.marketDay = 4;
+  original.satiety = 0;
+  original.fatigue = 0;
+  let g = original;
+  for (const id of ['scrap', 'used', 'collector', 'scrap']) {
+    g = run(g, { type: 'visit', id });
+    assert.equal(g.quotes?.outlet, id);
+    assert.equal(g.quotes?.at, original.minute);
+    const { quotes: ignoredOriginal, ...before } = original;
+    const { quotes: ignoredNext, ...after } = g;
+    void ignoredOriginal;
+    void ignoredNext;
+    assert.deepEqual(after, before);
+  }
+  const playable = structuredClone(g);
+  playable.satiety = 100;
+  playable.fatigue = 100;
+  const quote = playable.quotes!.prices[playable.inventory[0].id];
+  const sold = run(playable, {
+    type: 'outletSell',
+    id: playable.inventory[0].id,
+  });
+  assert.equal(sold.minute - playable.minute, 60);
+  assert.equal(sold.cash - playable.cash, quote);
+  assert.equal(sold.inventory.length, 0);
+  assert.equal(
+    sold.interest - playable.interest,
+    10_000,
+    'only the actual sale crosses midnight',
+  );
 });

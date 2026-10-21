@@ -695,8 +695,6 @@ export function execute(original: Game, command: Command): Result {
       case 'visit': {
         const outlet = OUTLETS.find((o) => o.id === command.id);
         if (!outlet) throw Error('없는 매각처입니다.');
-        hunger(g);
-        advance(g, 1);
         const prices: Record<string, number> = {};
         for (const i of g.inventory)
           if (outlet.kinds.includes(i.kind))
@@ -706,7 +704,6 @@ export function execute(original: Game, command: Command): Result {
             );
         g.quotes = { outlet: outlet.id, at: g.minute, prices };
         message = `${outlet.title} 방문.`;
-        log(g, message);
         break;
       }
       case 'outletSell': {
