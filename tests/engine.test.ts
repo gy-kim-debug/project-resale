@@ -434,7 +434,7 @@ test('every paid-time action advances whole hours, and listing wait starts after
         type === 'offer'
           ? { type, id: g.board[0].id, price: g.board[0].offers[0] }
           : { type, id: g.board[0].id },
-      hours: 1,
+      hours: type === 'offer' ? 0 : 1,
     });
   }
   for (const type of ['check', 'repair', 'post', 'visit', 'repay'] as const) {
@@ -473,6 +473,7 @@ test('every paid-time action advances whole hours, and listing wait starts after
   });
   for (const type of ['accept', 'reject', 'break'] as const) {
     g = pending();
+    if (type === 'reject') continue; // stochastic termination has its own settlement test
     cases.push({ game: g, command: { type, id: g.inquiries[0].id }, hours: 1 });
   }
   for (const choice of ['yes', 'no'] as const) {
@@ -535,4 +536,97 @@ test('hourly actions settle midnight once and legacy saves retain resources and 
   assert.equal(after.minute, 4 * 1440);
   assert.equal(after.interest - g.interest, 10_000);
   assert.equal(run(after, { type: 'wait' }).interest, after.interest);
+});
+
+test('purchase chat pauses time and survival until buy or explicit chat closure settles once', () => {
+  const before = rich();
+  const item = before.board[0];
+  const chat = run(before, {
+    type: 'offer',
+    id: item.id,
+    price: item.offers[1],
+  });
+  for (const key of [
+    'minute',
+    'cash',
+    'interest',
+    'satiety',
+    'fatigue',
+    'health',
+    'lastEvent',
+  ] as const)
+    assert.equal(chat[key], before[key]);
+  assert.equal(chat.board[0].chat?.length, 3);
+  const restored = parseSave(
+    JSON.parse(JSON.stringify({ version: 2, game: chat, favoriteIds: [] })),
+  ).game;
+  assert.deepEqual(restored, chat);
+  const bought = run(restored, { type: 'buy', id: item.id });
+  assert.equal(
+    bought.minute - before.minute,
+    60,
+    'chat plus exchange is one hour total',
+  );
+  assert.equal(bought.inventory[0].chatSettled, true);
+  const closed = run(restored, { type: 'closeChat', id: item.id });
+  assert.equal(closed.minute - before.minute, 60);
+  assert.equal(closed.board[0].chatSettled, true);
+  assert.equal(execute(closed, { type: 'closeChat', id: item.id }).ok, false);
+  const hungry = structuredClone(before);
+  hungry.satiety = 0;
+  const hungryChat = run(hungry, {
+    type: 'offer',
+    id: item.id,
+    price: item.offers[0],
+  });
+  assert.equal(hungryChat.health, hungry.health);
+  assert.ok(
+    run(hungryChat, { type: 'closeChat', id: item.id }).board[0].chatSettled,
+  );
+  const invalid = structuredClone(chat);
+  invalid.board[0].chat = [{ speaker: 'other', text: 42 } as never];
+  assert.equal(isGame(invalid), false);
+});
+
+test('sales chat counteroffers cost no time; acceptance, player break and buyer walk each settle once', () => {
+  const base = pending();
+  let continued = false,
+    walked = false;
+  for (const seed of [1, 1000, 12345, 999999, 123456789]) {
+    const g = structuredClone(base);
+    g.seed = seed;
+    const q = g.inquiries[0];
+    q.price = 100;
+    q.max = 1000;
+    q.rounds = 0;
+    const after = run(g, { type: 'reject', id: q.id });
+    if (after.inquiries.length) {
+      continued = true;
+      for (const key of [
+        'minute',
+        'satiety',
+        'fatigue',
+        'health',
+        'interest',
+        'lastEvent',
+      ] as const)
+        assert.equal(after[key], g[key]);
+      assert.equal(after.inquiries[0].chat?.length, 3);
+      assert.ok(after.inquiries[0].price > q.price);
+      for (const type of ['accept', 'break'] as const) {
+        const ended = run(after, { type, id: q.id });
+        assert.equal(ended.minute - g.minute, 60);
+        assert.equal(ended.inquiries.length, 0);
+        assert.equal(execute(ended, { type, id: q.id }).ok, false);
+      }
+    } else {
+      walked = true;
+      assert.equal(after.minute - g.minute, 60);
+      assert.equal(after.sales.length, 0);
+    }
+  }
+  assert.ok(continued && walked, 'both negotiation outcomes covered');
+  const old = structuredClone(base);
+  delete old.inquiries[0].chat;
+  assert.ok(isGame(old), 'old v2 saves do not require chat histories');
 });

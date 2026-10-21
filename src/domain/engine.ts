@@ -456,7 +456,6 @@ export function execute(original: Game, command: Command): Result {
       }
       case 'offer': {
         const i = preItem(g, command.id);
-        hunger(g);
         if (
           i.price === 0 ||
           i.negotiation !== 'none' ||
@@ -471,7 +470,30 @@ export function execute(original: Game, command: Command): Result {
           ? `판매자가 ${won(command.price)} 제안에 동의했습니다.`
           : '판매자가 네고를 거절했습니다.';
         log(g, message);
-        advance(g, 1);
+        i.chat = [
+          { speaker: 'other', text: `판매 가격은 ${won(i.price)}입니다.` },
+          {
+            speaker: 'player',
+            text: `${won(command.price)}에 거래할 수 있을까요?`,
+          },
+          {
+            speaker: 'other',
+            text: accepted
+              ? `좋아요. ${won(command.price)}에 거래해요.`
+              : `그 가격은 어렵습니다. ${won(i.price)}에 판매합니다.`,
+          },
+        ];
+        i.chatSettled = false;
+        break;
+      }
+      case 'closeChat': {
+        const i = preItem(g, command.id);
+        if (!i.chat || i.chatSettled) throw Error('진행 중인 흥정이 없습니다.');
+        i.chat.push({ speaker: 'player', text: '이번 거래는 하지 않을게요.' });
+        i.chatSettled = true;
+        message = '흥정을 마쳤습니다.';
+        log(g, message);
+        advance(g, 1, 0, 0, true);
         break;
       }
       case 'buy': {
@@ -481,7 +503,18 @@ export function execute(original: Game, command: Command): Result {
         const cost = item.negotiatedPrice ?? item.price;
         affordable(g, cost);
         money(g, -cost);
-        g.inventory.push({ ...item });
+        const received = {
+          ...item,
+          chat: item.chat ? [...item.chat] : undefined,
+        };
+        if (received.chat && !received.chatSettled) {
+          received.chat.push({
+            speaker: 'player',
+            text: `${won(cost)}에 거래할게요.`,
+          });
+          received.chatSettled = true;
+        }
+        g.inventory.push(received);
         g.board = g.board.filter((i) => i.id !== item.id);
         g.stats.purchases++;
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
@@ -593,8 +626,14 @@ export function execute(original: Game, command: Command): Result {
       case 'reject': {
         const q = g.inquiries.find((q) => q.id === command.id);
         if (!q) throw Error('종료된 문의입니다.');
+        q.chat ??= [
+          { speaker: 'other', text: `${won(q.price)}에 거래할 수 있을까요?` },
+        ];
+        q.chat.push({ speaker: 'player', text: '그 가격에는 어렵습니다.' });
+        let ended = false;
         if (q.rounds >= 2 || q.price >= q.max || roll(g) < 0.3) {
           finishSale(g, q.saleId);
+          ended = true;
           message =
             '구매자가 거래를 파토냈습니다. 판매 글과 다른 문의가 모두 종료됐습니다.';
         } else {
@@ -603,10 +642,14 @@ export function execute(original: Game, command: Command): Result {
             q.max,
             Math.max(q.price + 1, Math.floor(q.price * 1.12)),
           );
+          q.chat.push({
+            speaker: 'other',
+            text: `그러면 ${won(q.price)}은 어떠세요?`,
+          });
           message = `구매자가 ${won(q.price)}으로 다시 제안했습니다.`;
         }
         log(g, message);
-        advance(g, 1, 0, 0, true, false);
+        if (ended) advance(g, 1, 0, 0, true, false);
         break;
       }
       case 'break': {

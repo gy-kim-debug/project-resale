@@ -89,6 +89,15 @@ export const useGameStore = create<State>((set, get) => ({
       return false;
     }
     clearTimeout(highlightTimer);
+    // Chat replies update immediately; time is settled only when the conversation ends.
+    if (
+      ['offer', 'reject'].includes(command.type) &&
+      result.game.minute === g.minute
+    ) {
+      set({ game: result.game, notice: '', ok: true, changes: {} });
+      get().save();
+      return true;
+    }
     const id = current.actionId + 1;
     // Commit and save once before presentation: reload cannot lose or replay an action.
     set({

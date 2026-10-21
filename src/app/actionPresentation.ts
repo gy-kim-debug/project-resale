@@ -42,6 +42,7 @@ export function actionLabel(command: Command): string {
     inspect: '상태를 확인하는 중…',
     offer: '가격을 제안하는 중…',
     buy: '물품을 받는 중…',
+    closeChat: '흥정을 마무리하는 중…',
     check: '가치를 확인하는 중…',
     repair: '수리하는 중…',
     discard: '물품을 정리하는 중…',

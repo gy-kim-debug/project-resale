@@ -875,3 +875,44 @@ html {
   flex: 1;
   min-width: 0;
 }
+
+.trade-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 0;
+}
+.chat-message {
+  max-width: 88%;
+  align-self: flex-start;
+}
+.chat-message small {
+  display: block;
+  margin: 0 6px 4px;
+  color: #aab5a1;
+}
+.chat-message p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 2px 12px 12px;
+  background: #303b2a;
+  overflow-wrap: anywhere;
+}
+.chat-player {
+  align-self: flex-end;
+}
+.chat-player small {
+  text-align: right;
+}
+.chat-player p {
+  background: #4b5e39;
+  border-radius: 12px 2px 12px 12px;
+}
+.chat-cost,
+.chat-ended {
+  font-size: 12px;
+  color: #aab5a1;
+}

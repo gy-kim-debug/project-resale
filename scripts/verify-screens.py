@@ -65,13 +65,14 @@ with sync_playwright() as pw:
         page.wait_for_function("async()=> (await ("+READ_SAVE+")())?.game?.inquiries?.length > 0")
         before=saved()['game'];page.reload();expect(page.get_by_role('heading',name='문의',exact=True)).to_be_visible()
         assert saved()['game']['minute']==before['minute']
-        page.get_by_role('button',name='수락 (1시간)',exact=True).first.click()
+        page.get_by_role('button',name='수락하고 거래 · 1시간',exact=True).first.click()
         tab('보관함')
         expect(page.get_by_text('아직 보유한 물품이 없습니다.')).to_be_visible()
         # Real buy, negotiation, outlet and archive flows from a non-production fixture.
         fixture('rich');activity('장터');page.locator('.item-row').first.click();layout()
         expect(page.get_by_text('상태 미확인')).to_be_visible()
         page.get_by_role('button',name='구매 전 외관·작동 확인',exact=False).click()
+        click('판매자와 채팅')
         page.get_by_role('button',name=' 제안',exact=False).first.click()
         page.get_by_role('button',name='구매 내용 확인',exact=False).click();click('지불·수령 확정')
         click('받은 물품 확인');layout();page.screenshot(path=f'work/playable-item-{width}.png',full_page=True)

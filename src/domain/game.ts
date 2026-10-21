@@ -2,7 +2,13 @@
 export type Kind = '생활' | '디지털' | '가구' | '수집품';
 export type Condition = '양호' | '사용감' | '고장';
 export type Status = 'playing' | 'dead' | 'cleared';
+export interface ChatMessage {
+  speaker: 'player' | 'other';
+  text: string;
+}
 export interface Item {
+  chat?: ChatMessage[];
+  chatSettled?: boolean;
   id: string;
   title: string;
   kind: Kind;
@@ -30,6 +36,7 @@ export interface Sale {
   nextCheck: number;
 }
 export interface Inquiry {
+  chat?: ChatMessage[];
   id: string;
   saleId: string;
   name: string;
@@ -96,6 +103,7 @@ export type Command =
   | { type: 'inspect'; id: string }
   | { type: 'offer'; id: string; price: number }
   | { type: 'buy'; id: string }
+  | { type: 'closeChat'; id: string }
   | { type: 'check'; id: string }
   | { type: 'repair'; id: string }
   | { type: 'discard'; id: string }

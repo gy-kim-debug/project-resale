@@ -8,12 +8,24 @@ const text = (v: unknown): v is string =>
   typeof v === 'string' && v.length <= 2000;
 const kind = (v: unknown) =>
   ['생활', '디지털', '가구', '수집품'].includes(String(v));
+const chat = (v: unknown) =>
+  v === undefined ||
+  (Array.isArray(v) &&
+    v.length <= 12 &&
+    v.every(
+      (m) =>
+        record(m) &&
+        ['player', 'other'].includes(String(m.speaker)) &&
+        text(m.text),
+    ));
 function item(v: unknown): v is Item {
   return (
     record(v) &&
     ['id', 'title', 'seller', 'description', 'defect'].every((k) =>
       text(v[k]),
     ) &&
+    chat(v.chat) &&
+    (v.chatSettled === undefined || typeof v.chatSettled === 'boolean') &&
     kind(v.kind) &&
     ['양호', '사용감', '고장'].includes(String(v.condition)) &&
     ['base', 'value', 'price', 'expires'].every((k) =>
@@ -117,6 +129,7 @@ export function isGame(v: unknown): v is Game {
         text(q.saleId) &&
         sales.has(q.saleId) &&
         text(q.name) &&
+        chat(q.chat) &&
         integer(q.price, RULES.maxMoney) &&
         integer(q.max, RULES.maxMoney) &&
         integer(q.rounds, 2),

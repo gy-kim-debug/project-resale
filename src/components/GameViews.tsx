@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ItemArt } from './ItemArt';
+import { TradeChat } from './TradeChat';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, Kind } from '../domain/game';
 import { won, dayOf, timeOf, hoursText } from '../domain/game';
@@ -357,6 +358,7 @@ export function ListingView({
   const favorites = useGameStore((s) => s.favoriteIds);
   const toggle = useGameStore((s) => s.toggleFavorite);
   const [confirm, setConfirm] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const price = item.negotiatedPrice ?? item.price;
   return (
     <>
@@ -384,25 +386,47 @@ export function ListingView({
           ? '구매 전 상태 확인 완료'
           : `구매 전 외관·작동 확인 · 1시간${item.kind === '디지털' ? ' · 200원' : ' · 0원'}`}
       </Button>
-      {item.price > 0 && item.negotiation === 'none' && (
+      {item.price > 0 && (
         <section className="card">
-          <h3>구매 가격 제안 · 각 1시간</h3>
-          {item.offers.map((p) => (
-            <Button
-              key={p}
-              onClick={() => act({ type: 'offer', id: item.id, price: p })}
-            >
-              {won(p)} 제안 · 1시간
-            </Button>
-          ))}
+          {!chatOpen && !item.chat ? (
+            <Button onClick={() => setChatOpen(true)}>판매자와 채팅</Button>
+          ) : (
+            <>
+              <h3>{item.seller}</h3>
+              <TradeChat
+                name={item.seller}
+                messages={
+                  item.chat ?? [
+                    {
+                      speaker: 'other',
+                      text:
+                        item.negotiation === 'accepted'
+                          ? `${won(price)}에 거래해요.`
+                          : `판매 가격은 ${won(item.price)}입니다.`,
+                    },
+                  ]
+                }
+              />
+              {item.negotiation === 'none' &&
+                item.offers.map((p) => (
+                  <Button
+                    key={p}
+                    onClick={() =>
+                      act({ type: 'offer', id: item.id, price: p })
+                    }
+                  >
+                    {won(p)} 제안 · 0시간
+                  </Button>
+                ))}
+              {item.chat && !item.chatSettled && (
+                <Button onClick={() => act({ type: 'closeChat', id: item.id })}>
+                  거래하지 않고 흥정 종료 · 1시간
+                </Button>
+              )}
+              {item.chatSettled && <p className="chat-ended">대화 종료</p>}
+            </>
+          )}
         </section>
-      )}
-      {item.negotiation !== 'none' && (
-        <p className="lead">
-          {item.negotiation === 'accepted'
-            ? `협상 수락 · 합의 금액 ${won(price)}`
-            : '협상 거절'}
-        </p>
       )}
       {!confirm ? (
         <Button
@@ -604,13 +628,23 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
             <p>
               {item?.title} · 등록 {won(sale?.price ?? 0)}
             </p>
-            <p className="item-price">제안 {won(q.price)}</p>
-            <p>{q.rounds ? '거절 후 재제안' : '새로운 구매 문의'}</p>
+            <p className="chat-cost">대화 0시간 · 종료 1시간</p>
+            <TradeChat
+              name={q.name}
+              messages={
+                q.chat ?? [
+                  {
+                    speaker: 'other',
+                    text: `${won(q.price)}에 거래할 수 있을까요?`,
+                  },
+                ]
+              }
+            />
             <Button onClick={() => act({ type: 'accept', id: q.id })}>
-              수락 (1시간)
+              수락하고 거래 · 1시간
             </Button>
             <Button onClick={() => act({ type: 'reject', id: q.id })}>
-              거절 (1시간)
+              거절 · 종료 시 1시간
             </Button>
           </section>
         );
@@ -619,7 +653,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
         danger
         onClick={() => act({ type: 'break', id: g.inquiries[0].id })}
       >
-        거래 파토 (1시간)
+        거래 파토 · 1시간
       </Button>
     </>
   );
@@ -887,7 +921,7 @@ export function RouteView({
             제안 수락 · 1시간
           </Button>
           <Button onClick={() => act({ type: 'event', choice: 'no' })}>
-            거절 (1시간)
+            거절 · 종료 시 1시간
           </Button>
         </>
       ) : (
