@@ -1,11 +1,11 @@
 /** v1 playable balance, chosen by developer under user's delegation. */
 export const RULES = {
   debt: 10_000_000_000,
+  startingCash: 100_000,
+  weeklyBaseRateUnits: 1,
+  weeklyRateStepUnits: 2,
   capacity: 12,
   maxMoney: 1_000_000_000_000_000,
-  actionFatigue: 12,
-  interestDenominator: 1_000_000,
-  graceDays: 3,
 };
 export const JOBS = [
   {
@@ -13,21 +13,18 @@ export const JOBS = [
     title: '전단 배포',
     actions: 1,
     reward: 9_000,
-    fatigue: 8,
   },
   {
     id: 'shop',
     title: '매장 정리',
     actions: 1,
     reward: 22_000,
-    fatigue: 20,
   },
   {
     id: 'warehouse',
     title: '창고 분류',
     actions: 1,
     reward: 38_000,
-    fatigue: 42,
   },
 ];
 export const OUTLETS = [

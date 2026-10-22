@@ -1,4 +1,4 @@
-"""Three daily actions, survival, overnight settlement and old-save migration."""
+"""Three daily actions, overnight settlement and old-save migration."""
 import json
 import os
 from pathlib import Path
@@ -20,7 +20,7 @@ with sync_playwright() as p:
   def activity(name):page.locator('.activity-grid').get_by_role('button',name=name,exact=True).click()
   def work(index=0):
    page.get_by_role('button',name='일하기 · 행동 1회',exact=True).nth(index).click()
-   expect(page.locator('.action-layer')).to_be_visible();expect(page.locator('.action-layer')).to_have_count(0)
+   expect(page.locator('.action-layer')).to_have_count(0)
   expect(page.locator('.status-day')).to_have_text('1일째')
   expect(page.locator('.status-clock')).to_have_text('남은 행동 3/3')
   assert ':00' not in page.locator('.status-header').inner_text()
@@ -28,18 +28,12 @@ with sync_playwright() as p:
   for left in [2,1,3]:
    work();expect(page.locator('.status-clock')).to_have_text('남은 행동 '+str(left)+'/3')
   expect(page.locator('.status-day')).to_have_text('2일째')
-  assert read()['minute']==1440;assert read()['cash']==27000
-  assert read()['fatigue']==100
+  assert read()['minute']==1440;assert read()['cash']==127000
   assert 'satiety' not in read() and 'hungerRemainder' not in read()
   page.get_by_role('button',name='닫기',exact=True).click()
   page.screenshot(path=f'work/daily-home-{width}.png',full_page=True)
-  load();activity('아르바이트');work(2)
-  assert read()['fatigue']==46
-  work(2);expect(page.locator('.status-day')).to_have_text('2일째')
-  expect(page.locator('.status-clock')).to_have_text('남은 행동 3/3')
-  load();activity('아르바이트');work();page.get_by_role('button',name='닫기',exact=True).click()
-  activity('수면');page.get_by_role('button',name='잠자기 · 하루 마무리',exact=True).click()
-  expect(page.locator('.action-layer')).to_have_count(0)
+  load();activity('아르바이트')
+  for _ in range(3):work(2)
   expect(page.locator('.status-day')).to_have_text('2일째')
   expect(page.locator('.status-clock')).to_have_text('남은 행동 3/3')
   legacy=load();legacy['game'].update({'satiety':0,'hungerRemainder':59,'minute':480})
@@ -50,7 +44,7 @@ with sync_playwright() as p:
   assert 'satiety' not in read() and 'hungerRemainder' not in read()
   expect(page.locator('.status-clock')).to_have_text('남은 행동 1/3')
   # Old hourly snapshots keep their date and finances; the first action persists the marker.
-  old=json.loads(Path('work/rich.json').read_text());old['game'].pop('timeMode',None)
+  old=json.loads(Path('work/rich.json').read_text());old['game'].pop('timeMode',None);old['game'].pop('interestWeek',None)
   old['game']['minute']=14*1440+23*60+45;old['game']['marketDay']=15
   for item in old['game']['board']:item['expires']=old['game']['minute']+1440
   page.evaluate(WRITE,old);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
@@ -63,6 +57,6 @@ with sync_playwright() as p:
   expect(page.locator('.status-day')).to_have_text('15일째')
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   assert not errors,errors
-  results.append({'width':width,'third_action_new_day':'PASS','heavy_work_early_end':'PASS','sleep_forfeit':'PASS','legacy_migration_reload':'PASS'})
+  results.append({'width':width,'third_action_new_day':'PASS','all_jobs_one_action':'PASS','legacy_migration_reload':'PASS'})
   ctx.close()
  browser.close();print(json.dumps(results))

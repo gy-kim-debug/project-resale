@@ -16,12 +16,27 @@ import {
 import { RULES } from '../src/content/rules';
 import { isGame } from '../src/storage/validation';
 import { parseSave } from '../src/storage/saveRepository';
+import {
+  weeklyInterest,
+  weeklyRateText,
+  interestAmount,
+  interestPending,
+  WEEK_TICKS,
+} from '../src/domain/debt';
 import { acquisitionCost, compareItem } from '../src/domain/inventory';
 function run(g: Game, c: Command) {
   const r = execute(g, c);
   assert.ok(r.ok, r.message);
   assert.ok(isGame(r.game), JSON.stringify(r.game));
   return r.game;
+}
+function nextDay(g: Game) {
+  const day = dayOf(g);
+  while (dayOf(g) === day) {
+    for (const q of g.inquiries) g = run(g, { type: 'break', id: q.id });
+    g = run(g, { type: 'wait' });
+  }
+  return g;
 }
 function rich(seed = 3) {
   const g = newGame(seed);
@@ -46,10 +61,11 @@ function pending() {
 
 test('start, deterministic RNG, pure engine, rejected commands do not change time/RNG', () => {
   const g = newGame(42);
-  assert.equal(g.cash, 0);
+  assert.equal(g.cash, 100000);
   assert.equal(g.principal, 10_000_000_000);
   assert.deepEqual(g.inventory, []);
   assert.deepEqual(newGame(42), g);
+  g.board[0].price = g.cash + 1;
   const snapshot = structuredClone(g);
   const failed = execute(g, { type: 'buy', id: g.board[0].id });
   assert.equal(failed.ok, false);
@@ -57,7 +73,7 @@ test('start, deterministic RNG, pure engine, rejected commands do not change tim
   assert.strictEqual(failed.game, g);
   const next = run(g, { type: 'job', id: 'flyer' });
   assert.equal(next.minute, g.minute + ACTION_TICK);
-  assert.equal(next.cash, 9000);
+  assert.equal(next.cash, 109000);
   assert.deepEqual(g, snapshot);
 });
 test('obsolete hunger fields are discarded without blocking actions or changing progress', () => {
@@ -83,42 +99,29 @@ test('obsolete hunger fields are discarded without blocking actions or changing 
   assert.equal(g.principal, original.principal);
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
 });
-test('removed meals are rejected atomically and sleep preserves health', () => {
+test('removed survival commands cannot spend money or advance the day', () => {
   const g = rich();
-  g.health = 30;
-  const before = structuredClone(g);
-  const result = execute(g, { type: 'meal', id: 'free' } as unknown as Command);
-  assert.equal(result.ok, false);
-  assert.strictEqual(result.game, g);
-  assert.deepEqual(g, before);
-  const healed = run(g, { type: 'treat' });
-  assert.equal(healed.health, 90);
-  assert.equal(healed.cash, g.cash - 10000);
-  const slept = run(g, { type: 'sleep' });
-  assert.equal(slept.health, 30);
-  assert.equal(slept.fatigue, 100);
-  assert.equal(slept.minute % 1440, 0);
+  for (const type of ['meal', 'treat', 'sleep']) {
+    const snapshot = structuredClone(g);
+    const result = execute(g, { type, id: 'free' } as unknown as Command);
+    assert.equal(result.ok, false);
+    assert.strictEqual(result.game, g);
+    assert.deepEqual(g, snapshot);
+  }
 });
-test('fatigue zero ends day, health zero is final, death cannot be healed', () => {
-  let g = newGame();
-  g.fatigue = 1;
-  const day = Math.floor(g.minute / 1440);
-  g = run(g, { type: 'job', id: 'flyer' });
-  assert.ok(Math.floor(g.minute / 1440) > day);
-  assert.equal(g.fatigue, 100);
-  g = newGame();
-  g.health = 0;
-  g.status = 'dead';
-  assert.equal(g.health, 0);
-  assert.equal(g.status, 'dead');
-  assert.equal(execute(g, { type: 'treat' }).ok, false);
-  assert.equal(execute(g, { type: 'job', id: 'flyer' }).ok, false);
+test('old survival fields are ignored and stripped without changing time, inventory or finances', () => {
+  const g = rich();
+  const old = { ...g, health: 0, fatigue: 0, fatigueRemainder: 59 };
+  const restored = parseSave({ version: 2, game: old, favoriteIds: [] }).game;
+  assert.deepEqual(restored, g);
+  const worked = run(restored, { type: 'job', id: 'warehouse' });
+  assert.equal(worked.minute, ACTION_TICK);
+  assert.equal(actionsLeft(worked), 2);
 });
-test('survival numbers do not modify hidden value or stochastic negotiation outcomes', () => {
+test('obsolete survival fields do not modify hidden value or stochastic negotiation outcomes', () => {
   const a = rich(60),
     b = structuredClone(a);
-  b.health = 20;
-  b.fatigue = 60;
+  Object.assign(b, { health: 20, fatigue: 0 });
   const c: Command = {
     type: 'offer',
     id: a.board[0].id,
@@ -130,7 +133,7 @@ test('survival numbers do not modify hidden value or stochastic negotiation outc
   assert.equal(ra.board[0].negotiation, rb.board[0].negotiation);
   assert.equal(ra.seed, rb.seed);
 });
-test('free giveaways may be absent despite zero cash; available giveaway is guaranteed', () => {
+test('free giveaways appear randomly regardless of capital; available giveaway is guaranteed', () => {
   let absent = false,
     present = false;
   for (let seed = 1; seed < 100; seed++) {
@@ -141,7 +144,7 @@ test('free giveaways may be absent despite zero cash; available giveaway is guar
       present = true;
       const next = run(g, { type: 'buy', id: f.id });
       assert.equal(next.inventory[0].id, f.id);
-      assert.equal(next.cash, 0);
+      assert.equal(next.cash, g.cash);
     }
   }
   assert.ok(absent && present);
@@ -149,7 +152,6 @@ test('free giveaways may be absent despite zero cash; available giveaway is guar
 test('scavenging always finds one item; capacity checked before cost/time', () => {
   let g = newGame();
   for (let n = 0; n < RULES.capacity; n++) {
-    g.fatigue = 100;
     g = run(g, { type: 'scavenge' });
     assert.equal(g.inventory.length, n + 1);
   }
@@ -214,7 +216,6 @@ test('pending inquiries block actions; breaking one chat preserves listing and o
   );
   assert.deepEqual(serialized.game, g);
   for (const c of [
-    { type: 'sleep' },
     { type: 'repay', amount: 1 },
     { type: 'discard', id: g.inventory[0].id },
     { type: 'refresh' },
@@ -295,32 +296,26 @@ test('repair charges once and may fail, appraisal required, value depends on ite
   assert.equal(next.inventory[0].repaired, true);
   assert.equal(execute(next, { type: 'repair', id: i.id }).ok, false);
 });
-test('interest grace, ceil integer rounding, principal only, repayment interest first and clear', () => {
+test('principal repayments are separate from interest; legacy interest remains payable and final payment clears', () => {
   let g = rich();
   g.interest = 100;
   g = run(g, { type: 'repay', amount: 150 });
-  assert.equal(g.interest, 0);
-  assert.equal(g.principal, RULES.debt - 50);
-  g = newGame();
-  for (let n = 0; n < 2; n++) g = run(g, { type: 'sleep' });
-  assert.equal(g.interest, 0);
-  g = run(g, { type: 'sleep' });
-  assert.equal(g.interest, 10000);
-  g = run(g, { type: 'sleep' });
-  assert.equal(g.interest, 20000);
+  assert.equal(g.interest, 100);
+  assert.equal(g.principal, RULES.debt - 150);
   g = rich();
   g.principal = 101;
   g.interest = 7;
-  g = run(g, { type: 'repay', amount: 108 });
+  g = run(g, { type: 'repay', amount: 101 });
+  assert.equal(g.status, 'playing');
+  g = run(g, { type: 'payInterest' });
   assert.equal(g.status, 'cleared');
-  assert.equal(g.principal + g.interest, 0);
   assert.equal(execute(g, { type: 'job', id: 'flyer' }).ok, false);
 });
 test('expiry frees listing without disposing item; fixed capacity never grows', () => {
   let g = owned();
   g = run(g, { type: 'post', id: g.inventory[0].id, price: 999999999 });
   g.minute += 2880;
-  g = run(g, { type: 'sleep' });
+  g = nextDay(g);
   assert.equal(g.sales.length, 0);
   assert.equal(g.inventory.length, 1);
   assert.ok(g.inventory.length <= RULES.capacity);
@@ -334,19 +329,19 @@ test('conditional event chain and random market update', () => {
   g = run(g, { type: 'event', choice: 'yes' });
   assert.equal(g.eventStage, 2);
   assert.ok(g.stats.repairs >= 4);
-  g = run(g, { type: 'sleep' });
-  g = run(g, { type: 'sleep' });
+  g = nextDay(g);
+  g = nextDay(g);
   assert.equal(g.eventStage, 3);
   assert.ok(g.logs.some((l) => l.text.includes('감사금')));
 });
-test('corrupt data rejected, no restoring living health-zero or broken references', () => {
+test('corrupt data rejected, broken references and malformed bankrupt state rejected', () => {
   const g = newGame();
   assert.ok(isGame(g));
   assert.throws(() =>
     parseSave({ version: 2, game: { ...g, cash: 1.2 }, favoriteIds: [] }),
   );
   assert.equal(isGame({ ...g, inventory: [{}] }), false);
-  assert.equal(isGame({ ...g, health: 0 }), false);
+  assert.equal(isGame({ ...g, interestWeek: 99 }), false);
   assert.equal(isGame({ ...g, principal: -1 }), false);
   assert.equal(isGame({ ...g, seed: NaN }), false);
   assert.equal(
@@ -356,7 +351,7 @@ test('corrupt data rejected, no restoring living health-zero or broken reference
 });
 
 for (const seed of [1, 42, 210])
-  test(`long-play seed ${seed} grows from zero to full repayment through real commands`, () => {
+  test(`long-play seed ${seed} trades until clear or a verifiable unpaid weekly invoice`, () => {
     let g = newGame(seed);
     let commands = 0;
     const step = (c: Command) => {
@@ -367,17 +362,13 @@ for (const seed of [1, 42, 210])
       assert.ok(isGame(g));
     };
     while (g.status === 'playing' && commands < 8000) {
+      if (interestPending(g)) {
+        step({ type: 'payInterest' });
+        continue;
+      }
       if (g.inquiries.length) {
         const q = [...g.inquiries].sort((a, b) => b.price - a.price)[0];
         step({ type: 'accept', id: q.id });
-        continue;
-      }
-      if (g.health < 30 && g.cash >= 10000) {
-        step({ type: 'treat' });
-        continue;
-      }
-      if (g.fatigue < 25) {
-        step({ type: 'sleep' });
         continue;
       }
       if (g.cash >= g.principal + g.interest) {
@@ -428,11 +419,13 @@ for (const seed of [1, 42, 210])
         status: g.status,
       }),
     );
-    assert.equal(
-      g.status,
-      'cleared',
-      `Failed to reach goal after ${commands} actions; cash ${g.cash}`,
-    );
+    assert.ok(g.status === 'cleared' || g.status === 'bankrupt');
+    assert.ok(commands > 40);
+    if (g.status === 'bankrupt') {
+      assert.ok(interestPending(g));
+      assert.ok(g.cash < interestAmount(g));
+      assert.equal(execute(g, { type: 'job', id: 'warehouse' }).ok, false);
+    } else assert.equal(g.principal + g.interest, 0);
   });
 
 test('each major action costs one daily action and inquiries start after registration', () => {
@@ -443,7 +436,7 @@ test('each major action costs one daily action and inquiries start after registr
     ['warehouse', 1],
   ] as const)
     cases.push({ game: rich(), command: { type: 'job', id }, cost });
-  for (const type of ['treat', 'scavenge', 'refresh', 'wait'] as const)
+  for (const type of ['scavenge', 'refresh', 'wait'] as const)
     cases.push({ game: rich(), command: { type }, cost: 1 });
   for (const type of ['buy', 'offer'] as const) {
     const g = rich();
@@ -543,15 +536,7 @@ test('legacy saves migrate once to a fresh three-action day without losing resou
   assert.equal(actionsLeft(g), 3);
   assert.equal(g.board[0].expires - g.minute, ACTION_TICK);
   assert.equal(g.minute - g.quotes!.at, 0);
-  for (const key of [
-    'cash',
-    'principal',
-    'interest',
-    'health',
-    'fatigue',
-    'fatigueRemainder',
-    'seed',
-  ] as const)
+  for (const key of ['cash', 'principal', 'interest', 'seed'] as const)
     assert.equal(g[key], old[key]);
   assert.deepEqual(migrated.favoriteIds, ['favorite']);
   assert.deepEqual(parseSave(migrated), migrated, 'migration is idempotent');
@@ -560,7 +545,7 @@ test('legacy saves migrate once to a fresh three-action day without losing resou
   const second = run(first, { type: 'wait' });
   const after = run(second, { type: 'wait' });
   assert.equal(after.minute, 4 * 1440);
-  assert.equal(after.interest - g.interest, 10_000);
+  assert.equal(after.interest, g.interest);
   assert.equal(run(after, { type: 'wait' }).interest, after.interest);
 });
 
@@ -572,14 +557,7 @@ test('purchase chat and closure are free; only purchase consumes transaction tim
     id: item.id,
     price: item.offers[1],
   });
-  for (const key of [
-    'minute',
-    'cash',
-    'interest',
-    'fatigue',
-    'health',
-    'lastEvent',
-  ] as const)
+  for (const key of ['minute', 'cash', 'interest', 'lastEvent'] as const)
     assert.equal(chat[key], before[key]);
   assert.equal(chat.board[0].chat?.length, 3);
   const restored = parseSave(
@@ -603,7 +581,6 @@ test('purchase chat and closure are free; only purchase consumes transaction tim
     id: item.id,
     price: item.offers[0],
   });
-  assert.equal(hungryChat.health, hungry.health);
   assert.ok(
     run(hungryChat, { type: 'closeChat', id: item.id }).board[0].chatSettled,
   );
@@ -626,13 +603,7 @@ test('sales chat and either side walking cost no time; completed sale costs one 
     const after = run(g, { type: 'reject', id: q.id });
     if (after.inquiries.some((inquiry) => inquiry.id === q.id)) {
       continued = true;
-      for (const key of [
-        'minute',
-        'fatigue',
-        'health',
-        'interest',
-        'lastEvent',
-      ] as const)
+      for (const key of ['minute', 'interest', 'lastEvent'] as const)
         assert.equal(after[key], g[key]);
       assert.equal(after.inquiries[0].chat?.length, 3);
       assert.ok(after.inquiries[0].price > q.price);
@@ -765,13 +736,7 @@ test('seller counteroffers can be accepted or countered; failed negotiation keep
     accepted.inquiries[0].chat?.at(-1)?.text.includes('좋아요'),
     true,
   );
-  for (const key of [
-    'minute',
-    'cash',
-    'health',
-    'fatigue',
-    'interest',
-  ] as const)
+  for (const key of ['minute', 'cash', 'interest'] as const)
     assert.equal(accepted[key], base[key]);
   assert.deepEqual(accepted.sales, [sale]);
   assert.deepEqual(accepted.inquiries[1], base.inquiries[1]);
@@ -838,7 +803,6 @@ test('outlet travel consumes no time, stats, RNG or journal entries; actual sell
   const original = owned();
   original.minute = 3 * 1440 + ACTION_TICK * 2;
   original.marketDay = 4;
-  original.fatigue = 0;
   let g = original;
   for (const id of ['scrap', 'used', 'collector', 'scrap']) {
     g = run(g, { type: 'visit', id });
@@ -851,7 +815,6 @@ test('outlet travel consumes no time, stats, RNG or journal entries; actual sell
     assert.deepEqual(after, before);
   }
   const playable = structuredClone(g);
-  playable.fatigue = 100;
   const quote = playable.quotes!.prices[playable.inventory[0].id];
   const sold = run(playable, {
     type: 'outletSell',
@@ -862,8 +825,8 @@ test('outlet travel consumes no time, stats, RNG or journal entries; actual sell
   assert.equal(sold.inventory.length, 0);
   assert.equal(
     sold.interest - playable.interest,
-    10_000,
-    'only the actual sale crosses a day boundary',
+    0,
+    'crossing a day no longer accrues daily interest',
   );
 });
 
@@ -878,46 +841,41 @@ test('three major actions end exactly one day and refill the next daily budget',
   }
   assert.equal(dayOf(g), 2);
   assert.equal(g.minute, 1440);
-  assert.equal(g.cash, 27000);
-  assert.equal(g.fatigue, 100);
-  assert.equal(g.health, 100);
+  assert.equal(g.cash, 127000);
   assert.notDeepEqual(
     g.board.map((i) => i.id),
     originalBoard,
   );
 });
 
-test('manual sleep forfeits remaining actions and heavy work can end the day early', () => {
-  let g = run(newGame(), { type: 'job', id: 'flyer' });
-  assert.equal(actionsLeft(g), 2);
-  const beforeSleep = structuredClone(g);
-  g = run(g, { type: 'sleep' });
-  assert.equal(dayOf(g), dayOf(beforeSleep) + 1);
-  assert.equal(actionsLeft(g), 3);
-  assert.equal(g.health, beforeSleep.health);
-  assert.equal(g.fatigue, 100);
-  g = newGame();
-  g = run(g, { type: 'job', id: 'warehouse' });
-  assert.equal(actionsLeft(g), 2);
-  assert.equal(g.fatigue, 46);
-  g = run(g, { type: 'job', id: 'warehouse' });
+test('all jobs use exactly one action with no premature day ending', () => {
+  let g = newGame();
+  for (const remaining of [2, 1, 3]) {
+    g = run(g, { type: 'job', id: 'warehouse' });
+    assert.equal(actionsLeft(g), remaining);
+  }
   assert.equal(dayOf(g), 2);
-  assert.equal(actionsLeft(g), 3);
-  assert.equal(g.fatigue, 100);
-  assert.equal(g.cash, 76000);
-  assert.ok(g.logs.some((l) => l.text.includes('피로도 소진')));
+  assert.equal(g.cash, newGame().cash + 38000 * 3);
 });
 
-test('third-action treatment heals before day rollover, with health capped at 100', () => {
-  const g = rich();
-  g.minute = ACTION_TICK * 2;
-  g.health = 50;
-  const after = run(g, { type: 'treat' });
-  assert.equal(dayOf(after), 2);
-  assert.equal(actionsLeft(after), 3);
-  assert.equal(after.health, 100);
-  assert.equal(after.fatigue, 100);
-  assert.equal(after.cash, g.cash - 10000);
+test('weekly rates increase by 0.002 percentage points and round won exactly', () => {
+  for (const [week, rate, amount] of [
+    [1, '0.001%', 100000],
+    [2, '0.003%', 300000],
+    [3, '0.005%', 500000],
+    [4, '0.007%', 700000],
+  ] as const) {
+    assert.equal(weeklyRateText(week), rate);
+    assert.equal(weeklyInterest(RULES.debt, week), amount);
+  }
+  assert.equal(weeklyInterest(1, 1), 1);
+  assert.equal(weeklyInterest(100001, 1), 2);
+  assert.equal(weeklyInterest(0, 10), 0);
+  const principal = 999999999999999;
+  assert.equal(
+    BigInt(weeklyInterest(principal, 101)),
+    (BigInt(principal) * 201n + 99999n) / 100000n,
+  );
 });
 
 test('free navigation, bargaining, disposal and declining proposals never spend a daily action', () => {
@@ -937,22 +895,28 @@ test('free navigation, bargaining, disposal and declining proposals never spend 
   g = run(g, { type: 'event', choice: 'no' });
   assert.equal(g.minute, before);
   assert.equal(actionsLeft(g), 3);
-  assert.equal(g.fatigue, 100);
 });
 
-test('daily interest is settled once after the third action, never per action', () => {
-  let g = newGame();
-  g.minute = 2 * 1440 + ACTION_TICK * 2;
-  g.marketDay = 3;
+test('week boundary locks progress until payment, then increases the rate without spending an action', () => {
+  let g = rich();
+  g.minute = WEEK_TICKS - ACTION_TICK;
   g = run(g, { type: 'wait' });
-  assert.equal(dayOf(g), 4);
-  assert.equal(g.interest, 10000);
-  g = run(g, { type: 'wait' });
-  g = run(g, { type: 'wait' });
-  assert.equal(g.interest, 10000);
-  g = run(g, { type: 'wait' });
-  assert.equal(dayOf(g), 5);
-  assert.equal(g.interest, 20000);
+  assert.equal(interestPending(g), true);
+  assert.equal(g.interest, 0);
+  assert.equal(g.cash, 100000);
+  for (const type of ['job', 'wait', 'visit', 'discard', 'offer'] as const)
+    assert.equal(execute(g, { type, id: 'scrap' } as Command).ok, false);
+  const snapshot = structuredClone(g);
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.minute, snapshot.minute);
+  assert.equal(g.cash, 0);
+  assert.equal(g.status, 'playing');
+  assert.equal(g.interestWeek, 1);
+  assert.equal(interestPending(g), false);
+  assert.equal(interestAmount(g), 300000);
+  assert.equal(execute(g, { type: 'payInterest' }).ok, false);
+  assert.equal(run(g, { type: 'job', id: 'flyer' }).cash, 9000);
 });
 
 test('migration retains active listings, chats, prices and finances and refuses malformed new time grids', () => {
@@ -980,16 +944,98 @@ test('migration retains active listings, chats, prices and finances and refuses 
   assert.equal(g.sales[0].expires - g.minute, 2880);
   assert.equal(g.sales[0].nextCheck - g.minute, ACTION_TICK);
   assert.deepEqual(g.quotes?.prices, old.quotes.prices);
-  for (const key of [
-    'cash',
-    'principal',
-    'interest',
-    'fatigue',
-    'health',
-    'seed',
-  ] as const)
+  for (const key of ['cash', 'principal', 'interest', 'seed'] as const)
     assert.equal(g[key], old[key]);
   assert.deepEqual(parseSave(saved), saved);
   assert.equal(isGame({ ...g, minute: g.minute + 1 }), false);
   assert.equal(isGame({ ...g, timeMode: 'unknown' }), false);
+});
+
+test('spending the last cash does not end the game and owned items remain usable', () => {
+  const g = rich();
+  g.cash = g.board[0].price;
+  const after = run(g, { type: 'buy', id: g.board[0].id });
+  assert.equal(after.cash, 0);
+  assert.equal(after.status, 'playing');
+  assert.equal(after.inventory.length, 1);
+  assert.equal(run(after, { type: 'job', id: 'flyer' }).cash, 9000);
+});
+test('repaying all cash toward principal stays playable; final full principal repayment clears', () => {
+  const g = rich();
+  const after = run(g, { type: 'repay', amount: g.cash });
+  assert.equal(after.cash, 0);
+  assert.equal(after.status, 'playing');
+  const final = rich();
+  final.principal = final.cash;
+  const won = run(final, { type: 'repay', amount: final.cash });
+  assert.equal(won.cash, 0);
+  assert.equal(won.status, 'cleared');
+});
+test('insufficient funds refuse atomically; one remaining won keeps playing', () => {
+  const g = rich();
+  const price = g.board[0].price;
+  g.cash = price - 1;
+  const snapshot = structuredClone(g);
+  assert.equal(execute(g, { type: 'buy', id: g.board[0].id }).ok, false);
+  assert.deepEqual(g, snapshot);
+  g.cash = price + 1;
+  const after = run(g, { type: 'buy', id: g.board[0].id });
+  assert.equal(after.cash, 1);
+  assert.equal(after.status, 'playing');
+});
+
+test('new games start at 100000 won and old zero-cash saves remain playable without granting cash', () => {
+  const fresh = newGame();
+  assert.equal(fresh.cash, 100000);
+  assert.equal(fresh.stats.peakCash, 100000);
+  assert.equal(fresh.stats.earned, 0);
+  const old = owned();
+  old.cash = 0;
+  old.minute = ACTION_TICK;
+  delete old.interestWeek;
+  const snapshot = structuredClone(old);
+  const restored = parseSave({ version: 2, game: old, favoriteIds: ['kept'] });
+  assert.equal(restored.game.cash, 0);
+  assert.equal(restored.game.status, 'playing');
+  assert.equal(restored.game.minute, ACTION_TICK);
+  assert.deepEqual(restored.game.inventory, old.inventory);
+  assert.deepEqual(old, snapshot);
+});
+
+test('insufficient cash at the weekly deadline ends play even when cash and inventory remain', () => {
+  const g = owned();
+  g.minute = WEEK_TICKS - ACTION_TICK;
+  g.cash = 99999;
+  const after = run(g, { type: 'wait' });
+  assert.equal(after.status, 'bankrupt');
+  assert.equal(after.cash, 99999);
+  assert.equal(after.inventory.length, 1);
+  assert.equal(execute(after, { type: 'job', id: 'flyer' }).ok, false);
+  assert.deepEqual(
+    parseSave({ version: 2, game: after, favoriteIds: [] }).game,
+    after,
+  );
+});
+test('repayment while payment is due reprices the invoice and costs no action', () => {
+  let g = rich();
+  g.cash = 200000;
+  g.minute = WEEK_TICKS;
+  g = run(g, { type: 'repay', amount: 100000 });
+  assert.equal(g.minute, WEEK_TICKS);
+  assert.equal(interestAmount(g), 99999);
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, 1);
+  assert.equal(g.interestWeek, 1);
+});
+test('legacy saves keep arrears but begin weekly billing without retroactive invoices', () => {
+  const g = rich();
+  g.minute = WEEK_TICKS * 5 + ACTION_TICK;
+  g.interest = 1234;
+  delete g.interestWeek;
+  const result = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.equal(result.interestWeek, 5);
+  assert.equal(result.interest, 1234);
+  assert.equal(result.cash, g.cash);
+  assert.equal(interestPending(result), false);
+  assert.equal(interestAmount(result), 1100000 + 1234);
 });

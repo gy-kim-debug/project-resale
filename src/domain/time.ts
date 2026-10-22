@@ -1,13 +1,29 @@
 import { ACTION_TICK, dayOf, type Game } from './game';
+import { completedWeeks, interestPending, interestAmount } from './debt';
 
-/** Pure save normalization: remove obsolete hunger data and migrate legacy time once. */
+/** Pure save normalization: remove obsolete survival data and migrate legacy time once. */
 export function toDailyActions(original: Game): Game {
   const g = structuredClone(original) as Game & {
     satiety?: unknown;
     hungerRemainder?: unknown;
+    health?: unknown;
+    fatigue?: unknown;
+    fatigueRemainder?: unknown;
   };
   delete g.satiety;
   delete g.hungerRemainder;
+  delete g.health;
+  delete g.fatigue;
+  delete g.fatigueRemainder;
+  g.interestWeek ??= completedWeeks(g);
+  if (
+    g.status === 'playing' &&
+    interestPending(g) &&
+    g.cash < interestAmount(g)
+  ) {
+    g.status = 'bankrupt';
+    g.inquiries = [];
+  }
   if (g.timeMode === 'daily-actions') return g;
   const oldNow = g.minute;
   const now = Math.floor(oldNow / 1440) * 1440;

@@ -39,14 +39,14 @@ with sync_playwright() as pw:
         expect(page.get_by_role('button',name='플레이 안내',exact=True)).to_have_count(0)
         assert page.get_by_text('무료 급식은 언제나',exact=False).count()==0
         assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','상점']
-        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','매각처','수면','치료']
+        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','매각처']
         expect(page.locator('.header-debt')).to_contain_text('10,000,000,000 원')
-        assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==['체력','피로도']
+        assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==[]
         layout();page.screenshot(path=f'work/playable-home-{width}.png',full_page=True)
         activity('아르바이트');layout()
         assert page.get_by_role('button',name=re.compile('^일하기')).all_text_contents()==['일하기 · 행동 1회','일하기 · 행동 1회','일하기 · 행동 1회']
         page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
-        expect(page.locator('.status-top')).to_contain_text('9,000 원')
+        expect(page.locator('.status-top')).to_contain_text('109,000 원')
         expect(page.locator('.status-top')).to_contain_text('남은 행동 2/3')
         click('닫기');activity('물건 수집');click('물건 수집하기');click('닫기');tab('보관함')
         page.locator('.item-row').first.click();expect(page.get_by_text('가치 미확인',exact=True)).to_be_visible()
@@ -96,9 +96,6 @@ with sync_playwright() as pw:
         assert saved()['game']['principal']==9_999_999_900
         click('← 뒤로');click('닫기')
         # Recovery at zero, final death, final clear through actual UI commands.
-        fixture('empty');activity('치료');click('치료받기')
-        expect(page.locator('meter[aria-label="체력"]')).to_have_attribute('value','80')
-        click('닫기')
         data=json.loads(Path('work/death.json').read_text());page.evaluate(WRITE_SAVE,data);page.reload()
         expect(page.get_by_role('heading',name='이 이야기는 여기까지.')).to_be_visible()
         fixture('clear');tab('채무');page.get_by_role('button',name='가능한 만큼 상환',exact=False).click()

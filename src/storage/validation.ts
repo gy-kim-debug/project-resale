@@ -46,7 +46,7 @@ export function isGame(v: unknown): v is Game {
     !record(v) ||
     v.version !== 2 ||
     (v.timeMode !== undefined && v.timeMode !== 'daily-actions') ||
-    !['playing', 'dead', 'cleared'].includes(String(v.status))
+    !['playing', 'bankrupt', 'dead', 'cleared'].includes(String(v.status))
   )
     return false;
   if (
@@ -55,7 +55,6 @@ export function isGame(v: unknown): v is Game {
     )
   )
     return false;
-  if (!['health', 'fatigue'].every((k) => integer(v[k], 100))) return false;
   if (
     !['seed', 'serial', 'minute', 'marketDay', 'eventStage', 'lastEvent'].every(
       (k) => integer(v[k]),
@@ -64,12 +63,7 @@ export function isGame(v: unknown): v is Game {
     return false;
   if (v.timeMode === 'daily-actions' && Number(v.minute) % 480 !== 0)
     return false;
-  if (
-    !integer(v.fatigueRemainder, 59) ||
-    !integer(v.marketFactor, 200) ||
-    !kind(v.trend)
-  )
-    return false;
+  if (!integer(v.marketFactor, 200) || !kind(v.trend)) return false;
   if (
     !record(v.stats) ||
     ![
@@ -165,8 +159,11 @@ export function isGame(v: unknown): v is Game {
       !integer(v.event.expires))
   )
     return false;
-  if (v.status === 'dead' && v.health !== 0) return false;
-  if (v.status === 'playing' && v.health === 0) return false;
+  if (
+    v.interestWeek !== undefined &&
+    !integer(v.interestWeek, Math.floor(Number(v.minute) / 10080))
+  )
+    return false;
   if (v.status === 'cleared' && Number(v.principal) + Number(v.interest) !== 0)
     return false;
   return true;

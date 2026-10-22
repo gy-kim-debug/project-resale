@@ -1,7 +1,7 @@
 /** Serializable game types. KRW uses safe integers; the legacy minute field stores discrete daily action ticks. */
 export type Kind = '생활' | '디지털' | '가구' | '수집품';
 export type Condition = '양호' | '사용감' | '고장';
-export type Status = 'playing' | 'dead' | 'cleared';
+export type Status = 'playing' | 'bankrupt' | 'dead' | 'cleared';
 export interface ChatMessage {
   speaker: 'player' | 'other';
   text: string;
@@ -66,9 +66,7 @@ export interface Game {
   cash: number;
   principal: number;
   interest: number;
-  health: number;
-  fatigue: number;
-  fatigueRemainder: number;
+  interestWeek?: number;
   marketDay: number;
   marketFactor: number;
   trend: Kind;
@@ -93,8 +91,6 @@ export interface Game {
 }
 export type Command =
   | { type: 'job'; id: string }
-  | { type: 'treat' }
-  | { type: 'sleep' }
   | { type: 'scavenge' }
   | { type: 'refresh' }
   | { type: 'wait' }
@@ -113,6 +109,7 @@ export type Command =
   | { type: 'visit'; id: string }
   | { type: 'outletSell'; id: string }
   | { type: 'repay'; amount: number }
+  | { type: 'payInterest' }
   | { type: 'event'; choice: 'yes' | 'no' };
 export interface Result {
   game: Game;

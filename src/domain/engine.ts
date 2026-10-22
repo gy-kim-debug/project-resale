@@ -1,6 +1,7 @@
 import type { Command, Game, Item, Result, Kind } from './game';
 import { dayOf, isMoney, won, ACTION_TICK } from './game';
 import { toDailyActions } from './time';
+import { interestPending, interestAmount, paymentWeek } from './debt';
 import {
   CATALOG,
   JOBS,
@@ -10,7 +11,6 @@ import {
   TIER_TITLES,
 } from '../content/rules';
 
-const clamp = (n: number) => Math.max(0, Math.min(100, n));
 function roll(g: Game) {
   g.seed = (Math.imul(1664525, g.seed) + 1013904223) >>> 0;
   return g.seed / 4294967296;
@@ -139,18 +139,7 @@ function board(g: Game) {
     list.push(makeItem(g, 1000 + Math.floor(roll(g) * 4000), true));
   g.board = list;
 }
-function daily(g: Game, before: number) {
-  for (
-    let d = Math.floor(before / 1440) + 1;
-    d <= Math.floor(g.minute / 1440);
-    d++
-  ) {
-    if (d + 1 > RULES.graceDays && g.principal > 0) {
-      const interest = Math.ceil(g.principal / RULES.interestDenominator);
-      g.interest += interest;
-      log(g, `이자 ${won(interest)} 발생.`);
-    }
-  }
+function daily(g: Game) {
   if (g.marketDay !== dayOf(g)) {
     g.marketDay = dayOf(g);
     g.marketFactor = 85 + Math.floor(roll(g) * 31);
@@ -160,18 +149,10 @@ function daily(g: Game, before: number) {
     log(g, `시장 변화: 오늘은 ${g.trend} 수요가 높습니다.`);
   }
 }
-function endDay(
-  g: Game,
-  before: number,
-  reason: 'sleep' | 'fatigue' | 'budget',
-) {
+function endDay(g: Game, before: number) {
   g.minute = (Math.floor(before / 1440) + 1) * 1440;
-  g.fatigue = 100;
-  daily(g, before);
-  log(
-    g,
-    `${reason === 'fatigue' ? '피로도 소진으로' : reason === 'budget' ? '오늘의 행동을 모두 마쳐' : '수면으로'} 하루 종료. 피로도 100.`,
-  );
+  daily(g);
+  log(g, '오늘의 행동을 모두 마쳤습니다.');
   board(g);
 }
 function expire(g: Game) {
@@ -260,30 +241,31 @@ function event(g: Game) {
   }
 }
 /** Each major action spends one of three daily actions. No offline progression. */
-function advance(
-  g: Game,
-  actions: number,
-  fatigueExtra = 0,
-  generate = true,
-  healthGain = 0,
-) {
+function advance(g: Game, actions: number, generate = true) {
   const before = g.minute;
   g.minute += actions * ACTION_TICK;
-  const fatigue = RULES.actionFatigue * actions + fatigueExtra;
-  g.fatigue = clamp(g.fatigue - fatigue);
-  g.health = clamp(g.health + healthGain);
-  if (g.health === 0) {
-    daily(g, before);
-    g.status = 'dead';
-    g.inquiries = [];
-    log(g, '체력이 0이 되어 사망했습니다. 이 이야기는 끝났습니다.');
-  } else if (g.fatigue === 0) endDay(g, before, 'fatigue');
-  else if (dayOf(g) > Math.floor(before / 1440) + 1)
-    endDay(g, before, 'budget');
-  else daily(g, before);
+  if (dayOf(g) > Math.floor(before / 1440) + 1) endDay(g, before);
+  else daily(g);
   expire(g);
+  settleWeekly(g);
+  if (interestPending(g) || g.status !== 'playing') return;
   if (generate) inquiries(g);
   event(g);
+}
+function settleWeekly(g: Game) {
+  if (
+    g.status === 'playing' &&
+    interestPending(g) &&
+    g.cash < interestAmount(g)
+  ) {
+    g.status = 'bankrupt';
+    g.inquiries = [];
+    log(
+      g,
+      `${paymentWeek(g)}주차 이자 ${won(interestAmount(g))} 미납. 게임 종료.`,
+    );
+  }
+  return g.status === 'bankrupt';
 }
 function finishSale(g: Game, saleId: string) {
   g.sales = g.sales.filter((s) => s.id !== saleId);
@@ -322,12 +304,10 @@ export function newGame(seed = 1): Game {
     serial: 0,
     minute: 0,
     status: 'playing',
-    cash: 0,
+    cash: RULES.startingCash,
     principal: RULES.debt,
     interest: 0,
-    health: 100,
-    fatigue: 100,
-    fatigueRemainder: 0,
+    interestWeek: 0,
     marketDay: 1,
     marketFactor: 100,
     trend: '생활',
@@ -343,7 +323,7 @@ export function newGame(seed = 1): Game {
       repairs: 0,
       earned: 0,
       repaid: 0,
-      peakCash: 0,
+      peakCash: RULES.startingCash,
     },
     logs: [],
     event: null,
@@ -351,7 +331,7 @@ export function newGame(seed = 1): Game {
     lastEvent: 0,
   };
   board(g);
-  log(g, '현금 0원, 채무 100억 원.');
+  log(g, `현금 ${won(RULES.startingCash)}, 채무 100억 원.`);
   return g;
 }
 export function execute(original: Game, command: Command): Result {
@@ -360,10 +340,13 @@ export function execute(original: Game, command: Command): Result {
   try {
     if (g.status !== 'playing') throw Error('종료된 게임입니다.');
     if (
+      !interestPending(g) &&
       g.inquiries.length &&
       !['accept', 'reject', 'break', 'counter'].includes(command.type)
     )
       throw Error('구매 문의 응답이 필요합니다.');
+    if (interestPending(g) && !['repay', 'payInterest'].includes(command.type))
+      throw Error('주간 이자 납부가 필요합니다.');
     let message = '';
     switch (command.type) {
       case 'job': {
@@ -372,23 +355,9 @@ export function execute(original: Game, command: Command): Result {
         money(g, j.reward);
         message = `${j.title} 완료. ${won(j.reward)}을 받았습니다.`;
         log(g, message);
-        advance(g, j.actions, j.fatigue);
+        advance(g, j.actions);
         break;
       }
-      case 'treat':
-        affordable(g, 10_000);
-        money(g, -10_000);
-        advance(g, 1, 0, true, 60);
-        message = '치료 완료. 체력 +60.';
-        log(g, message);
-        break;
-      case 'sleep':
-        endDay(g, g.minute, 'sleep');
-        expire(g);
-        inquiries(g);
-        event(g);
-        message = '다음 날입니다.';
-        break;
       case 'scavenge': {
         room(g);
         const found = makeItem(
@@ -404,7 +373,7 @@ export function execute(original: Game, command: Command): Result {
         g.inventory.push(found);
         message = `${found.title} 발견.`;
         log(g, message);
-        advance(g, 1, 5);
+        advance(g, 1);
         break;
       }
       case 'refresh':
@@ -482,7 +451,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.purchases++;
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
         log(g, message);
-        advance(g, 1, 1);
+        advance(g, 1);
         break;
       }
       case 'check': {
@@ -520,7 +489,7 @@ export function execute(original: Game, command: Command): Result {
           ? `수리 성공. 실제 가치 ${won(i.value)}.`
           : `수리 실패. ${won(cost)} 사용.`;
         log(g, message);
-        advance(g, 1, 5);
+        advance(g, 1);
         break;
       }
       case 'discard': {
@@ -579,7 +548,7 @@ export function execute(original: Game, command: Command): Result {
         g.stats.sales++;
         message = `${i.title} 판매 완료. ${won(q.price)}을 받았습니다. 물품·대금 교환을 한 번에 마쳤습니다.`;
         log(g, message);
-        advance(g, 1, 0, false);
+        advance(g, 1, false);
         break;
       }
       case 'counter': {
@@ -697,21 +666,39 @@ export function execute(original: Game, command: Command): Result {
       }
       case 'repay': {
         const amount = command.amount;
-        if (!isMoney(amount) || amount < 1 || amount > g.principal + g.interest)
-          throw Error('남은 채무 이내의 정수 금액을 입력하세요.');
+        if (!isMoney(amount) || amount < 1 || amount > g.principal)
+          throw Error('남은 원금 이내의 정수 금액을 입력하세요.');
         affordable(g, amount);
+        const due = interestPending(g);
         money(g, -amount);
-        const toInterest = Math.min(g.interest, amount);
-        g.interest -= toInterest;
-        g.principal -= amount - toInterest;
+        g.principal -= amount;
         g.stats.repaid += amount;
-        message = `${won(amount)} 상환했습니다.`;
+        message = `원금 ${won(amount)} 상환했습니다.`;
         log(g, message);
-        advance(g, 1);
-        if (g.principal + g.interest === 0 && g.status === 'playing') {
+        if (g.principal + g.interest === 0) {
           g.status = 'cleared';
           g.inquiries = [];
-          log(g, '원금과 이자를 모두 갚았습니다. 채무에서 벗어났습니다.');
+          message = '채무 전액 상환. 게임 클리어!';
+          log(g, message);
+        }
+        if (!due) advance(g, 1);
+        else settleWeekly(g);
+        break;
+      }
+      case 'payInterest': {
+        const due = interestPending(g);
+        if (!due && g.interest === 0) throw Error('납부할 이자가 없습니다.');
+        const amount = due ? interestAmount(g) : g.interest;
+        affordable(g, amount);
+        money(g, -amount);
+        g.interest = 0;
+        if (due) g.interestWeek = paymentWeek(g);
+        g.stats.repaid += amount;
+        message = `이자 ${won(amount)} 납부했습니다.`;
+        log(g, message);
+        if (g.principal === 0) {
+          g.status = 'cleared';
+          g.inquiries = [];
           message = '채무 전액 상환. 게임 클리어!';
         }
         break;
@@ -740,12 +727,14 @@ export function execute(original: Game, command: Command): Result {
         }
         g.event = null;
         log(g, message);
-        advance(g, 1, e.type === 'deal' ? 5 : 0);
+        advance(g, 1);
         break;
       }
       default:
         throw Error('지원하지 않는 행동입니다.');
     }
+    const missed = settleWeekly(g);
+    if (missed) message = '주간 이자를 납부하지 못해 게임이 종료되었습니다.';
     return { game: g, ok: true, message };
   } catch (e) {
     return {

@@ -27,6 +27,13 @@ import type {
   ChangeKey,
 } from './app/actionPresentation';
 import { TIERS } from './content/rules';
+import {
+  interestPending,
+  interestAmount,
+  paymentWeek,
+  weeklyRateText,
+  daysUntilInterest,
+} from './domain/debt';
 
 const nav: { tab: Tab; icon: IconName }[] = [
   { tab: '내 정보', icon: 'user' },
@@ -38,7 +45,6 @@ const nav: { tab: Tab; icon: IconName }[] = [
 const groups: { title: string; activities: Route['kind'][] }[] = [
   { title: '돈 벌기', activities: ['무료나눔', '아르바이트', '물건 수집'] },
   { title: '거래', activities: ['장터', '매각처'] },
-  { title: '회복', activities: ['수면', '치료'] },
 ];
 function Header({
   g,
@@ -76,7 +82,12 @@ function Header({
       <div className="header-tools" aria-label="빠른 메뉴">
         <button
           aria-label="우편함"
-          disabled={!!action || !!g.inquiries.length || g.status !== 'playing'}
+          disabled={
+            !!action ||
+            !!g.inquiries.length ||
+            interestPending(g) ||
+            g.status !== 'playing'
+          }
           onClick={() => onOpen('우편함')}
         >
           <Icon name="mail" size={21} />
@@ -84,7 +95,12 @@ function Header({
         </button>
         <button
           aria-label="설정"
-          disabled={!!action || !!g.inquiries.length || g.status !== 'playing'}
+          disabled={
+            !!action ||
+            !!g.inquiries.length ||
+            interestPending(g) ||
+            g.status !== 'playing'
+          }
           onClick={() => onOpen('설정')}
         >
           <Icon name="settings" size={21} />
@@ -115,25 +131,15 @@ function Header({
           <span className="header-label">현금</span> <b>{won(g.cash)}</b>
         </span>
       </div>
-      <div className="vitals">
-        {(
-          [
-            { name: '체력', value: g.health, icon: 'heart', key: 'health' },
-            { name: '피로도', value: g.fatigue, icon: 'moon', key: 'fatigue' },
-          ] as const
-        ).map((s) => (
-          <div
-            className={`vital ${s.value <= 20 ? 'low' : ''}${changed(s.key)}`}
-            key={`${s.key}-${actionId}`}
-          >
-            <div>
-              <Icon name={s.icon} size={14} />
-              <span>{s.name}</span>
-              <b>{s.value}</b>
-            </div>
-            <meter min={0} max={100} value={s.value} aria-label={s.name} />
-          </div>
-        ))}
+      <div className="header-interest">
+        <span>{paymentWeek(g)}주차 이자</span>
+        <strong>{won(interestAmount(g))}</strong>
+      </div>
+      <div className="header-interest-date">
+        <span>주 {weeklyRateText(paymentWeek(g))}</span>
+        <span>
+          {interestPending(g) ? '납부 필요' : `${daysUntilInterest(g)}일 남음`}
+        </span>
       </div>
       <div key={`debt-${actionId}`} className={`header-debt${changed('debt')}`}>
         <span>남은 채무</span>
@@ -209,7 +215,9 @@ function Sheet({
     >
       <div className="sheet-toolbar">
         {locked ? (
-          <span>응답 필요</span>
+          <span>
+            {current.kind === '이자 납부' ? '납부 필요' : '응답 필요'}
+          </span>
         ) : (
           <button onClick={routes.length > 1 ? onBack : onClose}>
             {routes.length > 1 ? '← 뒤로' : '닫기'}
@@ -273,10 +281,15 @@ export default function App() {
   useEffect(() => {
     void useGameStore.getState().hydrate();
   }, []);
-  const pending = !!g?.inquiries.length;
+  const due = !!g && interestPending(g);
+  const pending = due || !!g?.inquiries.length;
   const over = !!g && g.status !== 'playing';
   // Pending inquiries override every route, including when restored from a save.
-  const shownRoutes: Route[] = pending ? [{ kind: '문의' }] : routes;
+  const shownRoutes: Route[] = due
+    ? [{ kind: '이자 납부' }]
+    : pending
+      ? [{ kind: '문의' }]
+      : routes;
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [state.tab]);
@@ -285,7 +298,9 @@ export default function App() {
     const ok = await state.act(c);
     if (
       ok &&
-      ['accept', 'break', 'reject', 'counter'].includes(c.type) &&
+      ['accept', 'break', 'reject', 'counter', 'payInterest'].includes(
+        c.type,
+      ) &&
       !useGameStore.getState().game?.inquiries.length
     )
       setRoutes([]);
@@ -412,21 +427,27 @@ export default function App() {
               aria-labelledby="end-title"
             >
               <p className="eyebrow">
-                {g.status === 'dead' ? '사망 · 게임 종료' : '채무 전액 상환'}
+                {g.status === 'cleared'
+                  ? '채무 전액 상환'
+                  : g.status === 'bankrupt'
+                    ? '파산 · 게임 종료'
+                    : '게임 종료'}
               </p>
               <h1 id="end-title">
-                {g.status === 'dead'
-                  ? '이 이야기는 여기까지.'
-                  : '드디어, 자유.'}
+                {g.status === 'cleared'
+                  ? '드디어, 자유.'
+                  : '이 이야기는 여기까지.'}
               </h1>
               <p>
                 {dayOf(g)}일 동안 거래 {g.stats.sales}회 · 누적 상환{' '}
                 {won(g.stats.repaid)}
               </p>
               <p>
-                {g.status === 'dead'
-                  ? '사망한 진행은 되살릴 수 없습니다. 새 게임은 별개의 시작입니다.'
-                  : '원금과 발생한 이자를 모두 갚았습니다.'}
+                {g.status === 'cleared'
+                  ? '원금과 발생한 이자를 모두 갚았습니다.'
+                  : g.status === 'bankrupt'
+                    ? '주간 이자를 납부하지 못했습니다.'
+                    : '종료된 게임입니다.'}
               </p>
               <StorageView />
             </section>

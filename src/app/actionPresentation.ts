@@ -3,7 +3,7 @@ import { JOBS } from '../content/rules';
 
 export const ACTION_DURATION_MS = 750;
 export const HIGHLIGHT_DURATION_MS = 1400;
-export type ChangeKey = 'minute' | 'cash' | 'health' | 'fatigue' | 'debt';
+export type ChangeKey = 'minute' | 'cash' | 'debt';
 export type Changes = Partial<Record<ChangeKey, number>>;
 export interface ActionPresentation {
   id: number;
@@ -14,7 +14,7 @@ export interface ActionPresentation {
 }
 export function changesBetween(before: Game, after: Game): Changes {
   const changes: Changes = {};
-  for (const key of ['minute', 'cash', 'health', 'fatigue'] as const) {
+  for (const key of ['minute', 'cash'] as const) {
     if (after[key] !== before[key]) changes[key] = after[key] - before[key];
   }
   const debt =
@@ -26,8 +26,6 @@ export function actionLabel(command: Command): string {
   if (command.type === 'job')
     return `${JOBS.find((j) => j.id === command.id)?.title ?? '일'} 중…`;
   const labels: Record<Exclude<Command['type'], 'job'>, string> = {
-    treat: '치료받는 중…',
-    sleep: '잠드는 중…',
     scavenge: '물건을 찾는 중…',
     refresh: '새 매물을 찾는 중…',
     wait: '기다리는 중…',
@@ -46,6 +44,7 @@ export function actionLabel(command: Command): string {
     visit: '매각처로 가는 중…',
     outletSell: '매각하는 중…',
     repay: '상환하는 중…',
+    payInterest: '이자를 납부하는 중…',
     event: '제안에 답하는 중…',
   };
   return labels[command.type];

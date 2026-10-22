@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
 import { ItemComparison } from './ItemComparison';
 import { TradeChat } from './TradeChat';
@@ -13,6 +13,13 @@ import {
   repairCost,
 } from '../domain/engine';
 import { JOBS, OUTLETS, RULES } from '../content/rules';
+import {
+  interestPending,
+  interestAmount,
+  paymentWeek,
+  weeklyRateText,
+  daysUntilInterest,
+} from '../domain/debt';
 
 export type Route = {
   kind:
@@ -21,12 +28,11 @@ export type Route = {
     | '아르바이트'
     | '물건 수집'
     | '매각처'
-    | '수면'
-    | '치료'
     | '매물'
     | '물품'
     | '판매 등록'
     | '문의'
+    | '이자 납부'
     | '특별 제안'
     | '기록'
     | '저장 관리'
@@ -213,6 +219,9 @@ export function InventoryView({ g, open }: { g: Game; open: Open }) {
   );
 }
 export function DebtView({ g, act }: { g: Game; act: Act }) {
+  const due = interestPending(g);
+  const amount = interestAmount(g);
+  const cost = due ? '행동 소모 없음' : '행동 1회';
   return (
     <>
       <h1>채무</h1>
@@ -226,8 +235,14 @@ export function DebtView({ g, act }: { g: Game; act: Act }) {
           <dd>{won(g.principal)}</dd>
         </div>
         <div>
-          <dt>발생 이자</dt>
-          <dd>{won(g.interest)}</dd>
+          <dt>
+            {paymentWeek(g)}주차 이자 · {weeklyRateText(paymentWeek(g))}
+          </dt>
+          <dd>{won(amount)}</dd>
+        </div>
+        <div>
+          <dt>납부 기한</dt>
+          <dd>{due ? '납부 필요' : `${daysUntilInterest(g)}일 남음`}</dd>
         </div>
         <div>
           <dt>누적 상환</dt>
@@ -238,24 +253,27 @@ export function DebtView({ g, act }: { g: Game; act: Act }) {
           <dd>{won(g.cash)}</dd>
         </div>
       </dl>
-
+      {(due || g.interest > 0) && (
+        <Button
+          disabled={g.cash < (due ? amount : g.interest)}
+          onClick={() => act({ type: 'payInterest' })}
+        >
+          이자 납부 · 행동 소모 없음 · {won(due ? amount : g.interest)}
+        </Button>
+      )}
       <AmountForm
-        title="입력 금액 상환 · 행동 1회"
+        title={`입력 금액 상환 · ${cost}`}
         label="상환 금액"
-        max={Math.min(g.cash, g.principal + g.interest)}
+        max={Math.min(g.cash, g.principal)}
         submit={(amount) => act({ type: 'repay', amount })}
       />
       <Button
-        disabled={!g.cash || (!g.principal && !g.interest)}
+        disabled={!g.cash || !g.principal}
         onClick={() =>
-          act({
-            type: 'repay',
-            amount: Math.min(g.cash, g.principal + g.interest),
-          })
+          act({ type: 'repay', amount: Math.min(g.cash, g.principal) })
         }
       >
-        가능한 만큼 상환 · 행동 1회 ·{' '}
-        {won(Math.min(g.cash, g.principal + g.interest))}
+        가능한 만큼 상환 · {cost} · {won(Math.min(g.cash, g.principal))}
       </Button>
     </>
   );
@@ -749,7 +767,7 @@ export function RouteView({
   g: Game;
   open: Open;
   act: Act;
-}) {
+}): ReactElement {
   const item = g.inventory.find((i) => i.id === route.id);
   const listing = g.board.find((i) => i.id === route.id);
   switch (route.kind) {
@@ -848,28 +866,6 @@ export function RouteView({
           </Button>
         </>
       );
-    case '수면':
-      return (
-        <>
-          <p>0 원</p>
-
-          <Button onClick={() => act({ type: 'sleep' })}>
-            잠자기 · 하루 마무리
-          </Button>
-        </>
-      );
-    case '치료':
-      return (
-        <>
-          <p className="lead">동네 의원 · {won(10_000)} · 행동 1회</p>
-          <Button
-            disabled={g.cash < 10_000}
-            onClick={() => act({ type: 'treat' })}
-          >
-            치료받기 · 행동 1회
-          </Button>
-        </>
-      );
     case '매각처':
       return <OutletView g={g} act={act} />;
     case '문의':
@@ -894,6 +890,8 @@ export function RouteView({
       ) : (
         <p>현재 특별 제안이 없습니다.</p>
       );
+    case '이자 납부':
+      return <DebtView g={g} act={act} />;
     case '우편함':
       return (
         <>

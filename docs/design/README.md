@@ -28,19 +28,9 @@
 
 - [능력치 도입 계획](character/ABILITIES.md)
 
-### 생존 지표
+### 채무·자본금
 
-- [체력과 피로도의 역할](survival/STAT_ROLES.md)
-- [행동 제한](survival/ACTION_RESTRICTIONS.md)
-- [지표가 0일 때의 처리](survival/ZERO_STAT_OUTCOMES.md)
-- [체력 회복 방법](survival/HEALTH_RECOVERY.md)
-- [피로도 소모 방식](survival/FATIGUE_CONSUMPTION.md)
-
-### 수면
-
-- [피로도 0으로 다음 날 아침이 되었을 때의 회복](sleep/NEXT_MORNING_RECOVERY.md)
-- [직접 수면 선택](sleep/VOLUNTARY_SLEEP.md)
-- [수면 비용](sleep/COST.md)
+- [주간 이자 상승과 미납 종료](debt/INTEREST_AND_BANKRUPTCY.md)
 
 ### 수익 경로
 
@@ -103,3 +93,5 @@
 - [보관함 매입가·현재 가치 비교](inventory/VALUE_COMPARISON.md)
 
 사용자 후속 결정: 포만감·식사 개념을 제거했다. `food/`와 `SATIETY_*` 파일은 폐기 표시만 남기고 현재 규칙 목차에서 제외한다.
+
+체력·피로도·수면·치료도 폐기했다. `survival/`과 `sleep/`는 이전 기획의 폐기 표시이며 현재 규칙이 아니다.

@@ -14,7 +14,7 @@ with sync_playwright() as p:
   page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for()
   def fixture(hungry):
-   data=json.loads(Path('work/inventory-comparison.json').read_text());data['game']['health']=20 if hungry else 100;data['game']['fatigue']=100
+   data=json.loads(Path('work/inventory-comparison.json').read_text());data['game']['cash']=0 if hungry else data['game']['cash']
    page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
    page.locator('.activity-grid').get_by_role('button',name='매각처',exact=True).click()
    return data['game']

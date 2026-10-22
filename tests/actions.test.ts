@@ -37,7 +37,7 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.ok(ACTION_DURATION_MS >= 500 && ACTION_DURATION_MS <= 1000);
   assert.equal(active.action?.before.minute, before.minute);
   assert.equal(active.action?.after.minute, before.minute + ACTION_TICK);
-  assert.equal(active.game!.cash, 9000);
+  assert.equal(active.game!.cash, 109000);
   assert.equal(active.notice, '');
   assert.equal(await active.act({ type: 'job', id: 'flyer' }), false);
   active.setTab('보관함');
@@ -46,11 +46,11 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.equal(active.importSave('{}'), false);
   assert.equal(store.getState().tab, '활동');
   assert.deepEqual(store.getState().favoriteIds, []);
-  assert.equal(store.getState().game!.cash, 9000);
+  assert.equal(store.getState().game!.cash, 109000);
   assert.equal(await completion, true);
   await flushSaves();
   assert.equal(writes.length, 1);
-  assert.equal(writes[0].game.cash, 9000);
+  assert.equal(writes[0].game.cash, 109000);
   assert.ok(!('action' in writes[0]));
   assert.equal(store.getState().action, null);
   assert.equal(store.getState().changes.cash, 9000);
@@ -64,10 +64,7 @@ test('navigation, favorites and rejected actions do not show presentation or con
   s.getState().setTab('내 정보');
   s.getState().toggleFavorite('x');
   assert.equal(s.getState().action, null);
-  assert.equal(
-    await s.getState().act({ type: 'buy', id: s.getState().game!.board[0].id }),
-    false,
-  );
+  assert.equal(await s.getState().act({ type: 'buy', id: 'missing' }), false);
   assert.equal(s.getState().action, null);
   assert.equal(s.getState().game!.minute, minute);
 });
@@ -159,4 +156,22 @@ test('outlet navigation updates and saves quotes immediately without action laye
   await flushSaves();
   assert.equal(writes.at(-1)?.game.quotes?.outlet, 'scrap');
   assert.deepEqual(writes.at(-1)?.game.logs, g.logs);
+});
+
+test('weekly payment commits once, saves the paid week and resumes with zero cash', async () => {
+  setup();
+  const g = newGame(42);
+  g.minute = 7 * 1440;
+  useGameStore.setState({ game: g });
+  const completion = useGameStore.getState().act({ type: 'payInterest' });
+  assert.equal(useGameStore.getState().game!.cash, 0);
+  assert.equal(useGameStore.getState().game!.interestWeek, 1);
+  assert.equal(
+    await useGameStore.getState().act({ type: 'payInterest' }),
+    false,
+  );
+  assert.equal(await completion, true);
+  await flushSaves();
+  assert.equal(writes.at(-1)?.game.interestWeek, 1);
+  assert.equal(useGameStore.getState().game!.status, 'playing');
 });
