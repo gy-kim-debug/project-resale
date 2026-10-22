@@ -5,6 +5,8 @@ import {
   newGame,
   listingLimit,
   marketValue,
+  checkCost,
+  repairCost,
 } from '../src/domain/engine';
 import {
   ACTION_TICK,
@@ -428,7 +430,7 @@ for (const seed of [1, 42, 210])
     } else assert.equal(g.principal + g.interest, 0);
   });
 
-test('each major action costs one daily action and inquiries start after registration', () => {
+test('action costs distinguish major commands from free operations; inquiries start after registration', () => {
   const cases: { game: Game; command: Command; cost: number }[] = [];
   for (const [id, cost] of [
     ['flyer', 1],
@@ -461,7 +463,11 @@ test('each major action costs one daily action and inquiries start after registr
           : type === 'repay'
             ? { type, amount: 1 }
             : { type, id: g.inventory[0].id };
-    cases.push({ game: g, command, cost: type === 'visit' ? 0 : 1 });
+    cases.push({
+      game: g,
+      command,
+      cost: ['visit', 'check', 'repair'].includes(type) ? 0 : 1,
+    });
   }
   let g = run(owned(), { type: 'post', id: owned().inventory[0].id, price: 1 });
   assert.equal(
@@ -1074,4 +1080,65 @@ test('high-tier generation stays within safe won amounts and existing owned item
     assert.ok(i.value <= RULES.maxMoney);
   }
   assert.deepEqual(next.inventory, original.inventory);
+});
+
+test('appraisal and repair spend money without using the last action, expiring listings or triggering weekly payment', () => {
+  const g = owned();
+  const item = g.inventory[0];
+  item.checked = false;
+  item.condition = '고장';
+  item.value = Math.floor((item.base * 18) / 100);
+  g.minute = WEEK_TICKS - ACTION_TICK;
+  g.marketDay = 7;
+  for (const listing of g.board) listing.expires = g.minute + 1;
+  const other = g.board.shift()!;
+  g.inventory.push(other);
+  g.sales = [
+    {
+      id: 'sale-probe',
+      itemId: other.id,
+      price: 1000,
+      created: g.minute - 1,
+      expires: g.minute + 1,
+      nextCheck: g.minute,
+    },
+  ];
+  g.event = {
+    id: 'event-probe',
+    type: 'deal',
+    title: '제안',
+    text: '일손',
+    expires: g.minute + 1,
+  };
+  g.quotes = { outlet: 'scrap', at: g.minute, prices: { [item.id]: 1000 } };
+  const snapshot = structuredClone(g);
+  const checkFee = checkCost(g, item),
+    repairFee = repairCost(item);
+  const checked = run(g, { type: 'check', id: item.id });
+  assert.equal(checked.seed, g.seed);
+  assert.equal(checked.cash, g.cash - checkFee);
+  assert.equal(checked.inventory[0].checked, true);
+  const repaired = run(checked, { type: 'repair', id: item.id });
+  assert.equal(repaired.cash, g.cash - checkFee - repairFee);
+  assert.equal(repaired.inventory[0].repaired, true);
+  assert.equal(repaired.stats.repairs, g.stats.repairs + 1);
+  for (const after of [checked, repaired]) {
+    assert.equal(after.minute, g.minute);
+    assert.equal(actionsLeft(after), 1);
+    assert.equal(interestPending(after), false);
+    assert.equal(after.status, 'playing');
+    assert.deepEqual(after.sales, g.sales);
+    assert.deepEqual(after.inquiries, g.inquiries);
+    assert.deepEqual(after.board, g.board);
+    assert.deepEqual(after.event, g.event);
+    assert.deepEqual(after.quotes, g.quotes);
+    assert.equal(after.marketFactor, g.marketFactor);
+  }
+  const retry = execute(repaired, { type: 'repair', id: item.id });
+  assert.equal(retry.ok, false);
+  assert.strictEqual(retry.game, repaired);
+  const due = run(repaired, { type: 'wait' });
+  assert.equal(interestPending(due), true);
+  assert.equal(due.status, 'bankrupt');
+  assert.deepEqual(g, snapshot);
 });

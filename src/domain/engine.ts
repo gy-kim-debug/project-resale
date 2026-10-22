@@ -498,7 +498,6 @@ export function execute(original: Game, command: Command): Result {
         g.stats.checks++;
         message = `가치 확인: ${i.title}, 실제 가치 ${won(i.value)}. ${i.defect}`;
         log(g, message);
-        advance(g, 1);
         break;
       }
       case 'repair': {
@@ -523,7 +522,6 @@ export function execute(original: Game, command: Command): Result {
           ? `수리 성공. 실제 가치 ${won(i.value)}.`
           : `수리 실패. ${won(cost)} 사용.`;
         log(g, message);
-        advance(g, 1);
         break;
       }
       case 'discard': {

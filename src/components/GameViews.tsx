@@ -496,18 +496,18 @@ export function OwnedView({
           disabled={g.cash < checkCost(g, item)}
           onClick={() => act({ type: 'check', id: item.id })}
         >
-          가치 확인 · 행동 1회 · {won(checkCost(g, item))}
+          가치 확인 · 행동 소모 없음 · {won(checkCost(g, item))}
         </Button>
       )}
       {item.checked && item.condition !== '양호' && !item.repaired && (
         <section className="card">
           <h3>수리</h3>
-          <p>비용 {won(repairCost(item))} · 행동 1회</p>
+          <p>비용 {won(repairCost(item))} · 행동 소모 없음</p>
           <Button
             disabled={!!sale || g.cash < repairCost(item)}
             onClick={() => act({ type: 'repair', id: item.id })}
           >
-            수리하기 · 행동 1회
+            수리하기 · 행동 소모 없음
           </Button>
         </section>
       )}
