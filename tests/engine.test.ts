@@ -61,7 +61,7 @@ function pending() {
 
 test('start, deterministic RNG, pure engine, rejected commands do not change time/RNG', () => {
   const g = newGame(42);
-  assert.equal(g.cash, 100000);
+  assert.equal(g.cash, 500000);
   assert.equal(g.principal, 10_000_000_000);
   assert.deepEqual(g.inventory, []);
   assert.deepEqual(newGame(42), g);
@@ -73,7 +73,7 @@ test('start, deterministic RNG, pure engine, rejected commands do not change tim
   assert.strictEqual(failed.game, g);
   const next = run(g, { type: 'job', id: 'flyer' });
   assert.equal(next.minute, g.minute + ACTION_TICK);
-  assert.equal(next.cash, 109000);
+  assert.equal(next.cash, 509000);
   assert.deepEqual(g, snapshot);
 });
 test('obsolete hunger fields are discarded without blocking actions or changing progress', () => {
@@ -841,7 +841,7 @@ test('three major actions end exactly one day and refill the next daily budget',
   }
   assert.equal(dayOf(g), 2);
   assert.equal(g.minute, 1440);
-  assert.equal(g.cash, 127000);
+  assert.equal(g.cash, 527000);
   assert.notDeepEqual(
     g.board.map((i) => i.id),
     originalBoard,
@@ -984,10 +984,10 @@ test('insufficient funds refuse atomically; one remaining won keeps playing', ()
   assert.equal(after.status, 'playing');
 });
 
-test('new games start at 100000 won and old zero-cash saves remain playable without granting cash', () => {
+test('new games start at 500000 won and old zero-cash saves remain playable without granting cash', () => {
   const fresh = newGame();
-  assert.equal(fresh.cash, 100000);
-  assert.equal(fresh.stats.peakCash, 100000);
+  assert.equal(fresh.cash, 500000);
+  assert.equal(fresh.stats.peakCash, 500000);
   assert.equal(fresh.stats.earned, 0);
   const old = owned();
   old.cash = 0;

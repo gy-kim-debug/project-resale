@@ -37,7 +37,7 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.ok(ACTION_DURATION_MS >= 500 && ACTION_DURATION_MS <= 1000);
   assert.equal(active.action?.before.minute, before.minute);
   assert.equal(active.action?.after.minute, before.minute + ACTION_TICK);
-  assert.equal(active.game!.cash, 109000);
+  assert.equal(active.game!.cash, 509000);
   assert.equal(active.notice, '');
   assert.equal(await active.act({ type: 'job', id: 'flyer' }), false);
   active.setTab('보관함');
@@ -46,11 +46,11 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.equal(active.importSave('{}'), false);
   assert.equal(store.getState().tab, '활동');
   assert.deepEqual(store.getState().favoriteIds, []);
-  assert.equal(store.getState().game!.cash, 109000);
+  assert.equal(store.getState().game!.cash, 509000);
   assert.equal(await completion, true);
   await flushSaves();
   assert.equal(writes.length, 1);
-  assert.equal(writes[0].game.cash, 109000);
+  assert.equal(writes[0].game.cash, 509000);
   assert.ok(!('action' in writes[0]));
   assert.equal(store.getState().action, null);
   assert.equal(store.getState().changes.cash, 9000);
@@ -161,6 +161,7 @@ test('outlet navigation updates and saves quotes immediately without action laye
 test('weekly payment commits once, saves the paid week and resumes with zero cash', async () => {
   setup();
   const g = newGame(42);
+  g.cash = 100000;
   g.minute = 7 * 1440;
   useGameStore.setState({ game: g });
   const completion = useGameStore.getState().act({ type: 'payInterest' });

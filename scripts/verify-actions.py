@@ -21,7 +21,7 @@ with sync_playwright() as p:
         expect(page.locator('.action-layer')).to_be_visible()
         expect(page.locator('.action-time')).to_contain_text('1일째 · 남은 행동 3/3')
         expect(page.locator('.action-time')).to_contain_text('1일째 · 남은 행동 2/3')
-        expect(page.locator('.status-top')).to_contain_text('현금 100,000 원')
+        expect(page.locator('.status-top')).to_contain_text('현금 500,000 원')
         assert page.locator('.game-scene').get_attribute('inert') is not None
         assert page.locator('.header-tools button:disabled').count()==2
         assert page.evaluate('document.activeElement.classList.contains("action-layer")')
@@ -33,15 +33,15 @@ with sync_playwright() as p:
         expect(page.locator('.action-layer')).to_have_count(0)
         elapsed=time.monotonic()-start
         assert elapsed>=0.5
-        expect(page.locator('.status-top')).to_contain_text('109,000 원')
+        expect(page.locator('.status-top')).to_contain_text('509,000 원')
         expect(page.locator('.status-top')).to_contain_text('남은 행동 2/3')
         assert page.locator('.status-header .stat-changed').count()>=2
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         # A refresh during presentation restores the committed action, with no replay.
         page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
         expect(page.locator('.action-layer')).to_be_visible()
-        page.wait_for_function("async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result);});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result?.game?.cash===118000);};});}")
-        page.reload();expect(page.locator('.status-top')).to_contain_text('118,000 원')
+        page.wait_for_function("async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result);});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result?.game?.cash===518000);};});}")
+        page.reload();expect(page.locator('.status-top')).to_contain_text('518,000 원')
         expect(page.locator('.status-top')).to_contain_text('남은 행동 1/3')
         assert page.locator('.action-layer').count()==0
         page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
@@ -57,5 +57,5 @@ with sync_playwright() as p:
     page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible()
     assert page.locator('.action-progress-track span').evaluate('(e)=>getComputedStyle(e).animationName')=='none'
     expect(page.locator('.action-layer')).to_have_count(0)
-    expect(page.locator('.status-top')).to_contain_text('109,000 원')
+    expect(page.locator('.status-top')).to_contain_text('509,000 원')
     context.close();browser.close();print(json.dumps({'mobile':results,'reduced_motion':'PASS'}))

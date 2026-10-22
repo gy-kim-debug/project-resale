@@ -1,7 +1,7 @@
 /** v1 playable balance, chosen by developer under user's delegation. */
 export const RULES = {
   debt: 10_000_000_000,
-  startingCash: 100_000,
+  startingCash: 500_000,
   weeklyBaseRateUnits: 1,
   weeklyRateStepUnits: 2,
   capacity: 12,

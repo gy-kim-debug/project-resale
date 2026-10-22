@@ -14,7 +14,7 @@ with sync_playwright() as p:
   page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for()
   expect(page.locator('meter')).to_have_count(0)
-  expect(page.locator('.header-cash')).to_contain_text('100,000 원')
+  expect(page.locator('.header-cash')).to_contain_text('500,000 원')
   expect(page.locator('.header-interest')).to_contain_text('1주차 이자')
   expect(page.locator('.header-interest')).to_contain_text('100,000 원')
   assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','매각처']

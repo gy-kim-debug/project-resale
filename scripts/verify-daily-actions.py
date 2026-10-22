@@ -28,7 +28,7 @@ with sync_playwright() as p:
   for left in [2,1,3]:
    work();expect(page.locator('.status-clock')).to_have_text('남은 행동 '+str(left)+'/3')
   expect(page.locator('.status-day')).to_have_text('2일째')
-  assert read()['minute']==1440;assert read()['cash']==127000
+  assert read()['minute']==1440;assert read()['cash']==527000
   assert 'satiety' not in read() and 'hungerRemainder' not in read()
   page.get_by_role('button',name='닫기',exact=True).click()
   page.screenshot(path=f'work/daily-home-{width}.png',full_page=True)

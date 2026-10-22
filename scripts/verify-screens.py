@@ -46,7 +46,7 @@ with sync_playwright() as pw:
         activity('아르바이트');layout()
         assert page.get_by_role('button',name=re.compile('^일하기')).all_text_contents()==['일하기 · 행동 1회','일하기 · 행동 1회','일하기 · 행동 1회']
         page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
-        expect(page.locator('.status-top')).to_contain_text('109,000 원')
+        expect(page.locator('.status-top')).to_contain_text('509,000 원')
         expect(page.locator('.status-top')).to_contain_text('남은 행동 2/3')
         click('닫기');activity('물건 수집');click('물건 수집하기');click('닫기');tab('보관함')
         page.locator('.item-row').first.click();expect(page.get_by_text('가치 미확인',exact=True)).to_be_visible()
