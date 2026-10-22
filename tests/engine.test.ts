@@ -177,7 +177,7 @@ test('purchase costs are atomic, no transport fee, value needs separate check', 
   assert.equal(g.inventory[0].checked, true);
   assert.ok(g.stats.checks === 1);
 });
-test('offer must be among choices, one attempt, accepted price used at purchase', () => {
+test('stale purchase offers are rejected and current seller quote is charged once', () => {
   let g = rich(11);
   const i = g.board[0];
   assert.equal(execute(g, { type: 'offer', id: i.id, price: 1 }).ok, false);
@@ -399,12 +399,18 @@ for (const seed of [1, 42, 210])
           (i) =>
             i.price > 0 &&
             i.price <= g.cash * 0.6 &&
-            i.negotiation !== 'rejected',
+            !i.purchaseBargain?.walked &&
+            (i.negotiation !== 'rejected' || !!i.purchaseBargain),
         )
         .sort((a, b) => b.price - a.price);
       const candidate = affordable[0];
       // Use only public prices and seller replies before buying; condition is hidden.
-      if (candidate?.negotiation === 'none')
+      if (
+        candidate &&
+        !candidate.chatSettled &&
+        candidate.negotiation !== 'accepted' &&
+        candidate.offers.length
+      )
         step({ type: 'offer', id: candidate.id, price: candidate.offers[0] });
       else if (candidate) step({ type: 'buy', id: candidate.id });
       else if (g.cash < 35000) step({ type: 'job', id: 'shop' });
@@ -1141,4 +1147,123 @@ test('appraisal and repair spend money without using the last action, expiring l
   assert.equal(interestPending(due), true);
   assert.equal(due.status, 'bankrupt');
   assert.deepEqual(g, snapshot);
+});
+
+test('purchase bargaining continues for several rounds, saves hidden seller limits, and charges only at exchange', () => {
+  let g = rich(17);
+  const start = structuredClone(g);
+  const id = g.board[0].id;
+  let previous = 0;
+  let rounds = 0;
+  while (!g.board[0].chatSettled && g.board[0].negotiation !== 'accepted') {
+    const item = g.board[0];
+    const offer = item.offers[0];
+    assert.ok(offer > previous);
+    previous = offer;
+    const before = structuredClone(g);
+    g = run(g, { type: 'offer', id, price: offer });
+    rounds++;
+    assert.equal(g.minute, start.minute);
+    assert.equal(g.cash, start.cash);
+    assert.deepEqual(g.inventory, start.inventory);
+    assert.equal(g.board[0].price, start.board[0].price);
+    assert.equal(g.board[0].chat?.length, 1 + 2 * rounds);
+    assert.ok(isGame(g));
+    const restored = parseSave(
+      JSON.parse(JSON.stringify({ version: 2, game: g, favoriteIds: [] })),
+    ).game;
+    assert.deepEqual(restored, g);
+    if (rounds > 1) {
+      assert.equal(
+        g.board[0].purchaseBargain!.floor,
+        before.board[0].purchaseBargain!.floor,
+      );
+      assert.equal(
+        g.board[0].purchaseBargain!.patience,
+        before.board[0].purchaseBargain!.patience,
+      );
+    }
+    assert.ok(rounds <= 6);
+  }
+  assert.ok(rounds >= 3);
+  assert.equal(execute(g, { type: 'offer', id, price: previous }).ok, false);
+  if (!g.board[0].purchaseBargain?.walked) {
+    const cost = g.board[0].negotiatedPrice ?? g.board[0].price;
+    const result = run(g, { type: 'buy', id });
+    assert.equal(result.cash, start.cash - cost);
+    assert.equal(result.inventory[0].acquiredFor, cost);
+    assert.equal(result.minute, start.minute + ACTION_TICK);
+    assert.ok(isGame(result));
+  }
+});
+
+test('seller holds, concessions, agreements, final prices and walkaways vary without an infinite retry', () => {
+  const outcomes = new Set<string>();
+  for (let seed = 1; seed <= 100; seed++) {
+    let g = rich(seed);
+    const id = g.board[0].id;
+    const original = structuredClone(g);
+    for (let round = 0; round < 7; round++) {
+      const item = g.board[0];
+      if (item.chatSettled || item.negotiation === 'accepted') break;
+      const previous = item.negotiatedPrice ?? item.price;
+      g = run(g, { type: 'offer', id, price: item.offers[0] });
+      const next = g.board[0];
+      const quote = next.negotiatedPrice;
+      if (!next.chatSettled && next.negotiation !== 'accepted') {
+        outcomes.add(quote === previous ? 'hold' : 'concession');
+        assert.ok(quote! <= previous);
+      }
+      assert.ok(isGame(g));
+    }
+    const item = g.board[0];
+    assert.ok(item.chatSettled || item.negotiation === 'accepted');
+    assert.equal(g.minute, original.minute);
+    assert.equal(g.cash, original.cash);
+    outcomes.add(
+      item.purchaseBargain?.walked
+        ? 'walked'
+        : item.negotiation === 'accepted'
+          ? 'agreed'
+          : 'final',
+    );
+    if (item.purchaseBargain?.walked) {
+      const rejected = execute(g, { type: 'buy', id });
+      assert.equal(rejected.ok, false);
+      assert.deepEqual(rejected.game, g);
+    }
+    const again = execute(g, { type: 'offer', id, price: 1 });
+    assert.equal(again.ok, false);
+    assert.deepEqual(again.game, g);
+  }
+  for (const expected of ['hold', 'concession', 'walked', 'agreed', 'final'])
+    assert.ok(outcomes.has(expected), expected);
+});
+
+test('old purchase chats stay loadable and closed chats cannot restart; malformed seller state is rejected', () => {
+  let g = rich(17);
+  const id = g.board[0].id;
+  g = run(g, { type: 'offer', id, price: g.board[0].offers[0] });
+  const closed = run(g, { type: 'closeChat', id });
+  assert.equal(
+    execute(closed, { type: 'offer', id, price: closed.board[0].offers[0] }).ok,
+    false,
+  );
+  const legacy = structuredClone(g);
+  delete legacy.board[0].purchaseBargain;
+  assert.ok(isGame(legacy));
+  assert.deepEqual(
+    parseSave({ version: 2, game: legacy, favoriteIds: [] }).game,
+    legacy,
+  );
+  for (const bad of [
+    { rounds: 7 },
+    { floor: -1 },
+    { patience: 9 },
+    { walked: 'yes' },
+  ]) {
+    const invalid = structuredClone(g);
+    Object.assign(invalid.board[0].purchaseBargain!, bad);
+    assert.equal(isGame(invalid), false);
+  }
 });

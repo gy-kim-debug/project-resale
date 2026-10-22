@@ -411,7 +411,9 @@ export function ListingView({
                   ]
                 }
               />
-              {item.negotiation === 'none' &&
+              {!item.chatSettled &&
+                (item.negotiation === 'none' ||
+                  (item.purchaseBargain && item.negotiation !== 'accepted')) &&
                 item.offers.map((p) => (
                   <Button
                     key={p}
@@ -432,9 +434,16 @@ export function ListingView({
           )}
         </section>
       )}
+      {item.purchaseBargain?.walked && (
+        <p className="chat-ended">판매자가 거래를 종료했습니다.</p>
+      )}
       {!confirm ? (
         <Button
-          disabled={g.cash < price || g.inventory.length >= RULES.capacity}
+          disabled={
+            !!item.purchaseBargain?.walked ||
+            g.cash < price ||
+            g.inventory.length >= RULES.capacity
+          }
           onClick={() => setConfirm(true)}
         >
           {item.price === 0 ? '나눔 수령 확인' : '구매 내용 확인'} ·{' '}
@@ -445,7 +454,11 @@ export function ListingView({
           <h3>지불·수령 확인</h3>
           <p>{won(price)} · 행동 1회</p>
           <Button
-            disabled={g.cash < price || g.inventory.length >= RULES.capacity}
+            disabled={
+              !!item.purchaseBargain?.walked ||
+              g.cash < price ||
+              g.inventory.length >= RULES.capacity
+            }
             onClick={() => act({ type: 'buy', id: item.id })}
           >
             {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'} · 행동 1회

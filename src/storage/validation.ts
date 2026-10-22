@@ -11,7 +11,7 @@ const kind = (v: unknown) =>
 const chat = (v: unknown) =>
   v === undefined ||
   (Array.isArray(v) &&
-    v.length <= 12 &&
+    v.length <= 16 &&
     v.every(
       (m) =>
         record(m) &&
@@ -26,6 +26,16 @@ function item(v: unknown): v is Item {
     ) &&
     (v.acquiredFor === undefined || integer(v.acquiredFor, RULES.maxMoney)) &&
     chat(v.chat) &&
+    (v.purchaseBargain === undefined ||
+      (record(v.purchaseBargain) &&
+        integer(v.purchaseBargain.rounds, 6) &&
+        integer(v.purchaseBargain.floor, RULES.maxMoney) &&
+        v.purchaseBargain.floor > 0 &&
+        v.purchaseBargain.floor <= Number(v.price) &&
+        integer(v.purchaseBargain.patience, 6) &&
+        v.purchaseBargain.patience >= 4 &&
+        v.purchaseBargain.rounds <= v.purchaseBargain.patience &&
+        typeof v.purchaseBargain.walked === 'boolean')) &&
     (v.chatSettled === undefined || typeof v.chatSettled === 'boolean') &&
     kind(v.kind) &&
     ['양호', '사용감', '고장'].includes(String(v.condition)) &&

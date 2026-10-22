@@ -7,6 +7,12 @@ export interface ChatMessage {
   text: string;
 }
 export interface Item {
+  purchaseBargain?: {
+    rounds: number;
+    floor: number;
+    patience: number;
+    walked: boolean;
+  };
   acquiredFor?: number;
   chat?: ChatMessage[];
   chatSettled?: boolean;

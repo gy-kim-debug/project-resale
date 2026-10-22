@@ -1,5 +1,6 @@
 import type { Command, Game, Item, Result, Kind } from './game';
 import { dayOf, isMoney, won, ACTION_TICK } from './game';
+import { nextPurchaseOffers } from './purchaseBargaining';
 import { toDailyActions } from './time';
 import { interestPending, interestAmount, paymentWeek } from './debt';
 import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
@@ -425,32 +426,69 @@ export function execute(original: Game, command: Command): Result {
         const i = preItem(g, command.id);
         if (
           i.price === 0 ||
-          i.negotiation !== 'none' ||
+          i.chatSettled ||
+          (i.purchaseBargain &&
+            i.purchaseBargain.rounds >= i.purchaseBargain.patience) ||
+          i.negotiation === 'accepted' ||
+          (i.negotiation === 'rejected' && !i.purchaseBargain) ||
           !i.offers.includes(command.price)
         )
           throw Error('선택할 수 없는 구매 제안입니다.');
-        const accepted =
-          roll(g) < (command.price >= i.price * 0.85 ? 0.8 : 0.4);
-        i.negotiation = accepted ? 'accepted' : 'rejected';
-        i.negotiatedPrice = accepted ? command.price : null;
-        message = accepted
-          ? `판매자가 ${won(command.price)} 제안에 동의했습니다.`
-          : '판매자가 네고를 거절했습니다.';
-        log(g, message);
-        i.chat = [
+        const state = (i.purchaseBargain ??= {
+          rounds: 0,
+          floor: Math.max(1, Math.floor(i.price * (0.78 + roll(g) * 0.12))),
+          patience: 4 + Math.floor(roll(g) * 3),
+          walked: false,
+        });
+        const current = i.negotiatedPrice ?? i.price;
+        state.rounds++;
+        i.chat ??= [
           { speaker: 'other', text: `판매 가격은 ${won(i.price)}입니다.` },
-          {
-            speaker: 'player',
-            text: `${won(command.price)}에 거래할 수 있을까요?`,
-          },
-          {
-            speaker: 'other',
-            text: accepted
-              ? `좋아요. ${won(command.price)}에 거래해요.`
-              : `그 가격은 어렵습니다. ${won(i.price)}에 판매합니다.`,
-          },
         ];
-        i.chatSettled = false;
+        i.chat.push({
+          speaker: 'player',
+          text: `${won(command.price)}에 거래할 수 있을까요?`,
+        });
+        if (command.price >= state.floor) {
+          i.negotiation = 'accepted';
+          i.negotiatedPrice = command.price;
+          i.offers = [];
+          message = `좋아요. ${won(command.price)}에 거래해요.`;
+        } else if (state.rounds >= state.patience && roll(g) < 0.3) {
+          state.walked = true;
+          i.negotiation = 'rejected';
+          i.negotiatedPrice = null;
+          i.offers = [];
+          i.chatSettled = true;
+          message = '가격이 안 맞네요. 이번 거래는 여기까지 할게요.';
+        } else {
+          // Small concessions and occasional holds make each reply meaningful.
+          const concession =
+            roll(g) < 0.25
+              ? 0
+              : Math.max(
+                  1,
+                  Math.floor(
+                    (current - command.price) * (0.15 + roll(g) * 0.15),
+                  ),
+                );
+          const counter = Math.max(state.floor, current - concession);
+          i.negotiation = 'rejected';
+          i.negotiatedPrice = counter;
+          i.offers =
+            state.rounds < state.patience
+              ? nextPurchaseOffers(counter, command.price)
+              : [];
+          const final = !i.offers.length;
+          i.chatSettled = final;
+          message = final
+            ? `${won(counter)}가 마지막 가격입니다. 더는 어렵겠어요.`
+            : counter === current
+              ? `그 가격은 어렵네요. ${won(counter)}는 받아야 해요.`
+              : `${won(counter)}까지는 맞춰드릴게요. 어떠세요?`;
+        }
+        i.chat.push({ speaker: 'other', text: message });
+        log(g, `${i.seller}: ${message}`);
         break;
       }
       case 'closeChat': {
@@ -464,6 +502,8 @@ export function execute(original: Game, command: Command): Result {
       }
       case 'buy': {
         const item = preItem(g, command.id);
+        if (item.purchaseBargain?.walked)
+          throw Error('판매자가 거래를 종료했습니다.');
         room(g);
         const cost = item.negotiatedPrice ?? item.price;
         affordable(g, cost);
