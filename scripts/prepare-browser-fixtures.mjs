@@ -10,8 +10,8 @@ await build({
 });
 const { newGame, execute } = await import('../work/browser-engine.mjs');
 const rich = newGame(31);
-rich.cash = 50_000;
-rich.stats.peakCash = 50_000;
+rich.cash = 500_000;
+rich.stats.peakCash = 500_000;
 const empty = newGame(31);
 empty.cash = 10000;
 empty.stats.peakCash = 10000;
@@ -45,7 +45,7 @@ for (const [name, game] of Object.entries({
 
 // Real purchases for acquisition-cost and appraisal UI checks.
 let comparison = newGame(31);
-comparison.cash = 100_000;
+comparison.cash = 2_000_000;
 comparison.stats.peakCash = comparison.cash;
 for (let n = 0; n < 3; n++) {
   const id = comparison.board[0].id;

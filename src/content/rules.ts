@@ -37,16 +37,7 @@ export const OUTLETS = [
   { id: 'used', title: '중고 상점', kinds: ['디지털', '가구'], percent: 72 },
   { id: 'collector', title: '수집품 상점', kinds: ['수집품'], percent: 85 },
 ];
-export const TIERS = [
-  { threshold: 0, base: 6_000, name: '동네 생활용품' },
-  { threshold: 30_000, base: 40_000, name: '소형 중고품' },
-  { threshold: 150_000, base: 200_000, name: '가전·취미용품' },
-  { threshold: 1_000_000, base: 1_200_000, name: '전문 장비' },
-  { threshold: 10_000_000, base: 12_000_000, name: '빈티지·한정품' },
-  { threshold: 100_000_000, base: 120_000_000, name: '고가 수집품' },
-  { threshold: 1_000_000_000, base: 1_200_000_000, name: '희귀 경매품' },
-  { threshold: 5_000_000_000, base: 6_000_000_000, name: '최상위 컬렉션' },
-];
+export { TIERS } from './market';
 export const CATALOG = [
   {
     title: '탁상 조명',

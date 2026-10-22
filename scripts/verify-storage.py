@@ -11,7 +11,7 @@ with sync_playwright() as p:
  page.get_by_role('button',name='백업·저장 관리 열기',exact=True).click();expect(page.get_by_role('button',name='백업 파일 내보내기')).to_be_visible()
  # A validated import recovers from corrupt save without losing the original first.
  page.once('dialog',lambda d:d.accept());page.locator('input[type=file]').set_input_files('work/rich.json');expect(page.get_by_role('status')).to_contain_text('백업을 불러왔습니다')
- page.get_by_role('button',name='닫기',exact=True).click();page.reload();expect(page.locator('.status-top')).to_contain_text('50,000 원')
+ page.get_by_role('button',name='닫기',exact=True).click();page.reload();expect(page.locator('.status-top')).to_contain_text('500,000 원')
  ctx.close()
  # Legacy favorites-only data backed up before playable state creation.
  ctx=browser.new_context();page=ctx.new_page();page.goto('http://127.0.0.1:4182');page.get_by_role('heading',name='활동',exact=True).wait_for()

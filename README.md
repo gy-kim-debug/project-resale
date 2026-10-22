@@ -58,3 +58,5 @@ Python Playwright와 Chromium이 필요합니다. `SCREEN_BASE_URL`, `CHROMIUM_P
 현재 주간 이율은 0.001%부터 매주 0.002%p 증가합니다. 원금은 별도로 상환하며, 이자는 납부 시 남은 원금 기준입니다. 현금 0원 즉시 종료는 사용하지 않습니다.
 
 주간 납부 화면과 미납 종료는 프로덕션 preview 실행 후 `python scripts/verify-economy.py`로 검증합니다.
+
+물품 종류와 단계별 가격표는 [매물 카테고리·가격대](docs/design/items/CATEGORIES_AND_PRICES.md), 실행 설정은 `src/content/market.ts`에서 관리합니다. 가격 상향은 새로 생성하는 매물부터 적용합니다.

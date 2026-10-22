@@ -2,6 +2,7 @@ import type { Command, Game, Item, Result, Kind } from './game';
 import { dayOf, isMoney, won, ACTION_TICK } from './game';
 import { toDailyActions } from './time';
 import { interestPending, interestAmount, paymentWeek } from './debt';
+import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
 import {
   CATALOG,
   JOBS,
@@ -69,34 +70,52 @@ function makeItem(g: Game, base: number, free = false): Item {
     (best, t, i) => (base >= t.base ? i : best),
     0,
   );
+  const categoryBase = Math.floor(
+    (base * CATEGORY_PRICING[template.kind].valuePercent) / 100,
+  );
   const quality = roll(g);
   const rarity = roll(g);
   const condition =
     quality < 0.18 ? '고장' : quality < 0.55 ? '사용감' : '양호';
-  const multiplier =
-    rarity < 0.1 ? 0.08 : rarity > 0.97 ? 4 : rarity > 0.86 ? 1.5 : 1;
-  const actualBase = Math.max(100, Math.floor(base * multiplier));
+  const rarityPercent =
+    rarity < 0.1 ? 8 : rarity > 0.97 ? 400 : rarity > 0.86 ? 150 : 100;
+  const actualBase = Math.max(
+    100,
+    Math.floor((categoryBase * rarityPercent) / 100),
+  );
   const price = free
     ? 0
-    : Math.max(100, Math.floor((base * (0.42 + roll(g) * 0.48)) / 100) * 100);
+    : Math.max(
+        MARKET_PRICING.priceStep,
+        Math.floor(
+          (categoryBase *
+            (MARKET_PRICING.askMinPercent +
+              roll(g) *
+                (MARKET_PRICING.askMaxPercent -
+                  MARKET_PRICING.askMinPercent))) /
+            100 /
+            MARKET_PRICING.priceStep,
+        ) * MARKET_PRICING.priceStep,
+      );
   return {
     id: id(g),
     title: TIER_TITLES[tierIndex][templateIndex],
     kind: template.kind,
     base: actualBase,
     value: Math.floor(
-      actualBase *
-        (condition === '고장' ? 0.18 : condition === '사용감' ? 0.75 : 1),
+      (actualBase *
+        (condition === '고장' ? 18 : condition === '사용감' ? 75 : 100)) /
+        100,
     ),
     condition,
     defect:
-      multiplier < 0.1
+      rarityPercent < 10
         ? '가품 또는 비정상 부품이 확인됐습니다.'
         : condition === '고장'
           ? '작동 불량·부품 손상이 있습니다.'
           : condition === '사용감'
             ? '마모와 작은 흠집이 있습니다.'
-            : multiplier > 1
+            : rarityPercent > 100
               ? '희귀한 구성·보존 가치가 확인됐습니다.'
               : '특별한 결함은 발견되지 않았습니다.',
     checked: false,
@@ -136,7 +155,16 @@ function board(g: Game) {
     );
   // Appearance is independent of cash; it can legitimately be absent.
   if (roll(g) < 0.5)
-    list.push(makeItem(g, 1000 + Math.floor(roll(g) * 4000), true));
+    list.push(
+      makeItem(
+        g,
+        MARKET_PRICING.giveawayMin +
+          Math.floor(
+            roll(g) * (MARKET_PRICING.giveawayMax - MARKET_PRICING.giveawayMin),
+          ),
+        true,
+      ),
+    );
   g.board = list;
 }
 function daily(g: Game) {
@@ -362,7 +390,13 @@ export function execute(original: Game, command: Command): Result {
         room(g);
         const found = makeItem(
           g,
-          roll(g) < 0.97 ? 200 + Math.floor(roll(g) * 1800) : 8000,
+          roll(g) < MARKET_PRICING.scavengeCommonChance
+            ? MARKET_PRICING.scavengeMin +
+                Math.floor(
+                  roll(g) *
+                    (MARKET_PRICING.scavengeMax - MARKET_PRICING.scavengeMin),
+                )
+            : MARKET_PRICING.scavengeRare,
           true,
         );
         found.title =

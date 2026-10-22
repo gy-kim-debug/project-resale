@@ -40,7 +40,7 @@ with sync_playwright() as p:
   page.evaluate(WRITE,legacy);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   expect(page.locator('.status-clock')).to_have_text('남은 행동 2/3')
   expect(page.locator('meter[aria-label="포만감"]')).to_have_count(0)
-  activity('아르바이트');work();assert read()['cash']==59000
+  activity('아르바이트');work();assert read()['cash']==509000
   assert 'satiety' not in read() and 'hungerRemainder' not in read()
   expect(page.locator('.status-clock')).to_have_text('남은 행동 1/3')
   # Old hourly snapshots keep their date and finances; the first action persists the marker.
@@ -51,7 +51,7 @@ with sync_playwright() as p:
   expect(page.locator('.status-day')).to_have_text('15일째')
   expect(page.locator('.status-clock')).to_have_text('남은 행동 3/3')
   activity('아르바이트');work()
-  assert read()['cash']==59000;assert read()['timeMode']=='daily-actions'
+  assert read()['cash']==509000;assert read()['timeMode']=='daily-actions'
   assert read()['interest']==old['game']['interest']
   page.reload();expect(page.locator('.status-clock')).to_have_text('남은 행동 2/3')
   expect(page.locator('.status-day')).to_have_text('15일째')

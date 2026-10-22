@@ -110,8 +110,8 @@ with sync_playwright() as pw:
             print('OFFLINE DIAGNOSTICS',page.locator('body').inner_text(),errors,page.evaluate('async()=>{const keys=await caches.keys();return await Promise.all(keys.map(async k=>[k,(await (await caches.open(k)).keys()).map(r=>r.url)]));}'))
             raise
         activity('아르바이트');page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
-        expect(page.locator('.status-top')).to_contain_text('59,000 원')
-        page.reload();expect(page.locator('.status-top')).to_contain_text('59,000 원')
+        expect(page.locator('.status-top')).to_contain_text('509,000 원')
+        page.reload();expect(page.locator('.status-top')).to_contain_text('509,000 원')
         # Offline navigations deliberately log failed network fetches; they are expected.
         context.set_offline(False)
         assert not [e for e in errors if 'net::ERR_INTERNET_DISCONNECTED' not in e],errors

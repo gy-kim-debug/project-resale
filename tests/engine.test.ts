@@ -1039,3 +1039,39 @@ test('legacy saves keep arrears but begin weekly billing without retroactive inv
   assert.equal(interestPending(result), false);
   assert.equal(interestAmount(result), 1100000 + 1234);
 });
+
+test('higher listing bands keep entry options affordable and the starting board centered on larger trades', () => {
+  for (let seed = 1; seed <= 100; seed++) {
+    const g = newGame(seed);
+    const paid = g.board.filter((i) => i.price > 0);
+    assert.equal(paid.length, 8);
+    assert.ok(paid.every((i) => i.price >= 28000 && i.price % 1000 === 0));
+    assert.ok(paid.filter((i) => i.price >= 150000).length >= 6);
+    assert.ok(paid.filter((i) => i.price <= g.cash).length >= 2);
+    assert.ok(
+      paid.every(
+        (i) => Number.isSafeInteger(i.value) && Number.isSafeInteger(i.base),
+      ),
+    );
+  }
+});
+test('high-tier generation stays within safe won amounts and existing owned items are not repriced', () => {
+  const original = owned();
+  original.inventory[0].price = 1234;
+  original.inventory[0].acquiredFor = 1234;
+  const saved = parseSave({ version: 2, game: original, favoriteIds: [] }).game;
+  assert.deepEqual(saved.inventory, original.inventory);
+  saved.cash = 5000000000;
+  saved.stats.peakCash = saved.cash;
+  const next = run(saved, { type: 'refresh' });
+  assert.ok(next.board.some((i) => i.price >= 1000000000));
+  for (const i of next.board) {
+    assert.ok(
+      Number.isSafeInteger(i.price) &&
+        Number.isSafeInteger(i.base) &&
+        Number.isSafeInteger(i.value),
+    );
+    assert.ok(i.value <= RULES.maxMoney);
+  }
+  assert.deepEqual(next.inventory, original.inventory);
+});
