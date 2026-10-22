@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Command, Game } from '../domain/game';
+import { mailboxLogs } from './notifications';
 import { execute, newGame } from '../domain/engine';
 import {
   saveRepository,
@@ -25,6 +26,9 @@ interface State {
   notice: string;
   ok: boolean;
   favoriteIds: string[];
+  readNotificationIds: number[];
+  readNotification(id: number): void;
+  readAllNotifications(): void;
   tab: Tab;
   hydrate(): Promise<void>;
   action: ActionPresentation | null;
@@ -52,6 +56,7 @@ export const useGameStore = create<State>((set, get) => ({
   notice: '',
   ok: true,
   favoriteIds: [],
+  readNotificationIds: [],
   tab: '활동',
   action: null,
   changes: {},
@@ -65,6 +70,7 @@ export const useGameStore = create<State>((set, get) => ({
         set({
           game: saved?.game ?? newGame(seed()),
           favoriteIds: saved?.favoriteIds ?? [],
+          readNotificationIds: saved?.readNotificationIds ?? [],
           ready: true,
         });
         if (!saved) get().save();
@@ -164,11 +170,48 @@ export const useGameStore = create<State>((set, get) => ({
     });
     get().save();
   },
+  readNotification(id) {
+    const { game, ready, action, readNotificationIds } = get();
+    if (
+      !game ||
+      !ready ||
+      action ||
+      readNotificationIds.includes(id) ||
+      !mailboxLogs(game).some((log) => log.id === id)
+    )
+      return;
+    set({ readNotificationIds: [...readNotificationIds, id] });
+    get().save();
+  },
+  readAllNotifications() {
+    const { game, ready, action, readNotificationIds } = get();
+    if (!game || !ready || action) return;
+    const unread = mailboxLogs(game).filter(
+      (log) => !readNotificationIds.includes(log.id),
+    );
+    if (!unread.length) return;
+    set({
+      readNotificationIds: [
+        ...readNotificationIds,
+        ...unread.map((log) => log.id),
+      ],
+    });
+    get().save();
+  },
   dismiss: () => set({ notice: '' }),
   save() {
     const { game, favoriteIds, storageBlocked } = get();
     if (!game || storageBlocked) return;
-    const data: SaveData = structuredClone({ version: 2, game, favoriteIds });
+    const readNotificationIds = get().readNotificationIds.filter((id) =>
+      game.logs.some((log) => log.id === id),
+    );
+    set({ readNotificationIds });
+    const data: SaveData = structuredClone({
+      version: 2,
+      game,
+      favoriteIds,
+      readNotificationIds,
+    });
     set({ saving: true });
     queue = queue
       .then(() => saveRepository.save(data))
@@ -190,6 +233,7 @@ export const useGameStore = create<State>((set, get) => ({
         changes: {},
         game: data.game,
         favoriteIds: data.favoriteIds,
+        readNotificationIds: data.readNotificationIds ?? [],
         tab: '활동',
         notice: '백업을 불러왔습니다.',
         ok: true,
@@ -213,6 +257,7 @@ export const useGameStore = create<State>((set, get) => ({
     set({
       game: newGame(seed()),
       favoriteIds: [],
+      readNotificationIds: [],
       tab: '활동',
       notice: '새 게임을 시작했습니다. 이전 진행은 계승되지 않습니다.',
       ok: true,

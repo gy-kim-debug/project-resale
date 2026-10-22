@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { useGameStore, flushSaves } from '../src/app/store';
-import { saveRepository, type SaveData } from '../src/storage/saveRepository';
+import { unreadCount } from '../src/app/notifications';
+import {
+  saveRepository,
+  parseSave,
+  type SaveData,
+} from '../src/storage/saveRepository';
 import { newGame, execute } from '../src/domain/engine';
 import { ACTION_TICK } from '../src/domain/game';
 import {
@@ -24,6 +29,7 @@ function setup() {
     notice: '',
     storageBlocked: false,
     favoriteIds: [],
+    readNotificationIds: [],
     saveError: '',
   });
 }
@@ -175,4 +181,91 @@ test('weekly payment commits once, saves the paid week and resumes with zero cas
   await flushSaves();
   assert.equal(writes.at(-1)?.game.interestWeek, 1);
   assert.equal(useGameStore.getState().game!.status, 'playing');
+});
+
+test('mail read state persists without changing game, time or action budget', async () => {
+  await flushSaves();
+  setup();
+  const s = useGameStore;
+  const game = structuredClone(s.getState().game!);
+  const id = game.logs[0].id;
+  assert.equal(unreadCount(game, []), game.logs.length);
+  s.getState().readNotification(id);
+  await flushSaves();
+  assert.deepEqual(s.getState().game, game);
+  assert.equal(s.getState().action, null);
+  assert.equal(
+    unreadCount(game, s.getState().readNotificationIds),
+    game.logs.length - 1,
+  );
+  assert.deepEqual(writes.at(-1)?.readNotificationIds, [id]);
+  const count = writes.length;
+  s.getState().readNotification(id);
+  s.getState().readNotification(-1);
+  await flushSaves();
+  assert.equal(writes.length, count);
+  const backup = JSON.stringify(writes.at(-1));
+  s.setState({ readNotificationIds: [] });
+  assert.equal(s.getState().importSave(backup), true);
+  assert.deepEqual(s.getState().readNotificationIds, [id]);
+  await flushSaves();
+  s.getState().startOver();
+  assert.deepEqual(s.getState().readNotificationIds, []);
+  await flushSaves();
+});
+
+test('all-read covers visible mail only; new mail is unread and expired ids are pruned', async () => {
+  await flushSaves();
+  setup();
+  const s = useGameStore;
+  const game = structuredClone(s.getState().game!);
+  game.logs = Array.from({ length: 25 }, (_, i) => ({
+    id: 1000 + i,
+    minute: 0,
+    text: `mail ${i}`,
+  }));
+  s.setState({ game });
+  s.getState().readAllNotifications();
+  await flushSaves();
+  assert.equal(s.getState().readNotificationIds.length, 20);
+  assert.equal(unreadCount(game, s.getState().readNotificationIds), 0);
+  const next = structuredClone(game);
+  next.logs.unshift({ id: 2000, minute: 0, text: 'new mail' });
+  next.logs = next.logs.filter((log) => log.id !== 1001);
+  s.setState({ game: next });
+  s.getState().save();
+  await flushSaves();
+  assert.equal(unreadCount(next, s.getState().readNotificationIds), 1);
+  assert.ok(!s.getState().readNotificationIds.includes(1001));
+  s.setState({
+    action: {
+      id: 1,
+      label: '처리 중',
+      before: next,
+      after: next,
+      duration: 750,
+    },
+  });
+  s.getState().readNotification(2000);
+  s.getState().readAllNotifications();
+  assert.equal(unreadCount(next, s.getState().readNotificationIds), 1);
+  s.setState({ action: null });
+});
+
+test('older backups default to unread, malformed read metadata cannot overwrite progress', async () => {
+  await flushSaves();
+  setup();
+  const s = useGameStore;
+  const game = s.getState().game!;
+  const old = { version: 2, game, favoriteIds: [] };
+  assert.deepEqual(parseSave(old).readNotificationIds, []);
+  for (const invalid of [[-1], ['1'], [1.5], Array(81).fill(1), null]) {
+    assert.equal(
+      s
+        .getState()
+        .importSave(JSON.stringify({ ...old, readNotificationIds: invalid })),
+      false,
+    );
+    assert.deepEqual(s.getState().game, game);
+  }
 });

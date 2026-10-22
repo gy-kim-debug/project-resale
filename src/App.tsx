@@ -26,6 +26,7 @@ import type {
   Changes,
   ChangeKey,
 } from './app/actionPresentation';
+import { unreadCount } from './app/notifications';
 import { TIERS } from './content/rules';
 import {
   interestPending,
@@ -52,8 +53,10 @@ function Header({
   changes,
   actionId,
   onOpen,
+  unread,
 }: {
   g: Game;
+  unread: number;
   action: ActionPresentation | null;
   changes: Changes;
   actionId: number;
@@ -82,6 +85,7 @@ function Header({
       <div className="header-tools" aria-label="빠른 메뉴">
         <button
           aria-label="우편함"
+          aria-describedby="mail-unread-count"
           disabled={
             !!action ||
             !!g.inquiries.length ||
@@ -91,7 +95,14 @@ function Header({
           onClick={() => onOpen('우편함')}
         >
           <Icon name="mail" size={21} />
-          {g.event && <span className="mail-dot" aria-hidden="true" />}
+          {unread > 0 && (
+            <span className="mail-badge" aria-hidden="true">
+              {unread}
+            </span>
+          )}
+          <span id="mail-unread-count" className="sr-only">
+            안 읽은 알림 {unread}개
+          </span>
         </button>
         <button
           aria-label="설정"
@@ -320,6 +331,10 @@ export default function App() {
     <div className="app-shell">
       <Header
         g={state.action?.before ?? g}
+        unread={unreadCount(
+          state.action?.before ?? g,
+          state.readNotificationIds,
+        )}
         action={state.action}
         changes={state.changes}
         actionId={state.actionId}

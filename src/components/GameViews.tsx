@@ -2,6 +2,7 @@ import { useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
 import { ItemComparison } from './ItemComparison';
 import { TradeChat } from './TradeChat';
+import { mailboxLogs, unreadCount } from '../app/notifications';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, Kind } from '../domain/game';
 import { won, dayOf, durationText } from '../domain/game';
@@ -677,7 +678,12 @@ export function StorageView() {
     const blob = new Blob(
       [
         JSON.stringify(
-          { version: 2, game: s.game, favoriteIds: s.favoriteIds },
+          {
+            version: 2,
+            game: s.game,
+            favoriteIds: s.favoriteIds,
+            readNotificationIds: s.readNotificationIds,
+          },
           null,
           2,
         ),
@@ -893,24 +899,7 @@ export function RouteView({
     case '이자 납부':
       return <DebtView g={g} act={act} />;
     case '우편함':
-      return (
-        <>
-          {g.event && (
-            <Button onClick={() => open({ kind: '특별 제안' })}>
-              {g.event.title}
-            </Button>
-          )}
-          <h2>최근 알림</h2>
-          <ol className="journal">
-            {g.logs.slice(0, 20).map((l) => (
-              <li key={l.id}>
-                <small>{dayOf({ ...g, minute: l.minute })}일째</small>
-                <p>{l.text}</p>
-              </li>
-            ))}
-          </ol>
-        </>
-      );
+      return <MailboxView g={g} open={open} />;
     case '설정':
       return (
         <Button onClick={() => open({ kind: '저장 관리' })}>
@@ -931,4 +920,48 @@ export function RouteView({
     case '저장 관리':
       return <StorageView />;
   }
+}
+
+function MailboxView({ g, open }: { g: Game; open: (route: Route) => void }) {
+  const readIds = useGameStore((s) => s.readNotificationIds);
+  const read = useGameStore((s) => s.readNotification);
+  const readAll = useGameStore((s) => s.readAllNotifications);
+  return (
+    <>
+      {g.event && (
+        <Button onClick={() => open({ kind: '특별 제안' })}>
+          {g.event.title}
+        </Button>
+      )}
+      <div className="mail-heading">
+        <h2>최근 알림</h2>
+        <button onClick={readAll} disabled={!unreadCount(g, readIds)}>
+          모두 읽음
+        </button>
+      </div>
+      <ol className="journal mailbox">
+        {mailboxLogs(g).map((log) => {
+          const isRead = readIds.includes(log.id);
+          return (
+            <li key={log.id} className={isRead ? 'mail-read' : 'mail-unread'}>
+              <button
+                className="mail-entry"
+                onClick={() => read(log.id)}
+                aria-pressed={isRead}
+              >
+                <span className="mail-meta">
+                  <small>{dayOf({ ...g, minute: log.minute })}일째</small>
+                  <span className="mail-state">
+                    {isRead ? '읽음' : '안 읽음'}
+                  </span>
+                </span>
+                <span className="mail-text">{log.text}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      {!g.logs.length && <p>받은 알림이 없습니다.</p>}
+    </>
+  );
 }

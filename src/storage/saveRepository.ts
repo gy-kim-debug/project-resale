@@ -6,6 +6,7 @@ export interface SaveData {
   version: 2;
   game: Game;
   favoriteIds: string[];
+  readNotificationIds?: number[];
 }
 export interface SaveRepository {
   load(): Promise<SaveData | undefined>;
@@ -22,15 +23,29 @@ export function parseSave(value: unknown): SaveData {
     !('favoriteIds' in value) ||
     !Array.isArray(value.favoriteIds) ||
     !value.favoriteIds.every((v: unknown) => typeof v === 'string') ||
-    value.favoriteIds.length > 100
+    value.favoriteIds.length > 100 ||
+    ('readNotificationIds' in value &&
+      (!Array.isArray(value.readNotificationIds) ||
+        value.readNotificationIds.length > 80 ||
+        !value.readNotificationIds.every(
+          (id: unknown) =>
+            typeof id === 'number' && Number.isSafeInteger(id) && id >= 0,
+        )))
   )
     throw Error(
       '저장 형식이 올바르지 않습니다. 기존 데이터는 덮어쓰지 않았습니다.',
     );
+  const game = toDailyActions(value.game);
   return {
     version: 2,
-    game: toDailyActions(value.game),
+    game,
     favoriteIds: value.favoriteIds,
+    readNotificationIds:
+      'readNotificationIds' in value
+        ? [...new Set(value.readNotificationIds as number[])].filter((id) =>
+            game.logs.some((log) => log.id === id),
+          )
+        : [],
   };
 }
 const database = () =>
