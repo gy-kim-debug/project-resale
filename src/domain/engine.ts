@@ -1,4 +1,4 @@
-import type { Command, Game, Item, Result, Kind } from './game';
+import type { Command, Game, Item, Result, Kind, MarketId } from './game';
 import { dayOf, isMoney, won, ACTION_TICK } from './game';
 import { nextPurchaseOffers } from './purchaseBargaining';
 import {
@@ -7,7 +7,15 @@ import {
   listingValuePercent,
   listingFindings,
   sellerProfile,
+  integrityLabel,
 } from './listingTags';
+import {
+  MARKETS,
+  marketOf,
+  marketDefinition,
+  isMarketId,
+  type MarketProduct,
+} from '../content/markets';
 import { TAG_RULES } from '../content/listingTags';
 import { toDailyActions } from './time';
 import { interestPending, interestAmount, paymentWeek } from './debt';
@@ -77,15 +85,18 @@ function makeItem(
   base: number,
   free = false,
   marketListing = true,
+  marketItem?: { marketId: MarketId; product: MarketProduct; asking: number },
 ): Item {
   const templateIndex = Math.floor(roll(g) * CATALOG.length);
-  const template = CATALOG[templateIndex];
+  const template = marketItem?.product ?? CATALOG[templateIndex];
   const tierIndex = TIERS.reduce(
     (best, t, i) => (base >= t.base ? i : best),
     0,
   );
   const categoryBase = Math.floor(
-    (base * CATEGORY_PRICING[template.kind].valuePercent) / 100,
+    marketItem
+      ? base
+      : (base * CATEGORY_PRICING[template.kind].valuePercent) / 100,
   );
   const quality = roll(g);
   const rarity = roll(g);
@@ -125,11 +136,14 @@ function makeItem(
             MARKET_PRICING.priceStep,
         ) * MARKET_PRICING.priceStep,
       );
-  price = listingAskPrice(price, listing);
+  price = listingAskPrice(marketItem?.asking ?? price, listing);
+  if (marketItem)
+    price = Math.max(marketDefinition(marketItem.marketId).min, price);
   return {
     listing,
+    ...(marketItem ? { marketId: marketItem.marketId } : {}),
     id: id(g),
-    title: TIER_TITLES[tierIndex][templateIndex],
+    title: marketItem?.product.title ?? TIER_TITLES[tierIndex][templateIndex],
     kind: template.kind,
     base: actualBase,
     value: Math.floor(
@@ -139,7 +153,7 @@ function makeItem(
     ),
     condition,
     defect: (listing ? !listing.facts.authentic : rarityPercent < 10)
-      ? '가품 또는 비정상 부품이 확인됐습니다.'
+      ? `${integrityLabel(template.kind, false)}. 비정상 요소가 확인됐습니다.`
       : condition === '고장'
         ? '작동 불량·부품 손상이 있습니다.'
         : condition === '사용감'
@@ -165,40 +179,41 @@ function makeItem(
     negotiatedPrice: null,
   };
 }
-function board(g: Game) {
-  const current = tier(g);
-  const liquid = TIERS.reduce(
-    (best, t, i) => (g.cash >= t.threshold ? i : best),
-    0,
-  );
-  const list: Item[] = [];
-  for (let i = 0; i < 8; i++)
-    list.push(
-      makeItem(
-        g,
-        TIERS[
-          i === 0
-            ? 0
-            : i === 1
-              ? Math.max(0, liquid - 1)
-              : i > 5
-                ? current
-                : liquid
-        ].base,
-      ),
+function board(g: Game, selected?: MarketId) {
+  const list: Item[] = selected
+    ? g.board.filter((item) => marketOf(item) !== selected)
+    : [];
+  for (const market of MARKETS.filter((m) => !selected || m.id === selected)) {
+    for (let n = 0; n < 8; n++) {
+      const product =
+        market.products[Math.floor(roll(g) * market.products.length)];
+      // Keep an entry listing at each band's lower edge, then sample its full range.
+      const asking =
+        n === 0
+          ? market.min
+          : market.min +
+            Math.floor(roll(g) * ((market.max - market.min) / 1000 + 1)) * 1000;
+      list.push(
+        makeItem(g, Math.floor((asking * 100) / 55), false, true, {
+          marketId: market.id,
+          product,
+          asking,
+        }),
+      );
+    }
+  }
+  if ((!selected || selected === 'street') && roll(g) < 0.5) {
+    const free = makeItem(
+      g,
+      MARKET_PRICING.giveawayMin +
+        Math.floor(
+          roll(g) * (MARKET_PRICING.giveawayMax - MARKET_PRICING.giveawayMin),
+        ),
+      true,
     );
-  // Appearance is independent of cash; it can legitimately be absent.
-  if (roll(g) < 0.5)
-    list.push(
-      makeItem(
-        g,
-        MARKET_PRICING.giveawayMin +
-          Math.floor(
-            roll(g) * (MARKET_PRICING.giveawayMax - MARKET_PRICING.giveawayMin),
-          ),
-        true,
-      ),
-    );
+    free.marketId = 'street';
+    list.push(free);
+  }
   g.board = list;
 }
 function daily(g: Game) {
@@ -446,12 +461,16 @@ export function execute(original: Game, command: Command): Result {
         advance(g, 1);
         break;
       }
-      case 'refresh':
+      case 'refresh': {
+        const target = command.marketId ?? 'street';
+        if (!isMarketId(target)) throw Error('없는 시장입니다.');
+        const beforeDay = dayOf(g);
         advance(g, 1);
-        board(g);
-        message = '새 매물을 찾았습니다.';
+        if (beforeDay === dayOf(g)) board(g, target);
+        message = `${marketDefinition(target).name}에서 새 매물을 찾았습니다.`;
         log(g, message);
         break;
+      }
       case 'wait':
         advance(g, 1);
         message = '기다리기를 마쳤습니다.';
@@ -623,7 +642,7 @@ export function execute(original: Game, command: Command): Result {
         break;
       }
       case 'post': {
-        owned(g, command.id);
+        const item = owned(g, command.id);
         unlisted(g, command.id);
         if (
           !isMoney(command.price) ||
@@ -636,6 +655,7 @@ export function execute(original: Game, command: Command): Result {
         if (g.sales.length >= listingLimit(g))
           throw Error('동시 판매 등록 한도에 도달했습니다.');
         const sale = {
+          marketId: marketOf(item),
           id: id(g),
           itemId: command.id,
           price: command.price,

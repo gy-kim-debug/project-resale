@@ -29,6 +29,7 @@ function setup() {
     notice: '',
     storageBlocked: false,
     favoriteIds: [],
+    selectedMarket: 'street',
     readNotificationIds: [],
     saveError: '',
   });
@@ -48,6 +49,8 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.equal(await active.act({ type: 'job', id: 'flyer' }), false);
   active.setTab('보관함');
   active.toggleFavorite('x');
+  active.selectMarket('cars');
+  assert.equal(store.getState().selectedMarket, 'street');
   active.startOver();
   assert.equal(active.importSave('{}'), false);
   assert.equal(store.getState().tab, '활동');
@@ -268,4 +271,28 @@ test('older backups default to unread, malformed read metadata cannot overwrite 
     );
     assert.deepEqual(s.getState().game, game);
   }
+});
+
+test('market selection is free, persisted and restored without changing any game state', async () => {
+  await flushSaves();
+  setup();
+  const s = useGameStore;
+  const before = structuredClone(s.getState().game!);
+  s.getState().selectMarket('computers');
+  assert.equal(s.getState().selectedMarket, 'computers');
+  assert.deepEqual(s.getState().game, before);
+  assert.equal(s.getState().action, null);
+  await flushSaves();
+  assert.equal(writes.at(-1)?.selectedMarket, 'computers');
+  const backup = JSON.stringify(writes.at(-1));
+  s.getState().selectMarket('aircraft');
+  assert.equal(s.getState().importSave(backup), true);
+  assert.equal(s.getState().selectedMarket, 'computers');
+  s.getState().selectMarket('unknown' as never);
+  assert.equal(s.getState().selectedMarket, 'computers');
+  assert.deepEqual(s.getState().game, before);
+  await flushSaves();
+  s.getState().startOver();
+  assert.equal(s.getState().selectedMarket, 'street');
+  await flushSaves();
 });

@@ -6,6 +6,7 @@ import {
   SELLER_TAGS,
   SELLER_PROFILES,
 } from '../content/listingTags';
+import { isMarketId, MARKETS } from '../content/markets';
 import { RULES } from '../content/rules';
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -13,8 +14,7 @@ const integer = (v: unknown, max = Number.MAX_SAFE_INTEGER): v is number =>
   typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 && v <= max;
 const text = (v: unknown): v is string =>
   typeof v === 'string' && v.length <= 2000;
-const kind = (v: unknown) =>
-  ['생활', '디지털', '가구', '수집품'].includes(String(v));
+const kind = (v: unknown) => Object.keys(KIND_TAGS).includes(String(v));
 const chat = (v: unknown) =>
   v === undefined ||
   (Array.isArray(v) &&
@@ -55,6 +55,7 @@ function item(v: unknown): v is Item {
     ) &&
     (v.acquiredFor === undefined || integer(v.acquiredFor, RULES.maxMoney)) &&
     chat(v.chat) &&
+    (v.marketId === undefined || isMarketId(v.marketId)) &&
     listing(v.listing, v.kind) &&
     (v.purchaseBargain === undefined ||
       (record(v.purchaseBargain) &&
@@ -68,6 +69,10 @@ function item(v: unknown): v is Item {
         typeof v.purchaseBargain.walked === 'boolean')) &&
     (v.chatSettled === undefined || typeof v.chatSettled === 'boolean') &&
     kind(v.kind) &&
+    (v.marketId === undefined ||
+      !!MARKETS.find((m) => m.id === v.marketId)?.products.some(
+        (p) => p.kind === v.kind,
+      )) &&
     ['양호', '사용감', '고장'].includes(String(v.condition)) &&
     ['base', 'value', 'price', 'expires'].every((k) =>
       integer(v[k], RULES.maxMoney),
@@ -123,7 +128,11 @@ export function isGame(v: unknown): v is Game {
     !v.inventory.every(item)
   )
     return false;
-  if (!Array.isArray(v.board) || v.board.length > 20 || !v.board.every(item))
+  if (
+    !Array.isArray(v.board) ||
+    v.board.length > MARKETS.length * 8 + 1 ||
+    !v.board.every(item)
+  )
     return false;
   const ids = new Set(v.inventory.map((i) => i.id));
   if (
@@ -139,6 +148,7 @@ export function isGame(v: unknown): v is Game {
       (s) =>
         record(s) &&
         text(s.id) &&
+        (s.marketId === undefined || isMarketId(s.marketId)) &&
         text(s.itemId) &&
         ids.has(s.itemId) &&
         integer(s.price, RULES.maxMoney) &&

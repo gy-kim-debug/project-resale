@@ -1,11 +1,13 @@
 import { openDB } from 'idb';
-import type { Game } from '../domain/game';
+import type { Game, MarketId } from '../domain/game';
+import { isMarketId } from '../content/markets';
 import { isGame } from './validation';
 import { toDailyActions } from '../domain/time';
 export interface SaveData {
   version: 2;
   game: Game;
   favoriteIds: string[];
+  selectedMarket?: MarketId;
   readNotificationIds?: number[];
 }
 export interface SaveRepository {
@@ -24,6 +26,7 @@ export function parseSave(value: unknown): SaveData {
     !Array.isArray(value.favoriteIds) ||
     !value.favoriteIds.every((v: unknown) => typeof v === 'string') ||
     value.favoriteIds.length > 100 ||
+    ('selectedMarket' in value && !isMarketId(value.selectedMarket)) ||
     ('readNotificationIds' in value &&
       (!Array.isArray(value.readNotificationIds) ||
         value.readNotificationIds.length > 80 ||
@@ -40,6 +43,8 @@ export function parseSave(value: unknown): SaveData {
     version: 2,
     game,
     favoriteIds: value.favoriteIds,
+    selectedMarket:
+      'selectedMarket' in value ? (value.selectedMarket as MarketId) : 'street',
     readNotificationIds:
       'readNotificationIds' in value
         ? [...new Set(value.readNotificationIds as number[])].filter((id) =>

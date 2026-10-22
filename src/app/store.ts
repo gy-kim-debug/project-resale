@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Command, Game } from '../domain/game';
+import type { Command, Game, MarketId } from '../domain/game';
+import { isMarketId } from '../content/markets';
 import { mailboxLogs } from './notifications';
 import { execute, newGame } from '../domain/engine';
 import {
@@ -26,6 +27,8 @@ interface State {
   notice: string;
   ok: boolean;
   favoriteIds: string[];
+  selectedMarket: MarketId;
+  selectMarket(id: MarketId): void;
   readNotificationIds: number[];
   readNotification(id: number): void;
   readAllNotifications(): void;
@@ -56,6 +59,7 @@ export const useGameStore = create<State>((set, get) => ({
   notice: '',
   ok: true,
   favoriteIds: [],
+  selectedMarket: 'street',
   readNotificationIds: [],
   tab: '활동',
   action: null,
@@ -70,6 +74,7 @@ export const useGameStore = create<State>((set, get) => ({
         set({
           game: saved?.game ?? newGame(seed()),
           favoriteIds: saved?.favoriteIds ?? [],
+          selectedMarket: saved?.selectedMarket ?? 'street',
           readNotificationIds: saved?.readNotificationIds ?? [],
           ready: true,
         });
@@ -170,6 +175,20 @@ export const useGameStore = create<State>((set, get) => ({
     });
     get().save();
   },
+  selectMarket(id) {
+    const current = get();
+    if (
+      !current.ready ||
+      !current.game ||
+      current.action ||
+      current.game.inquiries.length ||
+      !isMarketId(id) ||
+      current.selectedMarket === id
+    )
+      return;
+    set({ selectedMarket: id });
+    get().save();
+  },
   readNotification(id) {
     const { game, ready, action, readNotificationIds } = get();
     if (
@@ -211,6 +230,7 @@ export const useGameStore = create<State>((set, get) => ({
       game,
       favoriteIds,
       readNotificationIds,
+      selectedMarket: get().selectedMarket,
     });
     set({ saving: true });
     queue = queue
@@ -233,6 +253,7 @@ export const useGameStore = create<State>((set, get) => ({
         changes: {},
         game: data.game,
         favoriteIds: data.favoriteIds,
+        selectedMarket: data.selectedMarket ?? 'street',
         readNotificationIds: data.readNotificationIds ?? [],
         tab: '활동',
         notice: '백업을 불러왔습니다.',
@@ -257,6 +278,7 @@ export const useGameStore = create<State>((set, get) => ({
     set({
       game: newGame(seed()),
       favoriteIds: [],
+      selectedMarket: 'street',
       readNotificationIds: [],
       tab: '활동',
       notice: '새 게임을 시작했습니다. 이전 진행은 계승되지 않습니다.',

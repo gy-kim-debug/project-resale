@@ -71,3 +71,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 물품 가격대의 설계 원본은 `docs/design/items/CATEGORIES_AND_PRICES.md`, 실행 데이터는 `content/market.ts`로 분리한다. 카테고리·등급·희귀도·상태를 적용하고 게시 가격은 1,000원 단위로 내린다. 기존 저장의 물품 가격·실제 가치는 다시 생성하지 않는다.
 
 `check`와 `repair`는 비용·물품/능력치 변경만 처리하고 `advance`를 호출하지 않는다. 시간 0인 실제 처리의 기존 연출·직렬화 저장·중복 명령 차단은 유지한다.
+
+시장 정의와 고유 품목·게시가 범위는 `content/markets.ts`, 정책은 `docs/design/markets/`에 둔다. `Item.marketId`와 `Sale.marketId`로 출처를 보존하고 `Game.board`는 6개 시장의 매물을 함께 저장한다. UI는 선택 시장만 필터링한다. 선택 시장은 게임 계산 밖 `SaveData.selectedMarket` 메타데이터로 저장한다. 구 물품은 시장 ID가 없으면 장터로 취급하며 소급 재생성하지 않는다. 단일 시장 탐색은 그 시장만 교체하고 날짜 경계에서는 전체를 한 번 갱신한다.

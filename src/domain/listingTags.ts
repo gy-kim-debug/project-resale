@@ -2,6 +2,7 @@ import { MARKET_PRICING } from '../content/market';
 import type { Item, Kind, ListingInfo, ListingTag, SellerTrait } from './game';
 import {
   FEATURE_TAGS,
+  TAG_LABELS,
   KIND_TAGS,
   SELLER_TAGS,
   TAG_RULES,
@@ -13,7 +14,10 @@ export function createListingInfo(
   random: () => number,
   free = false,
 ): ListingInfo {
-  const feature = FEATURE_TAGS[Math.floor(random() * FEATURE_TAGS.length)];
+  const feature =
+    kind === '부동산'
+      ? 'authentic'
+      : FEATURE_TAGS[Math.floor(random() * FEATURE_TAGS.length)];
   const truth = random() < TAG_RULES.truthChance;
   const facts: ListingInfo['facts'] = {
     authentic:
@@ -57,7 +61,7 @@ export function listingValuePercent(info: ListingInfo): number {
 export function listingFindings(item: Item): string[] {
   if (!item.listing) return [];
   const { facts, tags } = item.listing;
-  const findings = [facts.authentic ? '진품' : '가품'];
+  const findings = [integrityLabel(item.kind, facts.authentic)];
   if (tags.includes('limited'))
     findings.push(facts.limited ? '한정판 확인' : '일반판 · 한정판 아님');
   if (tags.includes('discontinued'))
@@ -86,4 +90,24 @@ export function listingAskPrice(price: number, info?: ListingInfo): number {
     step,
     Math.floor((price * TAG_RULES.urgentAskPercent) / 100 / step) * step,
   );
+}
+
+export function integrityLabel(kind: Kind, valid: boolean): string {
+  if (kind === '부동산') return valid ? '권리 정상' : '권리 하자 확인';
+  if (kind === '자동차' || kind === '항공기')
+    return valid ? '서류 정상' : '서류 문제 확인';
+  return valid ? '진품' : '가품';
+}
+export function listingTagLabel(
+  item: Pick<Item, 'kind'>,
+  tag: ListingTag,
+): string {
+  if (item.kind === '부동산' && tag === 'authentic') return '권리정상';
+  if (item.kind === '자동차' || item.kind === '항공기') {
+    if (tag === 'authentic') return '서류정상';
+    if (tag === 'replica') return '서류문제';
+    if (tag === 'limited') return '한정모델';
+    if (tag === 'vintage') return '구형';
+  }
+  return TAG_LABELS[tag];
 }

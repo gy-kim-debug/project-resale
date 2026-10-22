@@ -54,11 +54,18 @@
 
 - [보유 물품 수량 제한](inventory/CAPACITY.md)
 - [필요 없는 물건 버리기](inventory/DISPOSAL.md)
+- [구매한 자산 검증 — 행동 소모 없음](inventory/VERIFICATION.md)
 
 ### 물품·가격대
 
 - [매물 카테고리·종류·가격대](items/CATEGORIES_AND_PRICES.md)
 - [매물 해시태그 — 사실 확률과 거래 효과](items/LISTING_TAGS.md)
+
+### 여러 시장
+
+- [시장별 가격대·품목·공통 규칙](markets/OVERVIEW.md)
+- [장터](markets/STREET.md) · [컴퓨터시장](markets/COMPUTERS.md) · [악기시장](markets/INSTRUMENTS.md)
+- [중고차시장](markets/CARS.md) · [부동산 시장](markets/PROPERTY.md) · [비행기 시장](markets/AIRCRAFT.md)
 
 ### 장터 구매
 

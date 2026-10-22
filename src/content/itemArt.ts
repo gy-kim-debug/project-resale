@@ -36,7 +36,11 @@ type Motif =
   | 'furniture'
   | 'gallery'
   | 'junk'
-  | 'trinket';
+  | 'trinket'
+  | 'instrument'
+  | 'car'
+  | 'house'
+  | 'plane';
 const motifs: Motif[][] = [
   ['lamp', 'keyboard', 'chair', 'radio', 'camera', 'vase'],
   ['lamp', 'keyboard', 'stool', 'radio', 'lens', 'figure'],
@@ -53,18 +57,29 @@ TIER_TITLES.forEach((titles, tier) =>
     namedArt.set(title, { motif: motifs[tier][index], tier }),
   ),
 );
+for (const title of ['게이밍 노트북', '크리에이터 노트북'])
+  namedArt.set(title, { motif: 'laptop', tier: 2 });
+namedArt.set('입문용 카메라', { motif: 'camera', tier: 0 });
 namedArt.set('수집한 생활 잡화', { motif: 'junk', tier: 0 });
 namedArt.set('수집한 낡은 소품', { motif: 'trinket', tier: 0 });
 export function itemArt(title: string, kind: Kind): Pixel[] {
   const spec = namedArt.get(title) ?? {
     motif:
-      kind === '가구'
-        ? 'chair'
-        : kind === '디지털'
-          ? 'gear'
-          : kind === '수집품'
-            ? 'trinket'
-            : 'junk',
+      kind === '악기'
+        ? 'instrument'
+        : kind === '자동차'
+          ? 'car'
+          : kind === '부동산'
+            ? 'house'
+            : kind === '항공기'
+              ? 'plane'
+              : kind === '가구'
+                ? 'chair'
+                : kind === '디지털'
+                  ? 'gear'
+                  : kind === '수집품'
+                    ? 'trinket'
+                    : 'junk',
     tier: 0,
   };
   return draw(spec.motif, spec.tier);
@@ -465,6 +480,44 @@ function draw(motif: Motif, tier: number): Pixel[] {
       r(22, 10, 3, 6, red);
       r(21, 17, 5, 3, wood);
       r(4, 26, 24, 2, woodDark);
+      break;
+    case 'instrument':
+      r(14, 2, 4, 17, wood);
+      r(13, 2, 6, 3, trim);
+      outline(8, 16, 16, 12, wood);
+      r(10, 14, 12, 9, woodLight);
+      r(15, 5, 2, 19, paper);
+      r(12, 23, 8, 2, ink);
+      r(13, 18, 6, 4, dark);
+      break;
+    case 'car':
+      outline(3, 16, 27, 9, main);
+      r(8, 10, 15, 7, main);
+      r(10, 11, 10, 5, glass);
+      r(16, 11, 1, 5, ink);
+      r(6, 23, 6, 5, ink);
+      r(22, 23, 6, 5, ink);
+      r(3, 18, 3, 3, light);
+      r(27, 18, 3, 3, red);
+      break;
+    case 'house':
+      r(5, 12, 23, 16, paper);
+      r(9, 7, 15, 5, wood);
+      r(13, 3, 7, 4, woodDark);
+      r(3, 12, 27, 3, woodDark);
+      r(8, 17, 5, 5, glass);
+      r(21, 17, 5, 5, glass);
+      r(15, 19, 5, 9, dark);
+      break;
+    case 'plane':
+      r(14, 2, 4, 26, paper);
+      r(12, 7, 8, 8, paper);
+      r(3, 14, 26, 5, paper);
+      r(7, 11, 18, 4, paper);
+      r(9, 24, 14, 3, main);
+      r(15, 5, 2, 4, blue);
+      r(8, 18, 3, 4, dark);
+      r(22, 18, 3, 4, dark);
       break;
     case 'junk':
       outline(4, 17, 17, 11, woodDark);

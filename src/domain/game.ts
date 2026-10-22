@@ -1,5 +1,15 @@
 /** Serializable game types. KRW uses safe integers; the legacy minute field stores discrete daily action ticks. */
-export type Kind = '생활' | '디지털' | '가구' | '수집품';
+export type Kind =
+  | '생활'
+  | '디지털'
+  | '가구'
+  | '수집품'
+  | '악기'
+  | '자동차'
+  | '부동산'
+  | '항공기';
+export type MarketId =
+  'street' | 'computers' | 'instruments' | 'cars' | 'property' | 'aircraft';
 export type Condition = '양호' | '사용감' | '고장';
 export type Status = 'playing' | 'bankrupt' | 'dead' | 'cleared';
 export interface ChatMessage {
@@ -11,6 +21,10 @@ export type ListingTag =
   | 'digital'
   | 'furniture'
   | 'collectible'
+  | 'instrument'
+  | 'vehicle'
+  | 'property'
+  | 'aircraft'
   | 'limited'
   | 'discontinued'
   | 'vintage'
@@ -33,6 +47,7 @@ export interface ListingInfo {
   };
 }
 export interface Item {
+  marketId?: MarketId;
   listing?: ListingInfo;
   purchaseBargain?: {
     rounds: number;
@@ -61,6 +76,7 @@ export interface Item {
   negotiatedPrice: number | null;
 }
 export interface Sale {
+  marketId?: MarketId;
   id: string;
   itemId: string;
   price: number;
@@ -125,7 +141,7 @@ export interface Game {
 export type Command =
   | { type: 'job'; id: string }
   | { type: 'scavenge' }
-  | { type: 'refresh' }
+  | { type: 'refresh'; marketId?: MarketId }
   | { type: 'wait' }
   | { type: 'offer'; id: string; price: number }
   | { type: 'buy'; id: string }

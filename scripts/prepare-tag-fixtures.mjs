@@ -13,7 +13,9 @@ const { newGame } = await import('../work/tag-engine.mjs');
 const found = new Set();
 for (let seed = 1; seed <= 1000; seed++) {
   const g = newGame(seed);
-  for (const item of g.board.filter((i) => i.price > 0)) {
+  for (const item of g.board.filter(
+    (i) => i.price > 0 && (!i.marketId || i.marketId === 'street'),
+  )) {
     const info = item.listing;
     const cases = {
       'false-limited': info.tags.includes('limited') && !info.facts.limited,

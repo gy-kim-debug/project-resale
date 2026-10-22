@@ -17,6 +17,10 @@ export const TAG_LABELS: Record<ListingTag, string> = {
   digital: '디지털기기',
   furniture: '가구',
   collectible: '수집품',
+  instrument: '악기',
+  vehicle: '자동차',
+  property: '부동산',
+  aircraft: '항공기',
   limited: '한정판',
   discontinued: '단종품',
   vintage: '빈티지',
@@ -32,6 +36,10 @@ export const KIND_TAGS: Record<Kind, ListingTag> = {
   디지털: 'digital',
   가구: 'furniture',
   수집품: 'collectible',
+  악기: 'instrument',
+  자동차: 'vehicle',
+  부동산: 'property',
+  항공기: 'aircraft',
 };
 export const FEATURE_TAGS: ListingTag[] = [
   'limited',

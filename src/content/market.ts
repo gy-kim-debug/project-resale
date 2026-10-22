@@ -9,6 +9,10 @@ export const CATEGORY_PRICING: Record<
   디지털: { valuePercent: 120, examples: '키보드·카메라·오디오·노트북' },
   가구: { valuePercent: 100, examples: '의자·수납장·소파' },
   수집품: { valuePercent: 140, examples: '라디오·피규어·시계·미술품' },
+  악기: { valuePercent: 100, examples: '기타·피아노·색소폰' },
+  자동차: { valuePercent: 100, examples: '세단·SUV·전기차' },
+  부동산: { valuePercent: 100, examples: '아파트·오피스텔·상가' },
+  항공기: { valuePercent: 100, examples: '경량기·훈련기·비즈니스기' },
 };
 export const MARKET_PRICING = {
   askMinPercent: 35,

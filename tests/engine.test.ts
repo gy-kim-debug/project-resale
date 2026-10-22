@@ -25,6 +25,7 @@ import {
 } from '../src/domain/listingTags';
 import { TAG_RULES, KIND_TAGS } from '../src/content/listingTags';
 import type { ListingTag, SellerTrait } from '../src/domain/game';
+import { MARKETS, marketOf } from '../src/content/markets';
 import { RULES } from '../src/content/rules';
 import { isGame } from '../src/storage/validation';
 import { parseSave } from '../src/storage/saveRepository';
@@ -1062,29 +1063,37 @@ test('legacy saves keep arrears but begin weekly billing without retroactive inv
   assert.equal(interestAmount(result), 1100000 + 1234);
 });
 
-test('higher listing bands keep entry options affordable and the starting board centered on larger trades', () => {
+test('each market generates its own bounded prices and products while the entry market remains affordable', () => {
   for (let seed = 1; seed <= 100; seed++) {
     const g = newGame(seed);
-    const paid = g.board.filter((i) => i.price > 0);
-    assert.equal(paid.length, 8);
+    assert.ok(isGame(g));
+    assert.equal(g.board.filter((i) => i.price > 0).length, 48);
+    assert.equal(new Set(g.board.map((i) => i.id)).size, g.board.length);
+    for (const market of MARKETS) {
+      const paid = g.board.filter(
+        (i) => marketOf(i) === market.id && i.price > 0,
+      );
+      assert.equal(paid.length, 8);
+      for (const item of paid) {
+        assert.ok(item.price >= market.min && item.price <= market.max);
+        assert.equal(item.price % 1000, 0);
+        assert.ok(
+          market.products.some(
+            (p) => p.title === item.title && p.kind === item.kind,
+          ),
+        );
+        assert.ok(
+          Number.isSafeInteger(item.value) && Number.isSafeInteger(item.base),
+        );
+      }
+      assert.ok(paid.some((i) => i.price === market.min));
+      if (market.id === 'street')
+        assert.ok(paid.every((i) => i.price <= g.cash));
+    }
     assert.ok(
-      paid.every(
-        (i) =>
-          i.price >= (i.listing?.facts.seller === 'urgent' ? 25000 : 28000) &&
-          i.price % 1000 === 0,
-      ),
-    );
-    assert.ok(
-      paid.filter(
-        (i) =>
-          i.price >= (i.listing?.facts.seller === 'urgent' ? 135000 : 150000),
-      ).length >= 6,
-    );
-    assert.ok(paid.filter((i) => i.price <= g.cash).length >= 2);
-    assert.ok(
-      paid.every(
-        (i) => Number.isSafeInteger(i.value) && Number.isSafeInteger(i.base),
-      ),
+      g.board
+        .filter((i) => i.price === 0)
+        .every((i) => marketOf(i) === 'street'),
     );
   }
 });
@@ -1449,4 +1458,118 @@ test('invalid listing metadata is rejected without replacing saves', () => {
       parseSave({ version: 2, game: invalid, favoriteIds: [] }),
     );
   }
+});
+
+test('market-specific refresh costs one action and keeps other unexpired boards and ongoing chats', () => {
+  let g = newGame(42);
+  const item = g.board.find((i) => i.marketId === 'computers')!;
+  g = run(g, { type: 'offer', id: item.id, price: item.offers[0] });
+  for (const item of g.board) item.expires = g.minute + 1440;
+  const before = structuredClone(g);
+  const after = run(g, { type: 'refresh', marketId: 'cars' });
+  assert.equal(after.minute, before.minute + ACTION_TICK);
+  assert.equal(after.cash, before.cash);
+  assert.deepEqual(
+    after.board.filter((i) => i.marketId !== 'cars'),
+    before.board.filter((i) => i.marketId !== 'cars'),
+  );
+  assert.ok(
+    after.board
+      .filter((i) => i.marketId === 'cars')
+      .every((i) => !before.board.some((old) => old.id === i.id)),
+  );
+  const invalid = execute(before, {
+    type: 'refresh',
+    marketId: 'unknown',
+  } as never);
+  assert.equal(invalid.ok, false);
+  assert.deepEqual(invalid.game, before);
+});
+
+test('every market supports purchase, zero-action verification, source-specific listing and fixed-price outlets', () => {
+  for (const market of MARKETS) {
+    let g = newGame(31);
+    g.cash = 100000000000;
+    g.stats.peakCash = g.cash;
+    const item = g.board.find((i) => i.marketId === market.id)!;
+    const price = item.price;
+    g = run(g, { type: 'buy', id: item.id });
+    assert.equal(g.inventory[0].marketId, market.id);
+    assert.equal(g.inventory[0].acquiredFor, price);
+    const before = structuredClone(g);
+    g = run(g, { type: 'check', id: item.id });
+    assert.equal(g.minute, before.minute);
+    assert.equal(g.seed, before.seed);
+    assert.deepEqual(g.board, before.board);
+    assert.deepEqual(g.inquiries, before.inquiries);
+    assert.ok(g.cash < before.cash);
+    const listed = run(g, {
+      type: 'post',
+      id: item.id,
+      price: marketValue(g, g.inventory[0]),
+    });
+    assert.equal(listed.sales[0].marketId, market.id);
+    assert.ok(isGame(listed));
+    const outletId = {
+      street: 'scrap',
+      computers: 'used',
+      instruments: 'music',
+      cars: 'carDealer',
+      property: 'propertyBroker',
+      aircraft: 'aircraftBroker',
+    }[market.id];
+    const visited = run(g, { type: 'visit', id: outletId });
+    assert.ok(visited.quotes!.prices[item.id] > 0);
+    const sold = run(visited, { type: 'outletSell', id: item.id });
+    assert.equal(sold.inventory.length, 0);
+    assert.equal(sold.minute, g.minute + ACTION_TICK);
+    assert.ok(sold.cash > visited.cash);
+    assert.ok(isGame(sold));
+  }
+});
+
+test('legacy boards and assets are retained; new markets are introduced by an actual refresh', () => {
+  const old = newGame(42);
+  old.board = old.board.filter((i) => i.marketId === 'street');
+  for (const item of old.board) delete item.marketId;
+  old.board[0].price = 1234567;
+  const parsed = parseSave({ version: 2, game: old, favoriteIds: [] }).game;
+  assert.deepEqual(parsed, old);
+  assert.equal(parsed.board[0].price, 1234567);
+  const after = run(parsed, { type: 'refresh', marketId: 'aircraft' });
+  assert.ok(after.board.some((i) => i.marketId === 'aircraft'));
+  assert.equal(after.board[0].price, 1234567);
+  assert.equal(after.minute, old.minute + ACTION_TICK);
+});
+
+test('day-end refresh includes all six markets and preserves purchased assets and valid backups', () => {
+  let g = newGame(1);
+  const item = g.board[0];
+  g = run(g, { type: 'buy', id: item.id });
+  g = run(g, { type: 'wait' });
+  const after = run(g, { type: 'refresh', marketId: 'property' });
+  assert.equal(after.minute, 1440);
+  for (const market of MARKETS)
+    assert.equal(
+      after.board.filter((i) => marketOf(i) === market.id && i.price > 0)
+        .length,
+      8,
+    );
+  assert.equal(after.inventory[0].id, item.id);
+  const backup = JSON.parse(
+    JSON.stringify({
+      version: 2,
+      game: after,
+      favoriteIds: [],
+      selectedMarket: 'property',
+    }),
+  );
+  assert.deepEqual(parseSave(backup).game, JSON.parse(JSON.stringify(after)));
+  assert.equal(parseSave(backup).selectedMarket, 'property');
+  const invalid = structuredClone(after);
+  invalid.board[0].marketId = 'invalid' as never;
+  assert.equal(isGame(invalid), false);
+  invalid.board[0].marketId = 'property';
+  assert.equal(isGame(invalid), false);
+  assert.throws(() => parseSave({ ...backup, selectedMarket: 'invalid' }));
 });

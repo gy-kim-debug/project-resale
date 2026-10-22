@@ -14,6 +14,7 @@ import {
   checkCost,
   repairCost,
 } from '../domain/engine';
+import { MARKETS, marketDefinition, marketOf } from '../content/markets';
 import { JOBS, OUTLETS, RULES } from '../content/rules';
 import {
   interestPending,
@@ -299,11 +300,16 @@ export function MarketView({
   free?: boolean;
 }) {
   const [category, setCategory] = useState<Kind | '전체'>('전체');
+  const selectedMarket = useGameStore((s) => s.selectedMarket);
+  const selectMarket = useGameStore((s) => s.selectMarket);
+  const market = marketDefinition(free ? 'street' : selectedMarket);
+  const categories = [...new Set(market.products.map((p) => p.kind))];
   const act = useGameStore((s) => s.act);
   const favorites = useGameStore((s) => s.favoriteIds);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const listings = g.board.filter(
     (i) =>
+      marketOf(i) === market.id &&
       (free ? i.price === 0 : i.price > 0) &&
       (category === '전체' || i.kind === category) &&
       (!onlyFavorites || favorites.includes(i.id)),
@@ -316,18 +322,40 @@ export function MarketView({
       </p>
       {!free && (
         <>
+          <div className="market-selector" aria-label="시장 선택">
+            {MARKETS.map((m) => (
+              <button
+                key={m.id}
+                aria-label={m.name}
+                aria-pressed={market.id === m.id}
+                onClick={() => {
+                  selectMarket(m.id);
+                  setCategory('전체');
+                }}
+              >
+                <strong>{m.name}</strong>
+                <small>
+                  {won(m.min)} ~ {won(m.max)}
+                </small>
+              </button>
+            ))}
+          </div>
+          <p className="market-selection">
+            <strong>{market.name}</strong>
+            <span>
+              {won(market.min)} ~ {won(market.max)}
+            </span>
+          </p>
           <div className="filters" aria-label="카테고리">
-            {(['전체', '생활', '디지털', '가구', '수집품'] as const).map(
-              (c) => (
-                <button
-                  key={c}
-                  aria-pressed={category === c}
-                  onClick={() => setCategory(c)}
-                >
-                  {c}
-                </button>
-              ),
-            )}
+            {(['전체', ...categories] as const).map((c) => (
+              <button
+                key={c}
+                aria-pressed={category === c}
+                onClick={() => setCategory(c)}
+              >
+                {c}
+              </button>
+            ))}
           </div>
           <label className="check-label">
             <input
@@ -339,7 +367,7 @@ export function MarketView({
           </label>
         </>
       )}
-      <Button onClick={() => act({ type: 'refresh' })}>
+      <Button onClick={() => act({ type: 'refresh', marketId: market.id })}>
         새 매물 탐색 · 행동 1회
       </Button>
       {listings.length ? (
@@ -380,6 +408,7 @@ export function ListingView({
       <ItemArt item={item} large />
       <h2>{item.title}</h2>
       <ItemTags item={item} />
+      <p className="asset-market">{marketDefinition(marketOf(item)).name}</p>
       <p className="item-price">
         {item.price === 0 ? '무료나눔' : won(item.price)}
       </p>
@@ -545,7 +574,7 @@ export function OwnedView({
         </section>
       ) : (
         <Button onClick={() => open({ kind: '판매 등록', id: item.id })}>
-          장터에 판매 등록
+          {marketDefinition(marketOf(item)).name}에 판매 등록
         </Button>
       )}
       <Button onClick={() => open({ kind: '매각처' })}>매각처 방문</Button>
@@ -701,6 +730,7 @@ export function StorageView() {
             game: s.game,
             favoriteIds: s.favoriteIds,
             readNotificationIds: s.readNotificationIds,
+            selectedMarket: s.selectedMarket,
           },
           null,
           2,
