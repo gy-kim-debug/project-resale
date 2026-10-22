@@ -13,7 +13,7 @@ import {
   MARKETS,
   marketOf,
   marketDefinition,
-  isMarketId,
+  isActiveMarketId,
   type MarketProduct,
 } from '../content/markets';
 import { TAG_RULES } from '../content/listingTags';
@@ -463,7 +463,7 @@ export function execute(original: Game, command: Command): Result {
       }
       case 'refresh': {
         const target = command.marketId ?? 'street';
-        if (!isMarketId(target)) throw Error('없는 시장입니다.');
+        if (!isActiveMarketId(target)) throw Error('없는 시장입니다.');
         const beforeDay = dayOf(g);
         advance(g, 1);
         if (beforeDay === dayOf(g)) board(g, target);

@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 import type { Game, MarketId } from '../domain/game';
-import { isMarketId } from '../content/markets';
+import { isMarketId, isActiveMarketId } from '../content/markets';
 import { isGame } from './validation';
 import { toDailyActions } from '../domain/time';
 export interface SaveData {
@@ -44,7 +44,9 @@ export function parseSave(value: unknown): SaveData {
     game,
     favoriteIds: value.favoriteIds,
     selectedMarket:
-      'selectedMarket' in value ? (value.selectedMarket as MarketId) : 'street',
+      'selectedMarket' in value && isActiveMarketId(value.selectedMarket)
+        ? value.selectedMarket
+        : 'street',
     readNotificationIds:
       'readNotificationIds' in value
         ? [...new Set(value.readNotificationIds as number[])].filter((id) =>

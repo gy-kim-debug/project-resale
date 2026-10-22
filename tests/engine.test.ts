@@ -1067,7 +1067,7 @@ test('each market generates its own bounded prices and products while the entry 
   for (let seed = 1; seed <= 100; seed++) {
     const g = newGame(seed);
     assert.ok(isGame(g));
-    assert.equal(g.board.filter((i) => i.price > 0).length, 48);
+    assert.equal(g.board.filter((i) => i.price > 0).length, MARKETS.length * 8);
     assert.equal(new Set(g.board.map((i) => i.id)).size, g.board.length);
     for (const market of MARKETS) {
       const paid = g.board.filter(
@@ -1106,7 +1106,9 @@ test('high-tier generation stays within safe won amounts and existing owned item
   saved.cash = 5000000000;
   saved.stats.peakCash = saved.cash;
   const next = run(saved, { type: 'refresh' });
-  assert.ok(next.board.some((i) => i.price >= 1000000000));
+  assert.ok(
+    next.board.some((i) => i.marketId === 'property' && i.price >= 100000000),
+  );
   for (const i of next.board) {
     assert.ok(
       Number.isSafeInteger(i.price) &&
@@ -1536,13 +1538,13 @@ test('legacy boards and assets are retained; new markets are introduced by an ac
   const parsed = parseSave({ version: 2, game: old, favoriteIds: [] }).game;
   assert.deepEqual(parsed, old);
   assert.equal(parsed.board[0].price, 1234567);
-  const after = run(parsed, { type: 'refresh', marketId: 'aircraft' });
-  assert.ok(after.board.some((i) => i.marketId === 'aircraft'));
+  const after = run(parsed, { type: 'refresh', marketId: 'property' });
+  assert.ok(after.board.some((i) => i.marketId === 'property'));
   assert.equal(after.board[0].price, 1234567);
   assert.equal(after.minute, old.minute + ACTION_TICK);
 });
 
-test('day-end refresh includes all six markets and preserves purchased assets and valid backups', () => {
+test('day-end refresh includes all active markets and preserves purchased assets and valid backups', () => {
   let g = newGame(1);
   const item = g.board[0];
   g = run(g, { type: 'buy', id: item.id });
@@ -1572,4 +1574,61 @@ test('day-end refresh includes all six markets and preserves purchased assets an
   invalid.board[0].marketId = 'property';
   assert.equal(isGame(invalid), false);
   assert.throws(() => parseSave({ ...backup, selectedMarket: 'invalid' }));
+});
+
+test('retired aircraft market is absent from new boards and cannot be refreshed', () => {
+  const game = newGame(42);
+  assert.equal(MARKETS.length, 5);
+  assert.ok(!game.board.some((item) => item.marketId === 'aircraft'));
+  const result = execute(game, { type: 'refresh', marketId: 'aircraft' });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.game, game);
+});
+
+test('retired market saves drop only NPC aircraft listings and preserve owned assets, sales and finances', () => {
+  const old = newGame(42);
+  const aircraft = structuredClone(old.board[0]);
+  aircraft.id = 'legacy-plane';
+  aircraft.marketId = 'aircraft';
+  aircraft.kind = '항공기';
+  aircraft.title = '경량 항공기';
+  aircraft.price = 2000000000;
+  aircraft.acquiredFor = 2000000000;
+  delete aircraft.listing;
+  old.inventory = [aircraft];
+  const unsold = structuredClone(aircraft);
+  unsold.id = 'legacy-plane-listing';
+  old.board.push(unsold);
+  old.sales.push({
+    id: 'legacy-sale',
+    itemId: aircraft.id,
+    marketId: 'aircraft',
+    price: 2100000000,
+    created: 0,
+    expires: 2880,
+    nextCheck: 480,
+  });
+  const data = parseSave({
+    version: 2,
+    game: old,
+    favoriteIds: [],
+    selectedMarket: 'aircraft',
+  });
+  assert.equal(data.selectedMarket, 'street');
+  assert.ok(!data.game.board.some((item) => item.marketId === 'aircraft'));
+  assert.deepEqual(data.game.inventory, old.inventory);
+  assert.deepEqual(data.game.sales, old.sales);
+  for (const key of [
+    'cash',
+    'principal',
+    'interest',
+    'seed',
+    'minute',
+  ] as const)
+    assert.equal(data.game[key], old[key]);
+  data.game.sales = [];
+  const visited = run(data.game, { type: 'visit', id: 'aircraftBroker' });
+  assert.ok(visited.quotes!.prices[aircraft.id] > 0);
+  const sold = run(visited, { type: 'outletSell', id: aircraft.id });
+  assert.equal(sold.inventory.length, 0);
 });

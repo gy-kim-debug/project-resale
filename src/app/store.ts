@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Command, Game, MarketId } from '../domain/game';
-import { isMarketId } from '../content/markets';
+import { isActiveMarketId } from '../content/markets';
 import { mailboxLogs } from './notifications';
 import { execute, newGame } from '../domain/engine';
 import {
@@ -182,7 +182,7 @@ export const useGameStore = create<State>((set, get) => ({
       !current.game ||
       current.action ||
       current.game.inquiries.length ||
-      !isMarketId(id) ||
+      !isActiveMarketId(id) ||
       current.selectedMarket === id
     )
       return;

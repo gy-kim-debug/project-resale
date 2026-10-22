@@ -6,7 +6,11 @@ import {
   SELLER_TAGS,
   SELLER_PROFILES,
 } from '../content/listingTags';
-import { isMarketId, MARKETS } from '../content/markets';
+import {
+  isMarketId,
+  marketDefinition,
+  LEGACY_BOARD_LIMIT,
+} from '../content/markets';
 import { RULES } from '../content/rules';
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -70,9 +74,9 @@ function item(v: unknown): v is Item {
     (v.chatSettled === undefined || typeof v.chatSettled === 'boolean') &&
     kind(v.kind) &&
     (v.marketId === undefined ||
-      !!MARKETS.find((m) => m.id === v.marketId)?.products.some(
-        (p) => p.kind === v.kind,
-      )) &&
+      !!marketDefinition(
+        v.marketId as Item['marketId'] & string,
+      )?.products.some((p) => p.kind === v.kind)) &&
     ['양호', '사용감', '고장'].includes(String(v.condition)) &&
     ['base', 'value', 'price', 'expires'].every((k) =>
       integer(v[k], RULES.maxMoney),
@@ -130,7 +134,7 @@ export function isGame(v: unknown): v is Game {
     return false;
   if (
     !Array.isArray(v.board) ||
-    v.board.length > MARKETS.length * 8 + 1 ||
+    v.board.length > LEGACY_BOARD_LIMIT ||
     !v.board.every(item)
   )
     return false;

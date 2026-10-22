@@ -10,6 +10,8 @@ export function toDailyActions(original: Game): Game {
     fatigue?: unknown;
     fatigueRemainder?: unknown;
   };
+  // Retired listings disappear, while already owned assets and sales remain intact.
+  g.board = g.board.filter((item) => item.marketId !== 'aircraft');
   delete g.satiety;
   delete g.hungerRemainder;
   delete g.health;

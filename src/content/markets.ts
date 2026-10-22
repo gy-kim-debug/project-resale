@@ -17,7 +17,7 @@ const products = (kind: Kind, titles: string[]): MarketProduct[] =>
     kind,
     description: '보관 중인 자산을 판매합니다. 가격 협의 가능합니다.',
   }));
-export const MARKETS: MarketDefinition[] = [
+const MARKET_DEFINITIONS: MarketDefinition[] = [
   {
     id: 'street',
     name: '장터',
@@ -127,9 +127,16 @@ export const MARKETS: MarketDefinition[] = [
     ]),
   },
 ];
+// Retired market definitions are retained solely to read and sell existing assets.
+export const MARKETS = MARKET_DEFINITIONS.filter(
+  (market) => market.id !== 'aircraft',
+);
+export const isActiveMarketId = (value: unknown): value is MarketId =>
+  MARKETS.some((market) => market.id === value);
+export const LEGACY_BOARD_LIMIT = MARKET_DEFINITIONS.length * 8 + 1;
 export const marketOf = (item: Pick<Item, 'marketId'>): MarketId =>
   item.marketId ?? 'street';
 export const marketDefinition = (id: MarketId) =>
-  MARKETS.find((m) => m.id === id)!;
+  MARKET_DEFINITIONS.find((m) => m.id === id)!;
 export const isMarketId = (value: unknown): value is MarketId =>
-  MARKETS.some((m) => m.id === value);
+  MARKET_DEFINITIONS.some((m) => m.id === value);

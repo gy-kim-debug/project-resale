@@ -601,7 +601,11 @@ export function OutletView({ g, act }: { g: Game; act: Act }) {
   const quote = item && g.quotes?.prices[item.id];
   return (
     <>
-      {OUTLETS.map((o) => (
+      {OUTLETS.filter(
+        (o) =>
+          o.id !== 'aircraftBroker' ||
+          g.inventory.some((item) => item.kind === '항공기'),
+      ).map((o) => (
         <Button
           key={o.id}
           onClick={() => {

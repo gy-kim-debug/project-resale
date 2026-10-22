@@ -65,7 +65,9 @@
 
 - [시장별 가격대·품목·공통 규칙](markets/OVERVIEW.md)
 - [장터](markets/STREET.md) · [컴퓨터시장](markets/COMPUTERS.md) · [악기시장](markets/INSTRUMENTS.md)
-- [중고차시장](markets/CARS.md) · [부동산 시장](markets/PROPERTY.md) · [비행기 시장](markets/AIRCRAFT.md)
+- [중고차시장](markets/CARS.md) · [부동산 시장](markets/PROPERTY.md)
+
+- [부동산 다음 시장 후보 — 미확정](markets/NEXT_MARKET_CANDIDATES.md)
 
 ### 장터 구매
 

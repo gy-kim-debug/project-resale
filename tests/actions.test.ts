@@ -285,8 +285,10 @@ test('market selection is free, persisted and restored without changing any game
   await flushSaves();
   assert.equal(writes.at(-1)?.selectedMarket, 'computers');
   const backup = JSON.stringify(writes.at(-1));
-  s.getState().selectMarket('aircraft');
+  s.getState().selectMarket('property');
   assert.equal(s.getState().importSave(backup), true);
+  assert.equal(s.getState().selectedMarket, 'computers');
+  s.getState().selectMarket('aircraft');
   assert.equal(s.getState().selectedMarket, 'computers');
   s.getState().selectMarket('unknown' as never);
   assert.equal(s.getState().selectedMarket, 'computers');
