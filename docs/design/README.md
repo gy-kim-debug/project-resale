@@ -58,6 +58,7 @@
 ### 물품·가격대
 
 - [매물 카테고리·종류·가격대](items/CATEGORIES_AND_PRICES.md)
+- [매물 해시태그 — 사실 확률과 거래 효과](items/LISTING_TAGS.md)
 
 ### 장터 구매
 

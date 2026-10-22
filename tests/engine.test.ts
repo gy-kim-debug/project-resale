@@ -15,6 +15,16 @@ import {
   type Command,
   type Game,
 } from '../src/domain/game';
+import {
+  createListingInfo,
+  listingAskPrice,
+  listingValuePercent,
+  listingFindings,
+  tagIsTrue,
+  sellerProfile,
+} from '../src/domain/listingTags';
+import { TAG_RULES, KIND_TAGS } from '../src/content/listingTags';
+import type { ListingTag, SellerTrait } from '../src/domain/game';
 import { RULES } from '../src/content/rules';
 import { isGame } from '../src/storage/validation';
 import { parseSave } from '../src/storage/saveRepository';
@@ -1057,8 +1067,19 @@ test('higher listing bands keep entry options affordable and the starting board 
     const g = newGame(seed);
     const paid = g.board.filter((i) => i.price > 0);
     assert.equal(paid.length, 8);
-    assert.ok(paid.every((i) => i.price >= 28000 && i.price % 1000 === 0));
-    assert.ok(paid.filter((i) => i.price >= 150000).length >= 6);
+    assert.ok(
+      paid.every(
+        (i) =>
+          i.price >= (i.listing?.facts.seller === 'urgent' ? 25000 : 28000) &&
+          i.price % 1000 === 0,
+      ),
+    );
+    assert.ok(
+      paid.filter(
+        (i) =>
+          i.price >= (i.listing?.facts.seller === 'urgent' ? 135000 : 150000),
+      ).length >= 6,
+    );
     assert.ok(paid.filter((i) => i.price <= g.cash).length >= 2);
     assert.ok(
       paid.every(
@@ -1151,6 +1172,7 @@ test('appraisal and repair spend money without using the last action, expiring l
 
 test('purchase bargaining continues for several rounds, saves hidden seller limits, and charges only at exchange', () => {
   let g = rich(17);
+  if (g.board[0].listing) g.board[0].listing.facts.seller = 'ordinary';
   const start = structuredClone(g);
   const id = g.board[0].id;
   let previous = 0;
@@ -1265,5 +1287,166 @@ test('old purchase chats stay loadable and closed chats cannot restart; malforme
     const invalid = structuredClone(g);
     Object.assign(invalid.board[0].purchaseBargain!, bad);
     assert.equal(isGame(invalid), false);
+  }
+});
+
+test('listing claims are mostly truthful but every claim can be false; category labels remain exact', () => {
+  let seed = 19;
+  const random = () => {
+    seed = (Math.imul(1664525, seed) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const counts = new Map<ListingTag, { total: number; truth: number }>();
+  for (let n = 0; n < 10000; n++) {
+    const info = createListingInfo('수집품', random);
+    assert.equal(info.tags[0], KIND_TAGS['수집품']);
+    assert.equal(new Set(info.tags).size, 3);
+    for (const tag of info.tags.slice(1)) {
+      const count = counts.get(tag) ?? { total: 0, truth: 0 };
+      count.total++;
+      count.truth += Number(tagIsTrue(tag, info.facts));
+      counts.set(tag, count);
+    }
+  }
+  assert.equal(counts.size, 9);
+  for (const [tag, count] of counts) {
+    const rate = count.truth / count.total;
+    assert.ok(Math.abs(rate - TAG_RULES.truthChance) < 0.04, `${tag}: ${rate}`);
+    assert.ok(count.truth > 0 && count.truth < count.total);
+  }
+});
+
+test('actual listing facts determine value independently of advertised labels', () => {
+  const info = createListingInfo('수집품', () => 0);
+  info.facts = {
+    authentic: true,
+    limited: false,
+    discontinued: false,
+    vintage: false,
+    seller: 'ordinary',
+  };
+  assert.equal(listingValuePercent(info), 100);
+  assert.ok(info.tags.includes('limited'));
+  info.facts.limited = true;
+  assert.equal(listingValuePercent(info), TAG_RULES.limitedValuePercent);
+  info.facts.authentic = false;
+  assert.equal(listingValuePercent(info), TAG_RULES.replicaValuePercent);
+  const original = rich();
+  const item = original.board[0];
+  item.listing = info;
+  info.facts.limited = false;
+  assert.ok(listingFindings(item).includes('일반판 · 한정판 아님'));
+  assert.ok(listingFindings(item).includes('가품'));
+});
+
+test('real urgency adjusts price and deadline while false urgency does not guarantee either effect', () => {
+  const info = createListingInfo('수집품', () => 0);
+  info.facts.seller = 'urgent';
+  assert.equal(listingAskPrice(100000, info), 90000);
+  assert.equal(listingAskPrice(0, info), 0);
+  info.facts.seller = 'ordinary';
+  assert.equal(listingAskPrice(100000, info), 100000);
+  let real = 0,
+    falseClaim = 0;
+  for (let seed = 1; seed <= 100; seed++) {
+    const g = newGame(seed);
+    assert.ok(isGame(g));
+    for (const item of g.board.filter((i) => i.price > 0)) {
+      const seller = item.listing!.facts.seller;
+      const duration = (item.expires - g.minute) / ACTION_TICK;
+      assert.equal(
+        duration,
+        seller === 'urgent' || seller === 'moving' ? 2 : 3,
+      );
+      assert.equal(item.price % 1000, 0);
+      if (item.listing!.tags.includes('urgent')) {
+        if (seller === 'urgent') real++;
+        else {
+          falseClaim++;
+          assert.equal(duration, 3);
+        }
+      }
+    }
+  }
+  assert.ok(real > falseClaim && falseClaim > 0);
+});
+
+test('bargaining uses actual seller traits; false firm tags can negotiate and true firm sellers hold the asking price', () => {
+  const outcomes: Partial<Record<SellerTrait, number>> = {};
+  for (const trait of ['ordinary', 'urgent', 'negotiable', 'firm'] as const) {
+    const g = rich(42);
+    const item = g.board[0];
+    item.listing!.tags[2] = 'firm';
+    item.listing!.facts.seller = trait;
+    g.seed = 42;
+    const profile = sellerProfile(item);
+    const next = run(g, { type: 'offer', id: item.id, price: item.offers[0] });
+    const result = next.board[0];
+    outcomes[trait] = result.purchaseBargain!.floor;
+    assert.equal(next.minute, g.minute);
+    assert.equal(next.cash, g.cash);
+    assert.ok(
+      result.purchaseBargain!.floor >=
+        Math.floor(item.price * profile.floorMin),
+    );
+    if (trait === 'firm') assert.equal(result.negotiatedPrice, item.price);
+  }
+  assert.ok(outcomes.urgent! < outcomes.ordinary!);
+  assert.ok(outcomes.negotiable! < outcomes.firm!);
+});
+
+test('tags, actual facts and findings survive purchase, appraisal, repair and backup without rerolling', () => {
+  let g = rich(31);
+  const item = g.board[0];
+  const original = structuredClone(item.listing);
+  const price = item.price;
+  g = run(g, { type: 'buy', id: item.id });
+  assert.equal(g.inventory[0].acquiredFor, price);
+  assert.deepEqual(g.inventory[0].listing, original);
+  const now = g.minute;
+  g = run(g, { type: 'check', id: item.id });
+  assert.deepEqual(g.inventory[0].listing, original);
+  assert.equal(g.minute, now);
+  assert.ok(
+    g.logs[0].text.includes(original!.facts.authentic ? '진품' : '가품'),
+  );
+  const restored = parseSave(
+    JSON.parse(JSON.stringify({ version: 2, game: g, favoriteIds: [] })),
+  ).game;
+  assert.deepEqual(restored, JSON.parse(JSON.stringify(g)));
+  if (restored.inventory[0].condition !== '양호') {
+    const repaired = run(restored, { type: 'repair', id: item.id });
+    assert.deepEqual(repaired.inventory[0].listing, original);
+  }
+  const legacy = structuredClone(g);
+  for (const item of [...legacy.board, ...legacy.inventory])
+    delete item.listing;
+  assert.deepEqual(
+    parseSave({ version: 2, game: legacy, favoriteIds: [] }).game,
+    legacy,
+  );
+});
+
+test('invalid listing metadata is rejected without replacing saves', () => {
+  const g = newGame(31);
+  for (const corrupt of [
+    null,
+    { tags: ['unknown'], facts: {} },
+    { ...g.board[0].listing, tags: ['digital', 'limited', 'limited'] },
+    {
+      ...g.board[0].listing,
+      facts: { ...g.board[0].listing!.facts, authentic: 'yes' },
+    },
+    {
+      ...g.board[0].listing,
+      facts: { ...g.board[0].listing!.facts, seller: 'anything' },
+    },
+  ]) {
+    const invalid = structuredClone(g);
+    invalid.board[0].listing = corrupt as never;
+    assert.equal(isGame(invalid), false);
+    assert.throws(() =>
+      parseSave({ version: 2, game: invalid, favoriteIds: [] }),
+    );
   }
 });

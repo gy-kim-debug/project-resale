@@ -1011,3 +1011,36 @@ html {
 .mail-read .mail-text {
   color: #aab3a3;
 }
+
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 7px 0;
+}
+.item-tag {
+  display: inline-block;
+  padding: 3px 6px;
+  border: 1px solid #43503a;
+  border-radius: 5px;
+  color: #c6d4b1;
+  background: #222d20;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.item-findings {
+  padding: 12px;
+  margin: 14px 0;
+  border-left: 2px solid #b9cc8f;
+  background: #222d20;
+}
+.item-findings h3 {
+  margin: 0 0 7px;
+  font-size: 13px;
+}
+.item-findings p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}

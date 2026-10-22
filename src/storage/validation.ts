@@ -1,4 +1,11 @@
 import type { Game, Item } from '../domain/game';
+import {
+  KIND_TAGS,
+  TAG_LABELS,
+  FEATURE_TAGS,
+  SELLER_TAGS,
+  SELLER_PROFILES,
+} from '../content/listingTags';
 import { RULES } from '../content/rules';
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -18,6 +25,28 @@ const chat = (v: unknown) =>
         ['player', 'other'].includes(String(m.speaker)) &&
         text(m.text),
     ));
+function listing(v: unknown, itemKind: unknown): boolean {
+  if (v === undefined) return true;
+  if (!record(v) || !Array.isArray(v.tags) || !record(v.facts)) return false;
+  const tags = v.tags;
+  const facts = v.facts;
+  return (
+    kind(itemKind) &&
+    (tags.length === 2 || tags.length === 3) &&
+    new Set(tags).size === tags.length &&
+    tags.every(
+      (tag) => typeof tag === 'string' && Object.keys(TAG_LABELS).includes(tag),
+    ) &&
+    tags[0] === KIND_TAGS[itemKind as keyof typeof KIND_TAGS] &&
+    FEATURE_TAGS.some((tag) => tag === tags[1]) &&
+    (tags.length === 2 || SELLER_TAGS.some((tag) => tag === tags[2])) &&
+    ['authentic', 'limited', 'discontinued', 'vintage'].every(
+      (key) => typeof facts[key] === 'boolean',
+    ) &&
+    typeof facts.seller === 'string' &&
+    Object.keys(SELLER_PROFILES).includes(facts.seller)
+  );
+}
 function item(v: unknown): v is Item {
   return (
     record(v) &&
@@ -26,6 +55,7 @@ function item(v: unknown): v is Item {
     ) &&
     (v.acquiredFor === undefined || integer(v.acquiredFor, RULES.maxMoney)) &&
     chat(v.chat) &&
+    listing(v.listing, v.kind) &&
     (v.purchaseBargain === undefined ||
       (record(v.purchaseBargain) &&
         integer(v.purchaseBargain.rounds, 6) &&

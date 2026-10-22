@@ -1,6 +1,14 @@
 import type { Command, Game, Item, Result, Kind } from './game';
 import { dayOf, isMoney, won, ACTION_TICK } from './game';
 import { nextPurchaseOffers } from './purchaseBargaining';
+import {
+  createListingInfo,
+  listingAskPrice,
+  listingValuePercent,
+  listingFindings,
+  sellerProfile,
+} from './listingTags';
+import { TAG_RULES } from '../content/listingTags';
 import { toDailyActions } from './time';
 import { interestPending, interestAmount, paymentWeek } from './debt';
 import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
@@ -64,7 +72,12 @@ function money(g: Game, amount: number) {
   g.stats.peakCash = Math.max(g.stats.peakCash, g.cash);
   if (amount > 0) g.stats.earned += amount;
 }
-function makeItem(g: Game, base: number, free = false): Item {
+function makeItem(
+  g: Game,
+  base: number,
+  free = false,
+  marketListing = true,
+): Item {
   const templateIndex = Math.floor(roll(g) * CATALOG.length);
   const template = CATALOG[templateIndex];
   const tierIndex = TIERS.reduce(
@@ -78,13 +91,27 @@ function makeItem(g: Game, base: number, free = false): Item {
   const rarity = roll(g);
   const condition =
     quality < 0.18 ? '고장' : quality < 0.55 ? '사용감' : '양호';
-  const rarityPercent =
-    rarity < 0.1 ? 8 : rarity > 0.97 ? 400 : rarity > 0.86 ? 150 : 100;
+  const listing = marketListing
+    ? createListingInfo(template.kind, () => roll(g), free)
+    : undefined;
+  const rarityPercent = listing
+    ? Math.floor(
+        (listingValuePercent(listing) *
+          (rarity > 0.97 ? 400 : rarity > 0.86 ? 150 : 100)) /
+          100,
+      )
+    : rarity < 0.1
+      ? 8
+      : rarity > 0.97
+        ? 400
+        : rarity > 0.86
+          ? 150
+          : 100;
   const actualBase = Math.max(
     100,
     Math.floor((categoryBase * rarityPercent) / 100),
   );
-  const price = free
+  let price = free
     ? 0
     : Math.max(
         MARKET_PRICING.priceStep,
@@ -98,7 +125,9 @@ function makeItem(g: Game, base: number, free = false): Item {
             MARKET_PRICING.priceStep,
         ) * MARKET_PRICING.priceStep,
       );
+  price = listingAskPrice(price, listing);
   return {
+    listing,
     id: id(g),
     title: TIER_TITLES[tierIndex][templateIndex],
     kind: template.kind,
@@ -109,16 +138,15 @@ function makeItem(g: Game, base: number, free = false): Item {
         100,
     ),
     condition,
-    defect:
-      rarityPercent < 10
-        ? '가품 또는 비정상 부품이 확인됐습니다.'
-        : condition === '고장'
-          ? '작동 불량·부품 손상이 있습니다.'
-          : condition === '사용감'
-            ? '마모와 작은 흠집이 있습니다.'
-            : rarityPercent > 100
-              ? '희귀한 구성·보존 가치가 확인됐습니다.'
-              : '특별한 결함은 발견되지 않았습니다.',
+    defect: (listing ? !listing.facts.authentic : rarityPercent < 10)
+      ? '가품 또는 비정상 부품이 확인됐습니다.'
+      : condition === '고장'
+        ? '작동 불량·부품 손상이 있습니다.'
+        : condition === '사용감'
+          ? '마모와 작은 흠집이 있습니다.'
+          : rarityPercent > 100
+            ? '희귀한 구성·보존 가치가 확인됐습니다.'
+            : '특별한 결함은 발견되지 않았습니다.',
     checked: false,
     repaired: false,
     price,
@@ -126,7 +154,12 @@ function makeItem(g: Game, base: number, free = false): Item {
       Math.floor(roll(g) * 4)
     ],
     description: template.description,
-    expires: g.minute + 1440,
+    expires:
+      g.minute +
+      ACTION_TICK *
+        (listing && ['urgent', 'moving'].includes(listing.facts.seller)
+          ? TAG_RULES.shortLifetimeActions
+          : TAG_RULES.normalLifetimeActions),
     offers: [Math.floor(price * 0.7), Math.floor(price * 0.85)],
     negotiation: 'none',
     negotiatedPrice: null,
@@ -399,7 +432,9 @@ export function execute(original: Game, command: Command): Result {
                 )
             : MARKET_PRICING.scavengeRare,
           true,
+          false,
         );
+        delete found.listing;
         found.title =
           found.value < 1000
             ? `수집한 ${found.kind === '수집품' ? '낡은 소품' : '생활 잡화'}`
@@ -434,10 +469,22 @@ export function execute(original: Game, command: Command): Result {
           !i.offers.includes(command.price)
         )
           throw Error('선택할 수 없는 구매 제안입니다.');
+        const profile = sellerProfile(i);
         const state = (i.purchaseBargain ??= {
           rounds: 0,
-          floor: Math.max(1, Math.floor(i.price * (0.78 + roll(g) * 0.12))),
-          patience: 4 + Math.floor(roll(g) * 3),
+          floor: Math.max(
+            1,
+            Math.floor(
+              i.price *
+                (profile.floorMin +
+                  roll(g) * (profile.floorMax - profile.floorMin)),
+            ),
+          ),
+          patience:
+            profile.patienceMin +
+            Math.floor(
+              roll(g) * (profile.patienceMax - profile.patienceMin + 1),
+            ),
           walked: false,
         });
         const current = i.negotiatedPrice ?? i.price;
@@ -464,12 +511,15 @@ export function execute(original: Game, command: Command): Result {
         } else {
           // Small concessions and occasional holds make each reply meaningful.
           const concession =
-            roll(g) < 0.25
+            roll(g) < profile.holdChance
               ? 0
               : Math.max(
                   1,
                   Math.floor(
-                    (current - command.price) * (0.15 + roll(g) * 0.15),
+                    (current - command.price) *
+                      (profile.concessionMin +
+                        roll(g) *
+                          (profile.concessionMax - profile.concessionMin)),
                   ),
                 );
           const counter = Math.max(state.floor, current - concession);
@@ -536,7 +586,7 @@ export function execute(original: Game, command: Command): Result {
         money(g, -cost);
         i.checked = true;
         g.stats.checks++;
-        message = `가치 확인: ${i.title}, 실제 가치 ${won(i.value)}. ${i.defect}`;
+        message = `가치 확인: ${i.title}, 실제 가치 ${won(i.value)}. ${i.defect}${i.listing ? ` ${listingFindings(i).join(' · ')}.` : ''}`;
         log(g, message);
         break;
       }

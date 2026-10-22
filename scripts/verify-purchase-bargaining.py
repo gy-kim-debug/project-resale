@@ -16,6 +16,7 @@ with sync_playwright() as p:
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for()
   data=json.loads(Path('work/rich.json').read_text())
   data['game']['cash']=2000000;data['game']['stats']['peakCash']=2000000;data['game']['seed']=17
+  if data['game']['board'][0].get('listing'): data['game']['board'][0]['listing']['facts']['seller']='ordinary'
   page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   def open_item():
    page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click()

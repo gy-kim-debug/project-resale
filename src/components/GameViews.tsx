@@ -2,6 +2,7 @@ import { useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
 import { ItemComparison } from './ItemComparison';
 import { TradeChat } from './TradeChat';
+import { ItemTags, ItemFindings } from './ItemTags';
 import { mailboxLogs, unreadCount } from '../app/notifications';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, Kind } from '../domain/game';
@@ -137,6 +138,7 @@ export function ItemRow({
         <small>
           {item.kind} · {detail}
         </small>
+        <ItemTags item={item} />
         {comparison}
       </span>
       <span aria-hidden="true">›</span>
@@ -377,6 +379,7 @@ export function ListingView({
     <>
       <ItemArt item={item} large />
       <h2>{item.title}</h2>
+      <ItemTags item={item} />
       <p className="item-price">
         {item.price === 0 ? '무료나눔' : won(item.price)}
       </p>
@@ -490,10 +493,12 @@ export function OwnedView({
     <>
       <ItemArt item={item} large />
       <h2>{item.title}</h2>
+      <ItemTags item={item} />
       <p>
         {item.kind} · {sale ? '판매 등록 중' : '보관 중'}
       </p>
       <ItemComparison g={g} item={item} />
+      <ItemFindings item={item} />
       <Details>
         <p>상태: {item.condition}</p>
         {item.checked ? (
@@ -835,6 +840,7 @@ export function RouteView({
           <>
             <ItemArt item={item} large />
             <h2>{item.title}</h2>
+            <ItemTags item={item} />
             <p className="lead">
               등록 · 행동 1회 · {g.sales.length}/{listingLimit(g)}개 등록 중
             </p>

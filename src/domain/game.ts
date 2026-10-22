@@ -6,7 +6,34 @@ export interface ChatMessage {
   speaker: 'player' | 'other';
   text: string;
 }
+export type ListingTag =
+  | 'household'
+  | 'digital'
+  | 'furniture'
+  | 'collectible'
+  | 'limited'
+  | 'discontinued'
+  | 'vintage'
+  | 'authentic'
+  | 'replica'
+  | 'urgent'
+  | 'moving'
+  | 'firm'
+  | 'negotiable';
+export type SellerTrait =
+  'ordinary' | 'urgent' | 'moving' | 'firm' | 'negotiable';
+export interface ListingInfo {
+  tags: ListingTag[];
+  facts: {
+    authentic: boolean;
+    limited: boolean;
+    discontinued: boolean;
+    vintage: boolean;
+    seller: SellerTrait;
+  };
+}
 export interface Item {
+  listing?: ListingInfo;
   purchaseBargain?: {
     rounds: number;
     floor: number;
