@@ -29,7 +29,7 @@ for (const marketId of [
         i.price > 0 &&
         i.listing?.facts.seller === 'ordinary',
     )) {
-      let current = structuredClone(initial);
+      let current = globalThis.structuredClone(initial);
       let changed = false;
       let ok = true;
       for (let round = 0; round < 2; round++) {
@@ -74,4 +74,4 @@ for (const marketId of [
   cases.push(found);
 }
 await writeFile('work/market-bargaining-cases.json', JSON.stringify(cases));
-console.log('Prepared five real generated market negotiation cases');
+globalThis.console.log('Prepared five real generated market negotiation cases');

@@ -669,6 +669,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
             <p>
               {item?.title} · 등록 {won(sale?.price ?? 0)}
             </p>
+            {item && <ItemComparison g={g} item={item} />}
             <p className="chat-cost">흥정 · 행동 소모 없음</p>
             <TradeChat
               name={q.name}
