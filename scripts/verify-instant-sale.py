@@ -42,7 +42,7 @@ with sync_playwright() as p:
   load(listed);enter();expect(page.locator('.sheet-layer .item-row')).to_be_disabled()
   expect(page.locator('.sheet-layer .item-row')).to_contain_text('판매 등록 취소 필요')
   # No actions left: preview is free, completion stays blocked.
-  exhausted=json.loads(json.dumps(data));exhausted['game']['weekActions']=30;exhausted['game']['minute']=14400
+  exhausted=json.loads(json.dumps(data));exhausted['game']['weekActions']=20;exhausted['game']['minute']=9600
   load(exhausted);enter();page.locator('.sheet-layer .item-row').click()
   expect(page.get_by_role('button',name='판매 확정 · 행동 1회',exact=True)).to_be_disabled()
   expect(page.get_by_role('button',name='이번주 정산하기',exact=True)).to_be_visible()

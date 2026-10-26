@@ -126,6 +126,8 @@ export interface Game {
   version: 2;
   timeMode?: 'daily-actions' | 'weekly-actions';
   weekActions?: number;
+  weeklyRulesVersion?: 2;
+  principalRepaidThisWeek?: number;
   settling?: boolean;
   seed: number;
   serial: number;
@@ -191,7 +193,7 @@ export const won = (n: number) => `${n.toLocaleString('ko-KR')} 원`;
 export const dayOf = (g: Game) => Math.floor(g.minute / 1440) + 1;
 export const ACTIONS_PER_DAY = 3;
 export const ACTION_TICK = 480;
-export const ACTIONS_PER_WEEK = 30;
+export const ACTIONS_PER_WEEK = 20;
 export const weekOf = (g: Game) => (g.interestWeek ?? 0) + 1;
 export const actionsLeft = (g: Game) => ACTIONS_PER_WEEK - (g.weekActions ?? 0);
 export const dayStatus = (g: Game) =>

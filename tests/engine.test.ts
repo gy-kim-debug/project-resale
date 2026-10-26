@@ -35,6 +35,9 @@ import {
   weeklyInterest,
   weeklyRateText,
   interestAmount,
+  mandatoryPrincipal,
+  weeklyPrincipalTarget,
+  settlementAmount,
   interestPending,
   WEEK_TICKS,
 } from '../src/domain/debt';
@@ -110,7 +113,7 @@ test('obsolete hunger fields are discarded without blocking actions or changing 
   const g = parseSave({ version: 2, game: legacy, favoriteIds: [] }).game;
   assert.equal('satiety' in g, false);
   assert.equal('hungerRemainder' in g, false);
-  assert.equal(actionsLeft(g), 29);
+  assert.equal(actionsLeft(g), 19);
   assert.deepEqual(legacy, snapshot);
   assert.deepEqual(g.inventory, original.inventory);
   for (const c of [
@@ -141,7 +144,7 @@ test('old survival fields are ignored and stripped without changing time, invent
   assert.deepEqual(restored, g);
   const worked = run(restored, { type: 'job', id: 'warehouse' });
   assert.equal(worked.minute, ACTION_TICK);
-  assert.equal(actionsLeft(worked), 29);
+  assert.equal(actionsLeft(worked), 19);
 });
 test('obsolete survival fields do not modify hidden value or stochastic negotiation outcomes', () => {
   const a = rich(60),
@@ -387,6 +390,10 @@ for (const seed of [1, 42, 210])
     };
     while (g.status === 'playing' && commands < 8000) {
       if (interestPending(g)) {
+        if (mandatoryPrincipal(g) > 0) {
+          step({ type: 'repay', amount: mandatoryPrincipal(g) });
+          continue;
+        }
         step({ type: 'payInterest' });
         continue;
       }
@@ -464,7 +471,7 @@ for (const seed of [1, 42, 210])
     assert.ok(commands > 40);
     if (g.status === 'bankrupt') {
       assert.ok(interestPending(g));
-      assert.ok(g.cash < interestAmount(g));
+      assert.ok(g.cash < settlementAmount(g));
       assert.equal(execute(g, { type: 'job', id: 'warehouse' }).ok, false);
     } else assert.equal(g.principal + g.interest, 0);
   });
@@ -578,7 +585,7 @@ test('legacy saves migrate once to a fresh three-action day without losing resou
   assert.deepEqual(old, snapshot, 'migration is pure');
   assert.ok(isGame(g));
   assert.equal(g.minute, 3 * 1440);
-  assert.equal(actionsLeft(g), 21);
+  assert.equal(actionsLeft(g), 11);
   assert.equal(g.board[0].expires - g.minute, ACTION_TICK);
   assert.equal(g.minute - g.quotes!.at, 0);
   for (const key of ['cash', 'principal', 'interest', 'seed'] as const)
@@ -875,13 +882,13 @@ test('outlet travel consumes no time, stats, RNG or journal entries; actual sell
   );
 });
 
-test('thirty major actions exhaust the weekly budget without automatic settlement', () => {
+test('twenty major actions exhaust the weekly budget without automatic settlement', () => {
   let g = newGame(42);
   assert.equal(weekOf(g), 1);
-  assert.equal(actionsLeft(g), 30);
-  for (let used = 1; used <= 30; used++) {
+  assert.equal(actionsLeft(g), 20);
+  for (let used = 1; used <= 20; used++) {
     g = run(g, { type: 'job', id: 'flyer' });
-    assert.equal(actionsLeft(g), 30 - used);
+    assert.equal(actionsLeft(g), 20 - used);
     assert.equal(weekOf(g), 1);
     assert.equal(interestPending(g), false);
   }
@@ -889,12 +896,12 @@ test('thirty major actions exhaust the weekly budget without automatic settlemen
   const failed = execute(g, { type: 'job', id: 'flyer' });
   assert.equal(failed.ok, false);
   assert.deepEqual(failed.game, before);
-  assert.equal(g.cash, 500000 + 9000 * 30);
+  assert.equal(g.cash, 500000 + 9000 * 20);
 });
 
 test('all jobs use exactly one action with no premature day ending', () => {
   let g = newGame();
-  for (const remaining of [29, 28, 27]) {
+  for (const remaining of [19, 18, 17]) {
     g = run(g, { type: 'job', id: 'warehouse' });
     assert.equal(actionsLeft(g), remaining);
   }
@@ -938,30 +945,33 @@ test('free navigation, bargaining, disposal and declining proposals never spend 
   };
   g = run(g, { type: 'event', choice: 'no' });
   assert.equal(g.minute, before);
-  assert.equal(actionsLeft(g), 30);
+  assert.equal(actionsLeft(g), 20);
 });
 
 test('week boundary locks progress until payment, then increases the rate without spending an action', () => {
   let g = rich();
+  g.cash = 150000;
   g.minute = WEEK_TICKS - ACTION_TICK;
-  g.weekActions = 29;
+  g.weekActions = 19;
   g = run(g, { type: 'wait' });
   assert.equal(interestPending(g), false);
   g = run(g, { type: 'startSettlement' });
   assert.equal(interestPending(g), true);
   assert.equal(g.interest, 0);
-  assert.equal(g.cash, 100000);
+  assert.equal(g.cash, 150000);
   for (const type of ['job', 'wait', 'visit', 'discard', 'offer'] as const)
     assert.equal(execute(g, { type, id: 'scrap' } as Command).ok, false);
   const snapshot = structuredClone(g);
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  assert.equal(execute(g, { type: 'payInterest' }).ok, false);
+  g = run(g, { type: 'repay', amount: 50000 });
   g = run(g, { type: 'payInterest' });
   assert.equal(g.minute, snapshot.minute);
   assert.equal(g.cash, 0);
   assert.equal(g.status, 'playing');
   assert.equal(g.interestWeek, 1);
   assert.equal(interestPending(g), false);
-  assert.equal(interestAmount(g), 300000);
+  assert.equal(interestAmount(g), 299996);
   assert.equal(execute(g, { type: 'payInterest' }).ok, false);
   assert.equal(run(g, { type: 'job', id: 'flyer' }).cash, 9000);
 });
@@ -985,7 +995,7 @@ test('migration retains active listings, chats, prices and finances and refuses 
   assert.deepEqual(old, before);
   assert.equal(g.timeMode, 'weekly-actions');
   assert.equal(weekOf(g), 2);
-  assert.equal(actionsLeft(g), 24);
+  assert.equal(actionsLeft(g), 14);
   assert.deepEqual(g.inquiries, old.inquiries);
   assert.deepEqual(g.stats, old.stats);
   assert.equal(g.sales[0].price, old.sales[0].price);
@@ -1054,7 +1064,7 @@ test('new games start at 500000 won and old zero-cash saves remain playable with
 test('insufficient cash at the weekly deadline ends play even when cash and inventory remain', () => {
   const g = owned();
   g.minute = WEEK_TICKS - ACTION_TICK;
-  g.weekActions = 29;
+  g.weekActions = 19;
   g.cash = 99999;
   const exhausted = run(g, { type: 'wait' });
   assert.equal(exhausted.status, 'playing');
@@ -1072,7 +1082,7 @@ test('repayment while payment is due reprices the invoice and costs no action', 
   let g = rich();
   g.cash = 200000;
   g.minute = WEEK_TICKS;
-  g.weekActions = 30;
+  g.weekActions = 20;
   g.settling = true;
   g = run(g, { type: 'repay', amount: 100000 });
   assert.equal(g.minute, WEEK_TICKS);
@@ -1092,7 +1102,7 @@ test('legacy saves keep arrears but begin weekly billing without retroactive inv
   assert.equal(result.interest, 1234);
   assert.equal(result.cash, g.cash);
   assert.equal(interestPending(result), false);
-  assert.equal(interestAmount(result), 1100000 + 1234);
+  assert.equal(interestAmount(result), 1101058);
 });
 
 test('each market generates its own bounded prices and products while the entry market remains affordable', () => {
@@ -1159,7 +1169,7 @@ test('appraisal and repair spend money without using the last action, expiring l
   item.condition = '고장';
   item.value = Math.floor((item.base * 18) / 100);
   g.minute = WEEK_TICKS - ACTION_TICK;
-  g.weekActions = 29;
+  g.weekActions = 19;
   g.marketDay = 7;
   for (const listing of g.board) listing.expires = g.minute + 1;
   const other = g.board.shift()!;
@@ -1788,7 +1798,7 @@ test('won auction settlement rechecks cash, inventory and weekly locks without l
   assert.equal(execute(full, { type: 'buy', id: lot.id }).ok, false);
   const due = structuredClone(game);
   due.minute = WEEK_TICKS;
-  due.weekActions = 30;
+  due.weekActions = 20;
   due.settling = true;
   due.board.find((i) => i.id === lot.id)!.expires = due.minute + 1440;
   assert.equal(execute(due, { type: 'buy', id: lot.id }).ok, false);
@@ -1810,18 +1820,19 @@ test('early settlement charges the full current rate once and discards unused ac
   assert.equal(execute(g, { type: 'startSettlement' }).ok, false);
   assert.equal(execute(g, { type: 'wait' }).ok, false);
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  g = run(g, { type: 'repay', amount: 50000 });
   g = run(g, { type: 'payInterest' });
-  assert.equal(g.cash, before.cash - 100000);
+  assert.equal(g.cash, before.cash - 150000);
   assert.equal(weekOf(g), 2);
-  assert.equal(actionsLeft(g), 30);
+  assert.equal(actionsLeft(g), 20);
   assert.equal(g.minute, WEEK_TICKS);
   assert.equal(execute(g, { type: 'payInterest' }).ok, false);
-  assert.equal(interestAmount(g), 300000);
+  assert.equal(interestAmount(g), 299996);
 });
 
 test('zero budget allows free owned-item verification but refuses every paid transaction atomically', () => {
   let g = owned();
-  g.weekActions = 30;
+  g.weekActions = 20;
   g.minute = WEEK_TICKS;
   g.inventory[0].checked = false;
   g.board[0].expires = g.minute + ACTION_TICK;
@@ -1862,7 +1873,7 @@ test('daily saves retain paid weeks, used actions, asset deadlines and settlemen
   const before = structuredClone(old);
   const data = parseSave({ version: 2, game: old, favoriteIds: ['favorite'] });
   assert.equal(weekOf(data.game), 3);
-  assert.equal(actionsLeft(data.game), 25);
+  assert.equal(actionsLeft(data.game), 15);
   assert.equal(data.game.minute, 2 * WEEK_TICKS + 5 * ACTION_TICK);
   assert.equal(data.game.inventory[0].expires - data.game.minute, 960);
   assert.equal(data.game.cash, old.cash);
@@ -1893,7 +1904,7 @@ test('instant selling always pays actual value times sixty percent, ignoring tre
   assert.equal(sold.minute - before.minute, ACTION_TICK);
   assert.equal(execute(sold, { type: 'outletSell', id: item.id }).ok, false);
   const exhausted = structuredClone(before);
-  exhausted.weekActions = 30;
+  exhausted.weekActions = 20;
   const denied = execute(exhausted, { type: 'outletSell', id: item.id });
   assert.equal(denied.ok, false);
   assert.deepEqual(denied.game, exhausted);
@@ -2070,4 +2081,146 @@ test('shared sale reply preserves buyer limits, two-round budget, immutability a
     null,
   );
   assert.throws(() => saleReply(q, 1000, 1001, () => 0));
+});
+
+test('mandatory weekly principal doubles from 50000 and is capped by remaining debt safely', () => {
+  for (const [week, amount] of [
+    [1, 50000],
+    [2, 100000],
+    [3, 200000],
+    [4, 400000],
+    [5, 800000],
+  ])
+    assert.equal(weeklyPrincipalTarget(week), amount);
+  const g = newGame();
+  assert.equal(settlementAmount(g), 150000);
+  g.principal = 12345;
+  assert.equal(mandatoryPrincipal(g), 12345);
+  assert.equal(interestAmount(g), 0);
+  assert.equal(settlementAmount(g), 12345);
+  assert.equal(weeklyPrincipalTarget(1000000), RULES.maxMoney);
+  g.interestWeek = 1000000;
+  assert.equal(mandatoryPrincipal(g), 12345);
+});
+
+test('voluntary partial principal prepayments count this week and payment order cannot be bypassed', () => {
+  let g = newGame();
+  g = run(g, { type: 'repay', amount: 20000 });
+  assert.equal(g.principalRepaidThisWeek, 20000);
+  assert.equal(mandatoryPrincipal(g), 30000);
+  assert.equal(g.weekActions, 1);
+  g = run(g, { type: 'startSettlement' });
+  const snapshot = structuredClone(g);
+  assert.equal(execute(g, { type: 'payInterest' }).ok, false);
+  assert.deepEqual(g, snapshot);
+  g = run(g, { type: 'repay', amount: mandatoryPrincipal(g) });
+  assert.equal(g.minute, snapshot.minute);
+  assert.equal(g.principalRepaidThisWeek, 50000);
+  assert.equal(g.principal, RULES.debt - 50000);
+  assert.equal(mandatoryPrincipal(g), 0);
+  assert.equal(interestAmount(g), 100000);
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, 350000);
+  assert.equal(g.principalRepaidThisWeek, 0);
+  assert.equal(g.interestWeek, 1);
+  assert.equal(mandatoryPrincipal(g), 100000);
+  assert.equal(interestAmount(g), 299996);
+  assert.equal(actionsLeft(g), 20);
+  assert.equal(execute(g, { type: 'payInterest' }).ok, false);
+});
+
+test('excess voluntary repayments reduce interest but do not prepay next weeks obligation', () => {
+  let g = newGame();
+  g = run(g, { type: 'repay', amount: 100000 });
+  assert.equal(mandatoryPrincipal(g), 0);
+  assert.equal(interestAmount(g), 99999);
+  g = run(g, { type: 'startSettlement' });
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, 300001);
+  assert.equal(mandatoryPrincipal(g), 100000);
+  assert.equal(g.stats.repaid, 199999);
+  assert.equal(g.principal, RULES.debt - 100000);
+});
+
+test('mandatory principal or interest shortfalls end play while exact funds resume with zero cash', () => {
+  for (const cash of [0, 49999, 100000, 149999]) {
+    const g = newGame();
+    g.cash = cash;
+    const after = run(g, { type: 'startSettlement' });
+    assert.equal(after.status, 'bankrupt');
+    assert.equal(after.principal, g.principal);
+    assert.equal(after.cash, cash);
+  }
+  let g = newGame();
+  g.cash = 150000;
+  g = run(g, { type: 'startSettlement' });
+  g = run(g, { type: 'repay', amount: 50000 });
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, 0);
+  assert.equal(g.status, 'playing');
+  assert.equal(run(g, { type: 'job', id: 'flyer' }).cash, 9000);
+});
+
+test('final remaining principal clears without excess mandatory charge and legacy interest is preserved', () => {
+  let final = newGame();
+  final.principal = 30000;
+  final.cash = 30000;
+  final = run(final, { type: 'startSettlement' });
+  final = run(final, { type: 'repay', amount: 30000 });
+  assert.equal(final.status, 'cleared');
+  assert.equal(final.cash, 0);
+  let arrears = newGame();
+  arrears.interest = 1234;
+  assert.equal(settlementAmount(arrears), 151234);
+  arrears = run(arrears, { type: 'startSettlement' });
+  arrears = run(arrears, { type: 'repay', amount: 50000 });
+  assert.equal(interestAmount(arrears), 101234);
+  arrears = run(arrears, { type: 'payInterest' });
+  assert.equal(arrears.interest, 0);
+  assert.equal(arrears.cash, 348766);
+});
+
+test('old thirty-action saves migrate once preserving assets, relative deadlines and known principal prepayments', () => {
+  const old = owned();
+  delete old.weeklyRulesVersion;
+  delete old.principalRepaidThisWeek;
+  old.interestWeek = 2;
+  old.weekActions = 25;
+  old.minute = 2 * 14400 + 25 * 480;
+  old.inventory[0].expires = old.minute + 960;
+  old.principal -= 100000;
+  old.logs.unshift({
+    id: ++old.serial,
+    minute: old.minute,
+    week: 3,
+    text: '원금 100,000 원 상환했습니다.',
+  });
+  const snapshot = structuredClone(old);
+  const saved = parseSave({ version: 2, game: old, favoriteIds: ['kept'] });
+  const g = saved.game;
+  assert.equal(g.weekActions, 20);
+  assert.equal(actionsLeft(g), 0);
+  assert.equal(g.interestWeek, 2);
+  assert.equal(g.minute, 3 * WEEK_TICKS);
+  assert.equal(g.principalRepaidThisWeek, 100000);
+  assert.equal(mandatoryPrincipal(g), 100000);
+  assert.equal(g.cash, old.cash);
+  assert.equal(g.inventory[0].expires - g.minute, 960);
+  assert.equal(g.seed, old.seed);
+  assert.deepEqual(parseSave(saved), saved);
+  assert.deepEqual(old, snapshot);
+  const active = structuredClone(old);
+  active.weekActions = 18;
+  active.minute = 2 * 14400 + 18 * 480;
+  assert.equal(
+    actionsLeft(parseSave({ version: 2, game: active, favoriteIds: [] }).game),
+    2,
+  );
+  for (const changes of [
+    { weekActions: 21 },
+    { principalRepaidThisWeek: -1 },
+    { principalRepaidThisWeek: 1.5 },
+    { weeklyRulesVersion: 3 },
+  ])
+    assert.equal(isGame({ ...g, ...changes }), false);
 });

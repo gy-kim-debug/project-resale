@@ -18,7 +18,7 @@ import {
   type Route,
 } from './components/GameViews';
 import type { Game } from './domain/game';
-import { weekOf, actionsLeft, won } from './domain/game';
+import { weekOf, actionsLeft, won, ACTIONS_PER_WEEK } from './domain/game';
 import { listingLimit, tier } from './domain/engine';
 import { ActionBudget, ActionProgress } from './components/ActionProgress';
 import type {
@@ -32,6 +32,7 @@ import { TIERS } from './content/rules';
 import {
   interestPending,
   interestAmount,
+  mandatoryPrincipal,
   paymentWeek,
   weeklyRateText,
 } from './domain/debt';
@@ -148,7 +149,7 @@ function Header({
             <>
               <span className="status-day">{weekOf(g)}주차</span>{' '}
               <strong className="status-clock">
-                남은 행동 {actionsLeft(g)}/30
+                남은 행동 {actionsLeft(g)}/{ACTIONS_PER_WEEK}
               </strong>
             </>
           )}
@@ -159,6 +160,10 @@ function Header({
         >
           <span className="header-label">현금</span> <b>{won(g.cash)}</b>
         </span>
+      </div>
+      <div className="header-interest">
+        <span>이번 주 남은 의무 원금</span>
+        <strong>{won(mandatoryPrincipal(g))}</strong>
       </div>
       <div className="header-interest">
         <span>{paymentWeek(g)}주차 이자</span>
@@ -524,7 +529,7 @@ export default function App() {
                 {g.status === 'cleared'
                   ? '원금과 발생한 이자를 모두 갚았습니다.'
                   : g.status === 'bankrupt'
-                    ? '주간 이자를 납부하지 못했습니다.'
+                    ? '주간 의무 원금 또는 이자를 납부하지 못했습니다.'
                     : '종료된 게임입니다.'}
               </p>
               <StorageView />

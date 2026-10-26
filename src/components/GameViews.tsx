@@ -23,6 +23,9 @@ import { JOBS, RULES } from '../content/rules';
 import {
   interestPending,
   interestAmount,
+  mandatoryPrincipal,
+  weeklyPrincipalTarget,
+  settlementAmount,
   paymentWeek,
   weeklyRateText,
 } from '../domain/debt';
@@ -238,6 +241,7 @@ export function DebtView({
 }) {
   const due = interestPending(g);
   const amount = interestAmount(g);
+  const required = mandatoryPrincipal(g);
   const cost = due ? '행동 소모 없음' : '행동 1회';
   const canRepay = due || actionsLeft(g) > 0;
   return (
@@ -258,6 +262,29 @@ export function DebtView({
           <dd>{won(g.principal)}</dd>
         </div>
         <div>
+          <dt>이번 주 의무 원금</dt>
+          <dd>
+            {won(
+              Math.min(
+                weeklyPrincipalTarget(paymentWeek(g)),
+                g.principal + (g.principalRepaidThisWeek ?? 0),
+              ),
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>이번 주 원금 상환</dt>
+          <dd>{won(g.principalRepaidThisWeek ?? 0)}</dd>
+        </div>
+        <div>
+          <dt>남은 의무 원금</dt>
+          <dd>{won(required)}</dd>
+        </div>
+        <div>
+          <dt>이번 정산 필요 금액</dt>
+          <dd>{won(settlementAmount(g))}</dd>
+        </div>
+        <div>
           <dt>
             {paymentWeek(g)}주차 이자 · {weeklyRateText(paymentWeek(g))}
           </dt>
@@ -276,9 +303,19 @@ export function DebtView({
           <dd>{won(g.cash)}</dd>
         </div>
       </dl>
+      {due && required > 0 && (
+        <Button
+          disabled={g.cash < required}
+          onClick={() => act({ type: 'repay', amount: required })}
+        >
+          의무 원금 납부 · {won(required)}
+        </Button>
+      )}
       {(due || g.interest > 0) && (
         <Button
-          disabled={g.cash < (due ? amount : g.interest)}
+          disabled={
+            (due && required > 0) || g.cash < (due ? amount : g.interest)
+          }
           onClick={() => act({ type: 'payInterest' })}
         >
           이자 납부 후 다음 주 시작 · {won(due ? amount : g.interest)}
@@ -959,7 +996,7 @@ export function RouteView({
           {g.logs.map((l) => (
             <li key={l.id}>
               <small>
-                {l.week ?? Math.floor(l.minute / (30 * 480)) + 1}주차
+                {l.week ?? Math.floor(l.minute / (20 * 480)) + 1}주차
               </small>
               <p>{l.text}</p>
             </li>
@@ -1000,7 +1037,7 @@ function MailboxView({ g, open }: { g: Game; open: (route: Route) => void }) {
               >
                 <span className="mail-meta">
                   <small>
-                    {log.week ?? Math.floor(log.minute / (30 * 480)) + 1}주차
+                    {log.week ?? Math.floor(log.minute / (20 * 480)) + 1}주차
                   </small>
                   <span className="mail-state">
                     {isRead ? '읽음' : '안 읽음'}

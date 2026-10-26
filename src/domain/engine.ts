@@ -20,7 +20,13 @@ import {
 import { createAuction, auctionBidOptions, placeAuctionBid } from './auction';
 import { TAG_RULES } from '../content/listingTags';
 import { toWeeklyActions } from './time';
-import { interestPending, interestAmount, paymentWeek } from './debt';
+import {
+  interestPending,
+  interestAmount,
+  paymentWeek,
+  mandatoryPrincipal,
+  settlementAmount,
+} from './debt';
 import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
 import { CATALOG, JOBS, RULES, TIERS, TIER_TITLES } from '../content/rules';
 
@@ -339,13 +345,13 @@ function settleWeekly(g: Game) {
   if (
     g.status === 'playing' &&
     interestPending(g) &&
-    g.cash < interestAmount(g)
+    g.cash < settlementAmount(g)
   ) {
     g.status = 'bankrupt';
     g.inquiries = [];
     log(
       g,
-      `${paymentWeek(g)}주차 이자 ${won(interestAmount(g))} 미납. 게임 종료.`,
+      `${paymentWeek(g)}주차 의무 원금·이자 ${won(settlementAmount(g))} 미납. 게임 종료.`,
     );
   }
   return g.status === 'bankrupt';
@@ -384,6 +390,8 @@ export function newGame(seed = 1): Game {
     version: 2,
     timeMode: 'weekly-actions',
     weekActions: 0,
+    weeklyRulesVersion: 2,
+    principalRepaidThisWeek: 0,
     settling: false,
     seed: seed >>> 0,
     serial: 0,
@@ -738,6 +746,10 @@ export function execute(original: Game, command: Command): Result {
         const due = interestPending(g);
         money(g, -amount);
         g.principal -= amount;
+        g.principalRepaidThisWeek = Math.min(
+          RULES.maxMoney,
+          (g.principalRepaidThisWeek ?? 0) + amount,
+        );
         g.stats.repaid += amount;
         message = `원금 ${won(amount)} 상환했습니다.`;
         log(g, message);
@@ -760,6 +772,8 @@ export function execute(original: Game, command: Command): Result {
       }
       case 'payInterest': {
         const due = interestPending(g);
+        if (due && mandatoryPrincipal(g) > 0)
+          throw Error('이번 주 의무 원금을 먼저 납부하세요.');
         if (!due && g.interest === 0) throw Error('납부할 이자가 없습니다.');
         const amount = due ? interestAmount(g) : g.interest;
         affordable(g, amount);
@@ -770,6 +784,7 @@ export function execute(original: Game, command: Command): Result {
           g.minute += remaining * ACTION_TICK;
           g.interestWeek = paymentWeek(g);
           g.weekActions = 0;
+          g.principalRepaidThisWeek = 0;
           g.settling = false;
           g.inquiries = [];
           expire(g);
@@ -817,7 +832,9 @@ export function execute(original: Game, command: Command): Result {
         throw Error('지원하지 않는 행동입니다.');
     }
     const missed = settleWeekly(g);
-    if (missed) message = '주간 이자를 납부하지 못해 게임이 종료되었습니다.';
+    if (missed)
+      message =
+        '주간 의무 원금 또는 이자를 납부하지 못해 게임이 종료되었습니다.';
     return { game: g, ok: true, message };
   } catch (e) {
     return {

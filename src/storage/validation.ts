@@ -151,9 +151,21 @@ export function isGame(v: unknown): v is Game {
   if (v.timeMode !== undefined && Number(v.minute) % 480 !== 0) return false;
   if (
     v.timeMode === 'weekly-actions' &&
-    (!integer(v.weekActions, 30) ||
+    (!integer(v.weekActions, v.weeklyRulesVersion === 2 ? 20 : 30) ||
       typeof v.settling !== 'boolean' ||
       !integer(v.interestWeek))
+  )
+    return false;
+  if (v.weeklyRulesVersion !== undefined && v.weeklyRulesVersion !== 2)
+    return false;
+  if (
+    v.principalRepaidThisWeek !== undefined &&
+    !integer(v.principalRepaidThisWeek, RULES.maxMoney)
+  )
+    return false;
+  if (
+    v.weeklyRulesVersion === 2 &&
+    !integer(v.principalRepaidThisWeek, RULES.maxMoney)
   )
     return false;
   if (!integer(v.marketFactor, 200) || !kind(v.trend)) return false;
@@ -267,7 +279,12 @@ export function isGame(v: unknown): v is Game {
     !integer(
       v.interestWeek,
       Math.floor(
-        Number(v.minute) / (v.timeMode === 'weekly-actions' ? 14400 : 10080),
+        Number(v.minute) /
+          (v.timeMode === 'weekly-actions'
+            ? v.weeklyRulesVersion === 2
+              ? 9600
+              : 14400
+            : 10080),
       ),
     )
   )

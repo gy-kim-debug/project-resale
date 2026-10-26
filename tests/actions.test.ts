@@ -172,8 +172,10 @@ test('weekly payment commits once, saves the paid week and resumes with zero cas
   setup();
   const g = newGame(42);
   g.cash = 100000;
-  g.minute = 30 * 480;
-  g.weekActions = 30;
+  g.principal -= 50000;
+  g.principalRepaidThisWeek = 50000;
+  g.minute = 20 * 480;
+  g.weekActions = 20;
   g.settling = true;
   useGameStore.setState({ game: g });
   const completion = useGameStore.getState().act({ type: 'payInterest' });

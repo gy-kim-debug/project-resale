@@ -2,6 +2,7 @@
 export const RULES = {
   debt: 10_000_000_000,
   startingCash: 500_000,
+  weeklyPrincipalBase: 50_000,
   weeklyBaseRateUnits: 1,
   weeklyRateStepUnits: 2,
   capacity: 12,

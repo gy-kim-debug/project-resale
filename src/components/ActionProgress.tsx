@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ActionPresentation } from '../app/actionPresentation';
-import { actionsLeft, weekOf, dayStatus } from '../domain/game';
+import {
+  actionsLeft,
+  weekOf,
+  dayStatus,
+  ACTIONS_PER_WEEK,
+} from '../domain/game';
 
 /** Presentation only: the engine already committed the action and any new day. */
 export function ActionBudget({ action }: { action: ActionPresentation }) {
@@ -15,7 +20,7 @@ export function ActionBudget({ action }: { action: ActionPresentation }) {
     <>
       <span className="status-day">{weekOf(snapshot)}주차</span>
       <strong className="status-clock">
-        남은 행동 {actionsLeft(snapshot)}/30
+        남은 행동 {actionsLeft(snapshot)}/{ACTIONS_PER_WEEK}
       </strong>
     </>
   );
