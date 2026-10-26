@@ -16,6 +16,7 @@ import {
   isActiveMarketId,
   type MarketProduct,
 } from '../content/markets';
+import { createAuction, auctionBidOptions, placeAuctionBid } from './auction';
 import { TAG_RULES } from '../content/listingTags';
 import { toDailyActions } from './time';
 import { interestPending, interestAmount, paymentWeek } from './debt';
@@ -103,7 +104,11 @@ function makeItem(
   const condition =
     quality < 0.18 ? '고장' : quality < 0.55 ? '사용감' : '양호';
   const listing = marketListing
-    ? createListingInfo(template.kind, () => roll(g), free)
+    ? createListingInfo(
+        template.kind,
+        () => roll(g),
+        free || marketItem?.marketId === 'auction',
+      )
     : undefined;
   const rarityPercent = listing
     ? Math.floor(
@@ -139,7 +144,7 @@ function makeItem(
   price = listingAskPrice(marketItem?.asking ?? price, listing);
   if (marketItem)
     price = Math.max(marketDefinition(marketItem.marketId).min, price);
-  return {
+  const item: Item = {
     listing,
     ...(marketItem ? { marketId: marketItem.marketId } : {}),
     id: id(g),
@@ -178,6 +183,11 @@ function makeItem(
     negotiation: 'none',
     negotiatedPrice: null,
   };
+  if (marketItem?.marketId === 'auction') {
+    item.auction = createAuction(item.price, () => roll(g));
+    item.offers = [];
+  }
+  return item;
 }
 function board(g: Game, selected?: MarketId) {
   const list: Item[] = selected
@@ -476,9 +486,39 @@ export function execute(original: Game, command: Command): Result {
         message = '기다리기를 마쳤습니다.';
         log(g, message);
         break;
+      case 'bid': {
+        const item = preItem(g, command.id);
+        if (
+          item.marketId !== 'auction' ||
+          !auctionBidOptions(item).includes(command.amount)
+        )
+          throw Error('선택할 수 없는 입찰 금액입니다.');
+        affordable(g, command.amount);
+        message = placeAuctionBid(item, command.amount);
+        log(g, `${item.title}: ${message}`);
+        break;
+      }
+      case 'withdrawAuction': {
+        const item = preItem(g, command.id);
+        if (
+          item.marketId !== 'auction' ||
+          !item.auction ||
+          item.auction.status === 'withdrawn'
+        )
+          throw Error('진행 중인 경매가 없습니다.');
+        item.auction.status = 'withdrawn';
+        item.auction.history.push({
+          speaker: 'player',
+          text: '이번 경매는 포기하겠습니다.',
+        });
+        message = '경매를 포기했습니다.';
+        log(g, message);
+        break;
+      }
       case 'offer': {
         const i = preItem(g, command.id);
         if (
+          i.marketId === 'auction' ||
           i.price === 0 ||
           i.chatSettled ||
           (i.purchaseBargain &&
@@ -574,7 +614,12 @@ export function execute(original: Game, command: Command): Result {
         if (item.purchaseBargain?.walked)
           throw Error('판매자가 거래를 종료했습니다.');
         room(g);
-        const cost = item.negotiatedPrice ?? item.price;
+        if (item.marketId === 'auction' && item.auction?.status !== 'won')
+          throw Error('낙찰 후 결제할 수 있습니다.');
+        const cost =
+          item.marketId === 'auction'
+            ? item.auction!.currentBid
+            : (item.negotiatedPrice ?? item.price);
         affordable(g, cost);
         money(g, -cost);
         const received = {

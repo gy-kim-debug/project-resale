@@ -1087,3 +1087,10 @@ html {
   font-size: 12px;
   color: var(--muted);
 }
+
+.auction-prices dd {
+  font-weight: 700;
+  color: #d4e4a9;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}

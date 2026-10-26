@@ -8,6 +8,7 @@ import {
   type SaveData,
 } from '../src/storage/saveRepository';
 import { newGame, execute } from '../src/domain/engine';
+import { auctionBidOptions } from '../src/domain/auction';
 import { ACTION_TICK } from '../src/domain/game';
 import {
   ACTION_DURATION_MS,
@@ -297,4 +298,37 @@ test('market selection is free, persisted and restored without changing any game
   s.getState().startOver();
   assert.equal(s.getState().selectedMarket, 'street');
   await flushSaves();
+});
+
+test('auction replies save immediately without loading or action cost; settlement still presents once', async () => {
+  await flushSaves();
+  setup();
+  const s = useGameStore;
+  const game = structuredClone(s.getState().game!);
+  game.cash = 100000000000;
+  s.setState({ game });
+  const lot = game.board.find((i) => i.marketId === 'auction')!;
+  while (
+    s.getState().game!.board.find((i) => i.id === lot.id)!.auction!.status !==
+    'won'
+  ) {
+    const live = s.getState().game!.board.find((i) => i.id === lot.id)!;
+    await s
+      .getState()
+      .act({ type: 'bid', id: lot.id, amount: auctionBidOptions(live)[0] });
+    assert.equal(s.getState().action, null);
+    assert.equal(s.getState().game!.minute, game.minute);
+    assert.equal(s.getState().game!.cash, game.cash);
+  }
+  await flushSaves();
+  assert.equal(
+    writes.at(-1)!.game.board.find((i) => i.id === lot.id)!.auction!.status,
+    'won',
+  );
+  const settled = s.getState().act({ type: 'buy', id: lot.id });
+  assert.ok(s.getState().action);
+  assert.equal(await s.getState().act({ type: 'buy', id: lot.id }), false);
+  await settled;
+  await flushSaves();
+  assert.equal(s.getState().game!.inventory[0].id, lot.id);
 });

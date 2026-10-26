@@ -15,6 +15,7 @@ import {
   repairCost,
 } from '../domain/engine';
 import { MARKETS, marketDefinition, marketOf } from '../content/markets';
+import { auctionBidOptions } from '../domain/auction';
 import { JOBS, OUTLETS, RULES } from '../content/rules';
 import {
   interestPending,
@@ -375,7 +376,13 @@ export function MarketView({
           <ItemRow
             key={i.id}
             item={i}
-            detail={free ? '무료나눔' : won(i.price)}
+            detail={
+              free
+                ? '무료나눔'
+                : i.auction
+                  ? `${i.auction.currentBid ? '현재가' : '시작가'} ${won(i.auction.currentBid || i.price)}`
+                  : won(i.price)
+            }
             onClick={() => open({ kind: '매물', id: i.id })}
           />
         ))
@@ -574,7 +581,9 @@ export function OwnedView({
         </section>
       ) : (
         <Button onClick={() => open({ kind: '판매 등록', id: item.id })}>
-          {marketDefinition(marketOf(item)).name}에 판매 등록
+          {item.marketId === 'auction'
+            ? '위탁 판매 등록'
+            : `${marketDefinition(marketOf(item)).name}에 판매 등록`}
         </Button>
       )}
       <Button onClick={() => open({ kind: '매각처' })}>매각처 방문</Button>
@@ -835,7 +844,11 @@ export function RouteView({
       return <MarketView g={g} open={open} free />;
     case '매물':
       return listing ? (
-        <ListingView g={g} item={listing} act={act} />
+        listing.marketId === 'auction' ? (
+          <AuctionListingView g={g} item={listing} act={act} />
+        ) : (
+          <ListingView g={g} item={listing} act={act} />
+        )
       ) : (
         <div className="empty">
           <h2>매물이 종료됐습니다.</h2>
@@ -1015,6 +1028,94 @@ function MailboxView({ g, open }: { g: Game; open: (route: Route) => void }) {
         })}
       </ol>
       {!g.logs.length && <p>받은 알림이 없습니다.</p>}
+    </>
+  );
+}
+
+function AuctionListingView({
+  g,
+  item,
+  act,
+}: {
+  g: Game;
+  item: Item;
+  act: Act;
+}) {
+  const [confirm, setConfirm] = useState(false);
+  const favorites = useGameStore((s) => s.favoriteIds);
+  const toggle = useGameStore((s) => s.toggleFavorite);
+  const auction = item.auction;
+  if (!auction) return <p>경매가 종료됐습니다.</p>;
+  const wonAuction = auction.status === 'won';
+  return (
+    <>
+      <ItemArt item={item} large />
+      <h2>{item.title}</h2>
+      <ItemTags item={item} />
+      <p className="asset-market">고가 경매시장</p>
+      <p className="lead">{item.description}</p>
+      <dl className="auction-prices">
+        <div>
+          <dt>시작가</dt>
+          <dd>{won(item.price)}</dd>
+        </div>
+        <div>
+          <dt>{wonAuction ? '낙찰가' : '현재 입찰가'}</dt>
+          <dd>{auction.currentBid ? won(auction.currentBid) : '입찰 없음'}</dd>
+        </div>
+      </dl>
+      <p>매물 유효 기간: {durationText(item.expires - g.minute)} 남음</p>
+      <Button onClick={() => toggle(item.id)}>
+        {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
+      </Button>
+      <TradeChat name="경매 진행" messages={auction.history} />
+      {auctionBidOptions(item).map((amount) => (
+        <Button
+          key={amount}
+          disabled={g.cash < amount}
+          onClick={() => act({ type: 'bid', id: item.id, amount })}
+        >
+          {won(amount)} 입찰 · 행동 소모 없음
+        </Button>
+      ))}
+      {wonAuction &&
+        (!confirm ? (
+          <Button onClick={() => setConfirm(true)}>
+            낙찰 내용 확인 · {won(auction.currentBid)}
+          </Button>
+        ) : (
+          <section className="card">
+            <h3>낙찰 대금 확인</h3>
+            <p>{won(auction.currentBid)} · 행동 1회</p>
+            <Button
+              disabled={
+                g.cash < auction.currentBid ||
+                g.inventory.length >= RULES.capacity
+              }
+              onClick={() => act({ type: 'buy', id: item.id })}
+            >
+              낙찰 대금 결제 · 행동 1회
+            </Button>
+            <Button onClick={() => setConfirm(false)}>돌아가기</Button>
+          </section>
+        ))}
+      {auction.status !== 'withdrawn' && (
+        <Button
+          danger
+          onClick={() => act({ type: 'withdrawAuction', id: item.id })}
+        >
+          {wonAuction ? '낙찰 포기' : '입찰 포기'} · 행동 소모 없음
+        </Button>
+      )}
+      {auction.status === 'withdrawn' && (
+        <p className="chat-ended">경매를 포기했습니다.</p>
+      )}
+      {wonAuction && g.cash < auction.currentBid && (
+        <p className="warning">현금이 부족합니다.</p>
+      )}
+      {wonAuction && g.inventory.length >= RULES.capacity && (
+        <p className="warning">보관함이 가득 찼습니다.</p>
+      )}
     </>
   );
 }

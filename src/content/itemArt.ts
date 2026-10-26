@@ -40,7 +40,8 @@ type Motif =
   | 'instrument'
   | 'car'
   | 'house'
-  | 'plane';
+  | 'plane'
+  | 'gem';
 const motifs: Motif[][] = [
   ['lamp', 'keyboard', 'chair', 'radio', 'camera', 'vase'],
   ['lamp', 'keyboard', 'stool', 'radio', 'lens', 'figure'],
@@ -59,6 +60,12 @@ TIER_TITLES.forEach((titles, tier) =>
 );
 for (const title of ['게이밍 노트북', '크리에이터 노트북'])
   namedArt.set(title, { motif: 'laptop', tier: 2 });
+namedArt.set('근현대 회화', { motif: 'art', tier: 6 });
+namedArt.set('희귀 도자기', { motif: 'vase', tier: 6 });
+namedArt.set('고급 기계식 시계', { motif: 'watch', tier: 6 });
+namedArt.set('앤티크 조각상', { motif: 'figure', tier: 6 });
+namedArt.set('천연 다이아몬드', { motif: 'gem', tier: 6 });
+namedArt.set('희귀 보석 목걸이', { motif: 'gem', tier: 6 });
 namedArt.set('입문용 카메라', { motif: 'camera', tier: 0 });
 namedArt.set('수집한 생활 잡화', { motif: 'junk', tier: 0 });
 namedArt.set('수집한 낡은 소품', { motif: 'trinket', tier: 0 });
@@ -480,6 +487,17 @@ function draw(motif: Motif, tier: number): Pixel[] {
       r(22, 10, 3, 6, red);
       r(21, 17, 5, 3, wood);
       r(4, 26, 24, 2, woodDark);
+      break;
+    case 'gem':
+      r(9, 6, 14, 3, glass);
+      r(5, 9, 22, 5, blue);
+      r(8, 14, 16, 4, glass);
+      r(11, 18, 10, 4, blue);
+      r(14, 22, 4, 5, glass);
+      r(14, 8, 4, 14, light);
+      r(6, 12, 20, 2, paper);
+      r(23, 3, 2, 5, light);
+      r(21, 5, 6, 1, light);
       break;
     case 'instrument':
       r(14, 2, 4, 17, wood);

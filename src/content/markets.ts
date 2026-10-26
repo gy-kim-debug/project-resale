@@ -113,6 +113,23 @@ const MARKET_DEFINITIONS: MarketDefinition[] = [
     ]),
   },
   {
+    id: 'auction',
+    name: '고가 경매시장',
+    min: 1000000000,
+    max: 10000000000,
+    products: products('수집품', [
+      '근현대 회화',
+      '천연 다이아몬드',
+      '희귀 도자기',
+      '고급 기계식 시계',
+      '앤티크 조각상',
+      '희귀 보석 목걸이',
+    ]).map((product) => ({
+      ...product,
+      description: '개인 컬렉션에서 출품된 작품입니다.',
+    })),
+  },
+  {
     id: 'aircraft',
     name: '비행기 시장',
     min: 2000000000,

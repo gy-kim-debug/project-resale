@@ -25,6 +25,7 @@ import {
 } from '../src/domain/listingTags';
 import { TAG_RULES, KIND_TAGS } from '../src/content/listingTags';
 import type { ListingTag, SellerTrait } from '../src/domain/game';
+import { auctionBidOptions } from '../src/domain/auction';
 import { MARKETS, marketOf } from '../src/content/markets';
 import { RULES } from '../src/content/rules';
 import { isGame } from '../src/storage/validation';
@@ -416,7 +417,13 @@ for (const seed of [1, 42, 210])
         .sort((a, b) => b.price - a.price);
       const candidate = affordable[0];
       // Use only public prices and seller replies before buying; condition is hidden.
-      if (
+      if (candidate?.auction && candidate.auction.status !== 'won')
+        step({
+          type: 'bid',
+          id: candidate.id,
+          amount: auctionBidOptions(candidate)[0],
+        });
+      else if (
         candidate &&
         !candidate.chatSettled &&
         candidate.negotiation !== 'accepted' &&
@@ -1494,7 +1501,18 @@ test('every market supports purchase, zero-action verification, source-specific 
     g.cash = 100000000000;
     g.stats.peakCash = g.cash;
     const item = g.board.find((i) => i.marketId === market.id)!;
-    const price = item.price;
+    if (item.auction) {
+      while (g.board.find((i) => i.id === item.id)!.auction!.status !== 'won') {
+        const live = g.board.find((i) => i.id === item.id)!;
+        g = run(g, {
+          type: 'bid',
+          id: item.id,
+          amount: auctionBidOptions(live)[0],
+        });
+      }
+    }
+    const price =
+      g.board.find((i) => i.id === item.id)!.auction?.currentBid ?? item.price;
     g = run(g, { type: 'buy', id: item.id });
     assert.equal(g.inventory[0].marketId, market.id);
     assert.equal(g.inventory[0].acquiredFor, price);
@@ -1519,6 +1537,7 @@ test('every market supports purchase, zero-action verification, source-specific 
       cars: 'carDealer',
       property: 'propertyBroker',
       aircraft: 'aircraftBroker',
+      auction: 'collector',
     }[market.id];
     const visited = run(g, { type: 'visit', id: outletId });
     assert.ok(visited.quotes!.prices[item.id] > 0);
@@ -1578,7 +1597,7 @@ test('day-end refresh includes all active markets and preserves purchased assets
 
 test('retired aircraft market is absent from new boards and cannot be refreshed', () => {
   const game = newGame(42);
-  assert.equal(MARKETS.length, 5);
+  assert.equal(MARKETS.length, 6);
   assert.ok(!game.board.some((item) => item.marketId === 'aircraft'));
   const result = execute(game, { type: 'refresh', marketId: 'aircraft' });
   assert.equal(result.ok, false);
@@ -1631,4 +1650,121 @@ test('retired market saves drop only NPC aircraft listings and preserve owned as
   assert.ok(visited.quotes!.prices[aircraft.id] > 0);
   const sold = run(visited, { type: 'outletSell', id: aircraft.id });
   assert.equal(sold.inventory.length, 0);
+});
+
+test('auction bidding is free and stable, rival replies are bounded, and only won settlement transfers money once', () => {
+  for (let seed = 1; seed <= 30; seed++) {
+    let g = newGame(seed);
+    g.cash = 100000000000;
+    const lot = g.board.find((i) => i.marketId === 'auction')!;
+    const before = structuredClone(g);
+    assert.equal(execute(g, { type: 'buy', id: lot.id }).ok, false);
+    assert.equal(
+      execute(g, { type: 'offer', id: lot.id, price: lot.price }).ok,
+      false,
+    );
+    let last = 0;
+    while (g.board.find((i) => i.id === lot.id)!.auction!.status !== 'won') {
+      const live = g.board.find((i) => i.id === lot.id)!;
+      const next = auctionBidOptions(live)[0];
+      assert.ok(next > last);
+      last = next;
+      const original = structuredClone(g);
+      const duplicate = execute(g, { type: 'bid', id: lot.id, amount: 1 });
+      assert.equal(duplicate.ok, false);
+      assert.deepEqual(duplicate.game, original);
+      g = run(g, { type: 'bid', id: lot.id, amount: next });
+      assert.equal(g.minute, before.minute);
+      assert.equal(g.cash, before.cash);
+      assert.equal(g.seed, before.seed);
+      assert.equal(g.inventory.length, 0);
+      assert.ok(isGame(g));
+      assert.ok(g.board.find((i) => i.id === lot.id)!.auction!.rounds <= 6);
+      const restored = parseSave(
+        JSON.parse(
+          JSON.stringify({
+            version: 2,
+            game: g,
+            favoriteIds: [],
+            selectedMarket: 'auction',
+          }),
+        ),
+      );
+      assert.deepEqual(restored.game, g);
+      g = restored.game;
+    }
+    const won = g.board.find((i) => i.id === lot.id)!;
+    const paid = run(g, { type: 'buy', id: lot.id });
+    assert.equal(paid.inventory[0].acquiredFor, won.auction!.currentBid);
+    assert.equal(paid.cash, before.cash - won.auction!.currentBid);
+    assert.equal(paid.minute, before.minute + ACTION_TICK);
+    assert.equal(execute(paid, { type: 'buy', id: lot.id }).ok, false);
+    assert.ok(isGame(paid));
+  }
+});
+
+test('auction insufficient funds, withdrawal, malformed state and expired lots cannot be bypassed', () => {
+  const game = newGame(3);
+  const lot = game.board.find((i) => i.marketId === 'auction')!;
+  const amount = auctionBidOptions(lot)[0];
+  const poor = execute(game, { type: 'bid', id: lot.id, amount });
+  assert.equal(poor.ok, false);
+  assert.deepEqual(poor.game, game);
+  game.cash = 100000000000;
+  const withdrawn = run(game, { type: 'withdrawAuction', id: lot.id });
+  assert.equal(withdrawn.minute, game.minute);
+  assert.equal(withdrawn.cash, game.cash);
+  assert.equal(
+    execute(withdrawn, { type: 'bid', id: lot.id, amount }).ok,
+    false,
+  );
+  assert.equal(execute(withdrawn, { type: 'buy', id: lot.id }).ok, false);
+  for (const change of [
+    { step: 0 },
+    { rounds: 7 },
+    { status: 'won', currentBid: 1 },
+    { competitorMax: -1 },
+    { history: [{ speaker: 'other', text: 10 }] },
+  ]) {
+    const invalid = structuredClone(game);
+    Object.assign(invalid.board.find((i) => i.id === lot.id)!.auction!, change);
+    assert.equal(isGame(invalid), false);
+  }
+  const expired = structuredClone(game);
+  expired.board.find((i) => i.id === lot.id)!.expires = 0;
+  assert.equal(execute(expired, { type: 'bid', id: lot.id, amount }).ok, false);
+});
+
+test('won auction settlement rechecks cash, inventory and weekly locks without losing the winning bid', () => {
+  let game = newGame(22);
+  game.cash = 100000000000;
+  const lot = game.board.find((i) => i.marketId === 'auction')!;
+  while (game.board.find((i) => i.id === lot.id)!.auction!.status !== 'won') {
+    const live = game.board.find((i) => i.id === lot.id)!;
+    game = run(game, {
+      type: 'bid',
+      id: lot.id,
+      amount: auctionBidOptions(live)[0],
+    });
+  }
+  const live = game.board.find((i) => i.id === lot.id)!;
+  const lowCash = structuredClone(game);
+  lowCash.cash = live.auction!.currentBid - 1;
+  const refused = execute(lowCash, { type: 'buy', id: lot.id });
+  assert.equal(refused.ok, false);
+  assert.deepEqual(refused.game, lowCash);
+  const full = structuredClone(game);
+  full.inventory = Array.from({ length: RULES.capacity }, (_, n) => ({
+    ...structuredClone(full.board[0]),
+    id: `owned-${n}`,
+  }));
+  assert.equal(execute(full, { type: 'buy', id: lot.id }).ok, false);
+  const due = structuredClone(game);
+  due.minute = WEEK_TICKS;
+  due.board.find((i) => i.id === lot.id)!.expires = due.minute + 1440;
+  assert.equal(execute(due, { type: 'buy', id: lot.id }).ok, false);
+  assert.equal(execute(due, { type: 'withdrawAuction', id: lot.id }).ok, false);
+  const withdrawn = run(game, { type: 'withdrawAuction', id: lot.id });
+  assert.equal(execute(withdrawn, { type: 'buy', id: lot.id }).ok, false);
+  assert.equal(withdrawn.cash, game.cash);
 });

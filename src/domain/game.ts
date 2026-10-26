@@ -9,7 +9,13 @@ export type Kind =
   | '부동산'
   | '항공기';
 export type MarketId =
-  'street' | 'computers' | 'instruments' | 'cars' | 'property' | 'aircraft';
+  | 'street'
+  | 'computers'
+  | 'instruments'
+  | 'cars'
+  | 'property'
+  | 'aircraft'
+  | 'auction';
 export type Condition = '양호' | '사용감' | '고장';
 export type Status = 'playing' | 'bankrupt' | 'dead' | 'cleared';
 export interface ChatMessage {
@@ -46,7 +52,16 @@ export interface ListingInfo {
     seller: SellerTrait;
   };
 }
+export interface Auction {
+  currentBid: number;
+  competitorMax: number;
+  step: number;
+  rounds: number;
+  status: 'open' | 'outbid' | 'won' | 'withdrawn';
+  history: ChatMessage[];
+}
 export interface Item {
+  auction?: Auction;
   marketId?: MarketId;
   listing?: ListingInfo;
   purchaseBargain?: {
@@ -145,6 +160,8 @@ export type Command =
   | { type: 'wait' }
   | { type: 'offer'; id: string; price: number }
   | { type: 'buy'; id: string }
+  | { type: 'bid'; id: string; amount: number }
+  | { type: 'withdrawAuction'; id: string }
   | { type: 'closeChat'; id: string }
   | { type: 'check'; id: string }
   | { type: 'repair'; id: string }

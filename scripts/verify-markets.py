@@ -6,7 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 subprocess.run(['node','scripts/prepare-browser-fixtures.mjs'],check=True)
 BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
-MARKETS=[('street','장터',10000,500000),('computers','컴퓨터시장',800000,1200000),('instruments','악기시장',1500000,10000000),('cars','중고차시장',10000000,80000000),('property','부동산 시장',100000000,1000000000)]
+MARKETS=[('street','장터',10000,500000),('computers','컴퓨터시장',800000,1200000),('instruments','악기시장',1500000,10000000),('cars','중고차시장',10000000,80000000),('property','부동산 시장',100000000,1000000000),('auction','고가 경매시장',1000000000,10000000000)]
 READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result)}})}"""
 WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""
 with sync_playwright() as p:
@@ -19,7 +19,7 @@ with sync_playwright() as p:
   def market():page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click()
   def read():return page.evaluate(READ)
   market();before=read()['game'];seen=set()
-  expect(page.locator('.market-selector button')).to_have_count(5)
+  expect(page.locator('.market-selector button')).to_have_count(6)
   expect(page.locator('.market-selector').get_by_role('button',name='비행기 시장',exact=True)).to_have_count(0)
   for mid,name,low,high in MARKETS:
    page.locator('.market-selector').get_by_role('button',name=name,exact=True).click()
@@ -33,13 +33,14 @@ with sync_playwright() as p:
    seen.update(i['title'] for i in rows)
    page.locator('.item-row').first.click()
    expect(page.locator('.asset-market')).to_have_text(name)
-   if low>before['cash']:expect(page.get_by_role('button',name='구매 내용 확인')).to_be_disabled()
+   if low>before['cash'] and mid!='auction':expect(page.get_by_role('button',name='구매 내용 확인')).to_be_disabled()
+   if mid=='auction': assert page.get_by_role('button',name=' 입찰 · 행동 소모 없음').count()==3
    page.get_by_role('button',name='← 뒤로',exact=True).click()
    expect(page.locator('.market-selection strong')).to_have_text(name)
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   page.screenshot(path=f'work/markets-{width}.png',full_page=True)
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();market()
-  expect(page.locator('.market-selection strong')).to_have_text('부동산 시장')
+  expect(page.locator('.market-selection strong')).to_have_text('고가 경매시장')
   page.locator('.market-selector').get_by_role('button',name='컴퓨터시장',exact=True).click()
   before=read()['game']
   page.get_by_role('button',name='새 매물 탐색 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
@@ -71,13 +72,13 @@ with sync_playwright() as p:
   old_listing=json.loads(json.dumps(plane));old_listing['id']='legacy-plane-listing';legacy['game']['board'].append(old_listing);legacy['selectedMarket']='aircraft'
   page.evaluate(WRITE,legacy);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();market()
   expect(page.locator('.market-selection strong')).to_have_text('장터')
-  expect(page.locator('.market-selector button')).to_have_count(5)
+  expect(page.locator('.market-selector button')).to_have_count(6)
   page.locator('.market-selector').get_by_role('button',name='컴퓨터시장',exact=True).click()
   normalized=read();assert normalized['selectedMarket']=='computers'
   assert not any(i.get('marketId')=='aircraft' for i in normalized['game']['board'])
   assert normalized['game']['inventory'][0]==plane
   assert normalized['game']['cash']==legacy['game']['cash'] and normalized['game']['minute']==legacy['game']['minute']
   assert not errors,errors
-  print(json.dumps({'width':width,'five_markets_free_switch_refresh_purchase_verification_backup':'PASS'}),flush=True)
+  print(json.dumps({'width':width,'six_markets_free_switch_refresh_purchase_verification_backup':'PASS'}),flush=True)
   ctx.close()
  browser.close()

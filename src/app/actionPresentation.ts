@@ -31,6 +31,8 @@ export function actionLabel(command: Command): string {
     wait: '기다리는 중…',
     offer: '가격을 제안하는 중…',
     buy: '물품을 받는 중…',
+    bid: '입찰하는 중…',
+    withdrawAuction: '경매를 마무리하는 중…',
     closeChat: '흥정을 마무리하는 중…',
     check: '가치를 확인하는 중…',
     repair: '수리하는 중…',

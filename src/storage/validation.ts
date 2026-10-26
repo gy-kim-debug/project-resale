@@ -11,6 +11,8 @@ import {
   marketDefinition,
   LEGACY_BOARD_LIMIT,
 } from '../content/markets';
+import { auctionStep } from '../domain/auction';
+import { AUCTION_RULES } from '../content/auction';
 import { RULES } from '../content/rules';
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -59,6 +61,37 @@ function item(v: unknown): v is Item {
     ) &&
     (v.acquiredFor === undefined || integer(v.acquiredFor, RULES.maxMoney)) &&
     chat(v.chat) &&
+    (v.auction === undefined ||
+      (v.marketId === 'auction' &&
+        record(v.auction) &&
+        integer(v.auction.currentBid, RULES.maxMoney) &&
+        integer(v.auction.competitorMax, RULES.maxMoney) &&
+        v.auction.competitorMax >=
+          Number(v.price) + auctionStep(Number(v.price)) &&
+        v.auction.competitorMax <=
+          (Number(v.price) * AUCTION_RULES.competitorMaxPercent) / 100 &&
+        integer(v.auction.step, RULES.maxMoney) &&
+        v.auction.step === auctionStep(Number(v.price)) &&
+        (v.auction.competitorMax - Number(v.price)) % v.auction.step === 0 &&
+        (v.auction.currentBid === 0 ||
+          (v.auction.currentBid - Number(v.price)) % v.auction.step === 0) &&
+        integer(v.auction.rounds, 6) &&
+        ['open', 'outbid', 'won', 'withdrawn'].includes(
+          String(v.auction.status),
+        ) &&
+        Array.isArray(v.auction.history) &&
+        chat(v.auction.history) &&
+        (v.auction.status !== 'open' ||
+          (v.auction.currentBid === 0 && v.auction.rounds === 0)) &&
+        (!['outbid', 'won'].includes(String(v.auction.status)) ||
+          (Number(v.auction.currentBid) >= Number(v.price) &&
+            Number(v.auction.rounds) > 0)) &&
+        (v.auction.status !== 'outbid' ||
+          (Number(v.auction.rounds) < 6 &&
+            Number(v.auction.currentBid) <= Number(v.auction.competitorMax))) &&
+        (v.auction.status !== 'won' ||
+          Number(v.auction.currentBid) >= Number(v.auction.competitorMax)))) &&
+    (v.marketId !== 'auction' || v.auction !== undefined) &&
     (v.marketId === undefined || isMarketId(v.marketId)) &&
     listing(v.listing, v.kind) &&
     (v.purchaseBargain === undefined ||
