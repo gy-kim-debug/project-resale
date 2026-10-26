@@ -19,8 +19,8 @@ with sync_playwright() as p:
         assert page.locator('.action-layer').count()==0
         start=time.monotonic();page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
         expect(page.locator('.action-layer')).to_be_visible()
-        expect(page.locator('.action-time')).to_contain_text('1일째 · 남은 행동 3/3')
-        expect(page.locator('.action-time')).to_contain_text('1일째 · 남은 행동 2/3')
+        expect(page.locator('.action-time')).to_contain_text('1주차 · 남은 행동 30/30')
+        expect(page.locator('.action-time')).to_contain_text('1주차 · 남은 행동 29/30')
         expect(page.locator('.status-top')).to_contain_text('현금 500,000 원')
         assert page.locator('.game-scene').get_attribute('inert') is not None
         assert page.locator('.header-tools button:disabled').count()==2
@@ -34,7 +34,7 @@ with sync_playwright() as p:
         elapsed=time.monotonic()-start
         assert elapsed>=0.5
         expect(page.locator('.status-top')).to_contain_text('509,000 원')
-        expect(page.locator('.status-top')).to_contain_text('남은 행동 2/3')
+        expect(page.locator('.status-top')).to_contain_text('남은 행동 29/30')
         assert page.locator('.status-header .stat-changed').count()>=2
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         # A refresh during presentation restores the committed action, with no replay.
@@ -42,13 +42,13 @@ with sync_playwright() as p:
         expect(page.locator('.action-layer')).to_be_visible()
         page.wait_for_function("async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result);});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result?.game?.cash===518000);};});}")
         page.reload();expect(page.locator('.status-top')).to_contain_text('518,000 원')
-        expect(page.locator('.status-top')).to_contain_text('남은 행동 1/3')
+        expect(page.locator('.status-top')).to_contain_text('남은 행동 28/30')
         assert page.locator('.action-layer').count()==0
         page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
         page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
-        expect(page.locator('.action-time')).to_contain_text('2일째')
+        expect(page.locator('.action-time')).to_contain_text('1주차')
         expect(page.locator('.action-layer')).to_have_count(0)
-        expect(page.locator('.status-top')).to_contain_text('2일째')
+        expect(page.locator('.status-top')).to_contain_text('1주차')
         assert not errors,errors
         results.append({'viewport':f'{width}x{height}','presentation':'PASS','double_input':'PASS','reload_mid_action':'PASS','observed_seconds':round(elapsed,2)})
         context.close()

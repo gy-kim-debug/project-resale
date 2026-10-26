@@ -1,4 +1,4 @@
-/** Serializable game types. KRW uses safe integers; the legacy minute field stores discrete daily action ticks. */
+/** Serializable game types. KRW uses safe integers; the legacy minute field stores discrete action ticks. */
 export type Kind =
   | '생활'
   | '디지털'
@@ -109,6 +109,7 @@ export interface Inquiry {
   rounds: number;
 }
 export interface Log {
+  week?: number;
   id: number;
   minute: number;
   text: string;
@@ -122,7 +123,9 @@ export interface Event {
 }
 export interface Game {
   version: 2;
-  timeMode?: 'daily-actions';
+  timeMode?: 'daily-actions' | 'weekly-actions';
+  weekActions?: number;
+  settling?: boolean;
   seed: number;
   serial: number;
   minute: number;
@@ -176,6 +179,7 @@ export type Command =
   | { type: 'outletSell'; id: string }
   | { type: 'repay'; amount: number }
   | { type: 'payInterest' }
+  | { type: 'startSettlement' }
   | { type: 'event'; choice: 'yes' | 'no' };
 export interface Result {
   game: Game;
@@ -186,18 +190,13 @@ export const won = (n: number) => `${n.toLocaleString('ko-KR')} 원`;
 export const dayOf = (g: Game) => Math.floor(g.minute / 1440) + 1;
 export const ACTIONS_PER_DAY = 3;
 export const ACTION_TICK = 480;
-export const actionsLeft = (g: Game) =>
-  ACTIONS_PER_DAY - Math.floor((g.minute % 1440) / ACTION_TICK);
+export const ACTIONS_PER_WEEK = 30;
+export const weekOf = (g: Game) => (g.interestWeek ?? 0) + 1;
+export const actionsLeft = (g: Game) => ACTIONS_PER_WEEK - (g.weekActions ?? 0);
 export const dayStatus = (g: Game) =>
-  `${dayOf(g)}일째 · 남은 행동 ${actionsLeft(g)}/${ACTIONS_PER_DAY}`;
+  `${weekOf(g)}주차 · 남은 행동 ${actionsLeft(g)}/${ACTIONS_PER_WEEK}`;
 export const isMoney = (n: number) => Number.isSafeInteger(n) && n >= 0;
 
-/** Durations in days and actions; no wall clock is exposed. */
-export const durationText = (ticks: number) => {
-  const actions = Math.ceil(Math.max(0, ticks) / ACTION_TICK);
-  const days = Math.floor(actions / ACTIONS_PER_DAY);
-  const rest = actions % ACTIONS_PER_DAY;
-  return days
-    ? `${days}일${rest ? ` · 행동 ${rest}회` : ''}`
-    : `행동 ${rest}회`;
-};
+/** Deadlines are measured in remaining actions, never calendar days. */
+export const durationText = (ticks: number) =>
+  `행동 ${Math.ceil(Math.max(0, ticks) / ACTION_TICK)}회`;

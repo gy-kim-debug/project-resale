@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ActionPresentation } from '../app/actionPresentation';
-import { actionsLeft, dayOf, dayStatus } from '../domain/game';
+import { actionsLeft, weekOf, dayStatus } from '../domain/game';
 
 /** Presentation only: the engine already committed the action and any new day. */
 export function ActionBudget({ action }: { action: ActionPresentation }) {
@@ -13,9 +13,9 @@ export function ActionBudget({ action }: { action: ActionPresentation }) {
   const snapshot = finished ? action.after : action.before;
   return (
     <>
-      <span className="status-day">{dayOf(snapshot)}일째</span>
+      <span className="status-day">{weekOf(snapshot)}주차</span>
       <strong className="status-clock">
-        남은 행동 {actionsLeft(snapshot)}/3
+        남은 행동 {actionsLeft(snapshot)}/30
       </strong>
     </>
   );
@@ -59,7 +59,8 @@ export function ActionProgress({ action }: { action: ActionPresentation }) {
         <h2 id="action-title" role="status">
           {action.label}
         </h2>
-        {action.before.minute !== action.after.minute && (
+        {(action.before.minute !== action.after.minute ||
+          weekOf(action.before) !== weekOf(action.after)) && (
           <div className="action-time" aria-label="행동 전후 상태">
             <time>{dayStatus(action.before)}</time>
             <span aria-hidden="true">→</span>

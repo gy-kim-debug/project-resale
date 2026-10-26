@@ -1,5 +1,5 @@
 import type { Command, Game, Item, Result, Kind, MarketId } from './game';
-import { dayOf, isMoney, won, ACTION_TICK } from './game';
+import { dayOf, isMoney, won, ACTION_TICK, actionsLeft, weekOf } from './game';
 import { nextPurchaseOffers } from './purchaseBargaining';
 import {
   createListingInfo,
@@ -18,7 +18,7 @@ import {
 } from '../content/markets';
 import { createAuction, auctionBidOptions, placeAuctionBid } from './auction';
 import { TAG_RULES } from '../content/listingTags';
-import { toDailyActions } from './time';
+import { toWeeklyActions } from './time';
 import { interestPending, interestAmount, paymentWeek } from './debt';
 import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
 import {
@@ -67,7 +67,7 @@ export function repairCost(item: Item) {
   return Math.max(300, Math.floor((item.base * 12) / 100));
 }
 export function log(g: Game, text: string) {
-  g.logs.unshift({ id: ++g.serial, minute: g.minute, text });
+  g.logs.unshift({ id: ++g.serial, minute: g.minute, week: weekOf(g), text });
   g.logs = g.logs.slice(0, 80);
 }
 function money(g: Game, amount: number) {
@@ -233,13 +233,12 @@ function daily(g: Game) {
     g.trend = ['생활', '디지털', '가구', '수집품'][
       Math.floor(roll(g) * 4)
     ] as Kind;
-    log(g, `시장 변화: 오늘은 ${g.trend} 수요가 높습니다.`);
+    log(g, `시장 변화: ${g.trend} 수요가 높습니다.`);
   }
 }
 function endDay(g: Game, before: number) {
   g.minute = (Math.floor(before / 1440) + 1) * 1440;
   daily(g);
-  log(g, '오늘의 행동을 모두 마쳤습니다.');
   board(g);
 }
 function expire(g: Game) {
@@ -327,8 +326,11 @@ function event(g: Game) {
     log(g, '이웃에게 시간 제한이 있는 제안이 왔습니다.');
   }
 }
-/** Each major action spends one of three daily actions. No offline progression. */
+/** Each major action spends the weekly budget; settlement never starts implicitly. */
 function advance(g: Game, actions: number, generate = true) {
+  if (actions > actionsLeft(g))
+    throw Error('이번 주 행동을 모두 사용했습니다. 정산을 진행하세요.');
+  g.weekActions = (g.weekActions ?? 0) + actions;
   const before = g.minute;
   g.minute += actions * ACTION_TICK;
   if (dayOf(g) > Math.floor(before / 1440) + 1) endDay(g, before);
@@ -336,7 +338,7 @@ function advance(g: Game, actions: number, generate = true) {
   expire(g);
   settleWeekly(g);
   if (interestPending(g) || g.status !== 'playing') return;
-  if (generate) inquiries(g);
+  if (generate && actionsLeft(g) > 0) inquiries(g);
   event(g);
 }
 function settleWeekly(g: Game) {
@@ -386,7 +388,9 @@ function preItem(g: Game, itemId: string) {
 export function newGame(seed = 1): Game {
   const g: Game = {
     version: 2,
-    timeMode: 'daily-actions',
+    timeMode: 'weekly-actions',
+    weekActions: 0,
+    settling: false,
     seed: seed >>> 0,
     serial: 0,
     minute: 0,
@@ -423,7 +427,7 @@ export function newGame(seed = 1): Game {
 }
 export function execute(original: Game, command: Command): Result {
   // Copy first; any rejected/invalid command leaves all state and RNG unchanged.
-  const g = structuredClone(toDailyActions(original));
+  const g = structuredClone(toWeeklyActions(original));
   try {
     if (g.status !== 'playing') throw Error('종료된 게임입니다.');
     if (
@@ -872,6 +876,13 @@ export function execute(original: Game, command: Command): Result {
         else settleWeekly(g);
         break;
       }
+      case 'startSettlement': {
+        if (g.settling) throw Error('이미 정산 중입니다.');
+        g.settling = true;
+        message = `${paymentWeek(g)}주차 정산을 시작합니다.`;
+        log(g, message);
+        break;
+      }
       case 'payInterest': {
         const due = interestPending(g);
         if (!due && g.interest === 0) throw Error('납부할 이자가 없습니다.');
@@ -879,9 +890,19 @@ export function execute(original: Game, command: Command): Result {
         affordable(g, amount);
         money(g, -amount);
         g.interest = 0;
-        if (due) g.interestWeek = paymentWeek(g);
+        if (due) {
+          const remaining = actionsLeft(g);
+          g.minute += remaining * ACTION_TICK;
+          g.interestWeek = paymentWeek(g);
+          g.weekActions = 0;
+          g.settling = false;
+          g.inquiries = [];
+          expire(g);
+          daily(g);
+          board(g);
+        }
         g.stats.repaid += amount;
-        message = `이자 ${won(amount)} 납부했습니다.`;
+        message = `이자 ${won(amount)} 납부했습니다.${due ? ` ${paymentWeek(g)}주차 시작.` : ''}`;
         log(g, message);
         if (g.principal === 0) {
           g.status = 'cleared';

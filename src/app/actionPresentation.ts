@@ -46,7 +46,8 @@ export function actionLabel(command: Command): string {
     visit: '매각처로 가는 중…',
     outletSell: '매각하는 중…',
     repay: '상환하는 중…',
-    payInterest: '이자를 납부하는 중…',
+    payInterest: '정산을 마치는 중…',
+    startSettlement: '이번 주를 정산하는 중…',
     event: '제안에 답하는 중…',
   };
   return labels[command.type];

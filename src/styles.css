@@ -1062,3 +1062,24 @@ html {
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+
+.weekly-settlement-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  width: min(100%, 480px);
+  padding: 12px 20px;
+  background: var(--bg, #192019);
+  border-top: 1px solid var(--border);
+  z-index: 41;
+}
+.app-shell:has(.weekly-settlement-bar) main {
+  padding-bottom: 180px;
+}
+.sheet-settlement-bar {
+  flex-shrink: 0;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  background: #20291d;
+  border-top: 1px solid var(--border);
+}

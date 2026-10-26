@@ -12,6 +12,7 @@ import {
   ACTION_TICK,
   actionsLeft,
   dayOf,
+  weekOf,
   type Command,
   type Game,
 } from '../src/domain/game';
@@ -93,13 +94,14 @@ test('start, deterministic RNG, pure engine, rejected commands do not change tim
 test('obsolete hunger fields are discarded without blocking actions or changing progress', () => {
   const original = owned();
   original.minute = ACTION_TICK;
+  original.weekActions = 1;
   original.inventory[0].checked = false;
   const legacy = { ...original, satiety: 0, hungerRemainder: 59 };
   const snapshot = structuredClone(legacy);
   const g = parseSave({ version: 2, game: legacy, favoriteIds: [] }).game;
   assert.equal('satiety' in g, false);
   assert.equal('hungerRemainder' in g, false);
-  assert.equal(actionsLeft(g), 2);
+  assert.equal(actionsLeft(g), 29);
   assert.deepEqual(legacy, snapshot);
   assert.deepEqual(g.inventory, original.inventory);
   for (const c of [
@@ -130,7 +132,7 @@ test('old survival fields are ignored and stripped without changing time, invent
   assert.deepEqual(restored, g);
   const worked = run(restored, { type: 'job', id: 'warehouse' });
   assert.equal(worked.minute, ACTION_TICK);
-  assert.equal(actionsLeft(worked), 2);
+  assert.equal(actionsLeft(worked), 29);
 });
 test('obsolete survival fields do not modify hidden value or stochastic negotiation outcomes', () => {
   const a = rich(60),
@@ -380,6 +382,11 @@ for (const seed of [1, 42, 210])
         step({ type: 'payInterest' });
         continue;
       }
+      if (actionsLeft(g) === 0) {
+        for (const q of g.inquiries) step({ type: 'break', id: q.id });
+        step({ type: 'startSettlement' });
+        continue;
+      }
       if (g.inquiries.length) {
         const q = [...g.inquiries].sort((a, b) => b.price - a.price)[0];
         step({ type: 'accept', id: q.id });
@@ -563,7 +570,7 @@ test('legacy saves migrate once to a fresh three-action day without losing resou
   assert.deepEqual(old, snapshot, 'migration is pure');
   assert.ok(isGame(g));
   assert.equal(g.minute, 3 * 1440);
-  assert.equal(actionsLeft(g), 3);
+  assert.equal(actionsLeft(g), 21);
   assert.equal(g.board[0].expires - g.minute, ACTION_TICK);
   assert.equal(g.minute - g.quotes!.at, 0);
   for (const key of ['cash', 'principal', 'interest', 'seed'] as const)
@@ -860,27 +867,26 @@ test('outlet travel consumes no time, stats, RNG or journal entries; actual sell
   );
 });
 
-test('three major actions end exactly one day and refill the next daily budget', () => {
+test('thirty major actions exhaust the weekly budget without automatic settlement', () => {
   let g = newGame(42);
-  const originalBoard = g.board.map((i) => i.id);
-  assert.equal(dayOf(g), 1);
-  assert.equal(actionsLeft(g), 3);
-  for (const left of [2, 1, 3]) {
+  assert.equal(weekOf(g), 1);
+  assert.equal(actionsLeft(g), 30);
+  for (let used = 1; used <= 30; used++) {
     g = run(g, { type: 'job', id: 'flyer' });
-    assert.equal(actionsLeft(g), left);
+    assert.equal(actionsLeft(g), 30 - used);
+    assert.equal(weekOf(g), 1);
+    assert.equal(interestPending(g), false);
   }
-  assert.equal(dayOf(g), 2);
-  assert.equal(g.minute, 1440);
-  assert.equal(g.cash, 527000);
-  assert.notDeepEqual(
-    g.board.map((i) => i.id),
-    originalBoard,
-  );
+  const before = structuredClone(g);
+  const failed = execute(g, { type: 'job', id: 'flyer' });
+  assert.equal(failed.ok, false);
+  assert.deepEqual(failed.game, before);
+  assert.equal(g.cash, 500000 + 9000 * 30);
 });
 
 test('all jobs use exactly one action with no premature day ending', () => {
   let g = newGame();
-  for (const remaining of [2, 1, 3]) {
+  for (const remaining of [29, 28, 27]) {
     g = run(g, { type: 'job', id: 'warehouse' });
     assert.equal(actionsLeft(g), remaining);
   }
@@ -924,13 +930,16 @@ test('free navigation, bargaining, disposal and declining proposals never spend 
   };
   g = run(g, { type: 'event', choice: 'no' });
   assert.equal(g.minute, before);
-  assert.equal(actionsLeft(g), 3);
+  assert.equal(actionsLeft(g), 30);
 });
 
 test('week boundary locks progress until payment, then increases the rate without spending an action', () => {
   let g = rich();
   g.minute = WEEK_TICKS - ACTION_TICK;
+  g.weekActions = 29;
   g = run(g, { type: 'wait' });
+  assert.equal(interestPending(g), false);
+  g = run(g, { type: 'startSettlement' });
   assert.equal(interestPending(g), true);
   assert.equal(g.interest, 0);
   assert.equal(g.cash, 100000);
@@ -954,6 +963,7 @@ test('migration retains active listings, chats, prices and finances and refuses 
   delete old.timeMode;
   old.minute = 9 * 1440 + 13 * 60 + 15;
   old.marketDay = 10;
+  old.interestWeek = 1;
   old.sales[0].expires = old.minute + 2880;
   old.sales[0].nextCheck = old.minute + 30;
   old.quotes = {
@@ -965,9 +975,9 @@ test('migration retains active listings, chats, prices and finances and refuses 
   const saved = parseSave({ version: 2, game: old, favoriteIds: ['kept'] });
   const g = saved.game;
   assert.deepEqual(old, before);
-  assert.equal(g.timeMode, 'daily-actions');
-  assert.equal(dayOf(g), 10);
-  assert.equal(actionsLeft(g), 3);
+  assert.equal(g.timeMode, 'weekly-actions');
+  assert.equal(weekOf(g), 2);
+  assert.equal(actionsLeft(g), 24);
   assert.deepEqual(g.inquiries, old.inquiries);
   assert.deepEqual(g.stats, old.stats);
   assert.equal(g.sales[0].price, old.sales[0].price);
@@ -1023,6 +1033,7 @@ test('new games start at 500000 won and old zero-cash saves remain playable with
   old.cash = 0;
   old.minute = ACTION_TICK;
   delete old.interestWeek;
+  old.timeMode = 'daily-actions';
   const snapshot = structuredClone(old);
   const restored = parseSave({ version: 2, game: old, favoriteIds: ['kept'] });
   assert.equal(restored.game.cash, 0);
@@ -1035,8 +1046,11 @@ test('new games start at 500000 won and old zero-cash saves remain playable with
 test('insufficient cash at the weekly deadline ends play even when cash and inventory remain', () => {
   const g = owned();
   g.minute = WEEK_TICKS - ACTION_TICK;
+  g.weekActions = 29;
   g.cash = 99999;
-  const after = run(g, { type: 'wait' });
+  const exhausted = run(g, { type: 'wait' });
+  assert.equal(exhausted.status, 'playing');
+  const after = run(exhausted, { type: 'startSettlement' });
   assert.equal(after.status, 'bankrupt');
   assert.equal(after.cash, 99999);
   assert.equal(after.inventory.length, 1);
@@ -1050,6 +1064,8 @@ test('repayment while payment is due reprices the invoice and costs no action', 
   let g = rich();
   g.cash = 200000;
   g.minute = WEEK_TICKS;
+  g.weekActions = 30;
+  g.settling = true;
   g = run(g, { type: 'repay', amount: 100000 });
   assert.equal(g.minute, WEEK_TICKS);
   assert.equal(interestAmount(g), 99999);
@@ -1059,7 +1075,8 @@ test('repayment while payment is due reprices the invoice and costs no action', 
 });
 test('legacy saves keep arrears but begin weekly billing without retroactive invoices', () => {
   const g = rich();
-  g.minute = WEEK_TICKS * 5 + ACTION_TICK;
+  g.timeMode = 'daily-actions';
+  g.minute = 10080 * 5 + ACTION_TICK;
   g.interest = 1234;
   delete g.interestWeek;
   const result = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
@@ -1134,6 +1151,7 @@ test('appraisal and repair spend money without using the last action, expiring l
   item.condition = '고장';
   item.value = Math.floor((item.base * 18) / 100);
   g.minute = WEEK_TICKS - ACTION_TICK;
+  g.weekActions = 29;
   g.marketDay = 7;
   for (const listing of g.board) listing.expires = g.minute + 1;
   const other = g.board.shift()!;
@@ -1182,7 +1200,8 @@ test('appraisal and repair spend money without using the last action, expiring l
   const retry = execute(repaired, { type: 'repair', id: item.id });
   assert.equal(retry.ok, false);
   assert.strictEqual(retry.game, repaired);
-  const due = run(repaired, { type: 'wait' });
+  const exhausted = run(repaired, { type: 'wait' });
+  const due = run(exhausted, { type: 'startSettlement' });
   assert.equal(interestPending(due), true);
   assert.equal(due.status, 'bankrupt');
   assert.deepEqual(g, snapshot);
@@ -1761,10 +1780,84 @@ test('won auction settlement rechecks cash, inventory and weekly locks without l
   assert.equal(execute(full, { type: 'buy', id: lot.id }).ok, false);
   const due = structuredClone(game);
   due.minute = WEEK_TICKS;
+  due.weekActions = 30;
+  due.settling = true;
   due.board.find((i) => i.id === lot.id)!.expires = due.minute + 1440;
   assert.equal(execute(due, { type: 'buy', id: lot.id }).ok, false);
   assert.equal(execute(due, { type: 'withdrawAuction', id: lot.id }).ok, false);
   const withdrawn = run(game, { type: 'withdrawAuction', id: lot.id });
   assert.equal(execute(withdrawn, { type: 'buy', id: lot.id }).ok, false);
   assert.equal(withdrawn.cash, game.cash);
+});
+
+test('early settlement charges the full current rate once and discards unused actions', () => {
+  let g = newGame(17);
+  g = run(g, { type: 'job', id: 'warehouse' });
+  const before = structuredClone(g);
+  g = run(g, { type: 'startSettlement' });
+  assert.equal(g.minute, before.minute);
+  assert.equal(g.weekActions, 1);
+  assert.equal(g.cash, before.cash);
+  assert.equal(interestAmount(g), 100000);
+  assert.equal(execute(g, { type: 'startSettlement' }).ok, false);
+  assert.equal(execute(g, { type: 'wait' }).ok, false);
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, before.cash - 100000);
+  assert.equal(weekOf(g), 2);
+  assert.equal(actionsLeft(g), 30);
+  assert.equal(g.minute, WEEK_TICKS);
+  assert.equal(execute(g, { type: 'payInterest' }).ok, false);
+  assert.equal(interestAmount(g), 300000);
+});
+
+test('zero budget allows free owned-item verification but refuses every paid transaction atomically', () => {
+  let g = owned();
+  g.weekActions = 30;
+  g.minute = WEEK_TICKS;
+  g.inventory[0].checked = false;
+  g.board[0].expires = g.minute + ACTION_TICK;
+  g = run(g, { type: 'check', id: g.inventory[0].id });
+  for (const command of [
+    { type: 'wait' },
+    { type: 'job', id: 'flyer' },
+    { type: 'refresh' },
+    { type: 'scavenge' },
+    { type: 'buy', id: g.board[0].id },
+    { type: 'post', id: g.inventory[0].id, price: 10000 },
+    { type: 'repay', amount: 1 },
+  ] as Command[]) {
+    const before = structuredClone(g);
+    const result = execute(g, command);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.game, before);
+  }
+  assert.equal(g.status, 'playing');
+  assert.equal(weekOf(g), 1);
+  assert.equal(interestPending(g), false);
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  for (const changes of [
+    { weekActions: 31 },
+    { weekActions: -1 },
+    { weekActions: 1.5 },
+    { settling: 'yes' },
+  ])
+    assert.equal(isGame({ ...g, ...changes }), false);
+});
+
+test('daily saves retain paid weeks, used actions, asset deadlines and settlement state exactly once', () => {
+  const old = owned();
+  old.timeMode = 'daily-actions';
+  old.interestWeek = 2;
+  old.minute = 2 * 10080 + 5 * ACTION_TICK;
+  old.inventory[0].expires = old.minute + 960;
+  const before = structuredClone(old);
+  const data = parseSave({ version: 2, game: old, favoriteIds: ['favorite'] });
+  assert.equal(weekOf(data.game), 3);
+  assert.equal(actionsLeft(data.game), 25);
+  assert.equal(data.game.minute, 2 * WEEK_TICKS + 5 * ACTION_TICK);
+  assert.equal(data.game.inventory[0].expires - data.game.minute, 960);
+  assert.equal(data.game.cash, old.cash);
+  assert.deepEqual(parseSave(data), data);
+  assert.deepEqual(old, before);
 });

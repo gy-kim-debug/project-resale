@@ -103,6 +103,7 @@ export const useGameStore = create<State>((set, get) => ({
     // Navigation and chat replies update immediately, without action presentation.
     if (
       [
+        'startSettlement',
         'offer',
         'bid',
         'withdrawAuction',

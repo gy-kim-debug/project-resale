@@ -19,35 +19,37 @@ with sync_playwright() as p:
   expect(page.locator('.header-interest')).to_contain_text('100,000 원')
   assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','매각처']
   def read(): return page.evaluate(READ)
-  def load(cash=200000,minute=10080-480):
+  def load(cash=200000,minute=14400-480):
    data=json.loads(Path('work/rich.json').read_text())
-   data['game'].update({'cash':cash,'minute':minute,'marketDay':minute//1440+1,'interestWeek':0,'health':0,'fatigue':0})
+   data['game'].update({'cash':cash,'minute':minute,'marketDay':minute//1440+1,'interestWeek':0,'weekActions':29,'settling':False,'health':0,'fatigue':0})
    page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();return data
   def finish_week():
    page.locator('.activity-grid').get_by_role('button',name='물건 수집',exact=True).click()
    page.get_by_role('button',name='물건 수집하기 · 행동 1회',exact=True).click()
    expect(page.locator('.action-layer')).to_have_count(0)
+   page.get_by_role('button',name='이번주 정산하기',exact=True).click()
+   page.get_by_role('button',name='이번 주 마무리 · 정산 시작',exact=True).click()
   load();finish_week()
-  expect(page.get_by_role('heading',name='이자 납부',exact=True)).to_be_visible()
+  expect(page.get_by_role('heading',name='1주차 정산',exact=True)).to_be_visible()
   assert page.get_by_role('button',name='닫기',exact=True).count()==0
   assert all(b.is_disabled() for b in page.locator('.bottom-nav button').all())
-  page.keyboard.press('Escape');expect(page.get_by_role('heading',name='이자 납부',exact=True)).to_be_visible()
-  page.reload();expect(page.get_by_role('heading',name='이자 납부',exact=True)).to_be_visible()
+  page.keyboard.press('Escape');expect(page.get_by_role('heading',name='1주차 정산',exact=True)).to_be_visible()
+  page.reload();expect(page.get_by_role('heading',name='1주차 정산',exact=True)).to_be_visible()
   page.get_by_label('상환 금액').fill('100000')
   page.get_by_role('button',name='입력 금액 상환 · 행동 소모 없음',exact=True).click()
   expect(page.locator('.action-layer')).to_have_count(0)
   expect(page.locator('.header-interest')).to_contain_text('99,999 원')
-  page.get_by_role('button',name='이자 납부 · 행동 소모 없음 · 99,999 원',exact=True).click()
+  page.get_by_role('button',name='이자 납부 후 다음 주 시작 · 99,999 원',exact=True).click()
   expect(page.locator('.action-layer')).to_have_count(0)
   expect(page.get_by_role('heading',name='활동',exact=True)).to_be_visible()
-  assert read()['cash']==1 and read()['interestWeek']==1 and read()['minute']==10080
+  assert read()['cash']==1 and read()['interestWeek']==1 and read()['minute']==14400
   assert not any(k in read() for k in ['health','fatigue','fatigueRemainder'])
   expect(page.locator('.header-interest-date')).to_contain_text('0.003%')
   expect(page.locator('.header-interest')).to_contain_text('299,997 원')
   page.reload();expect(page.locator('.header-interest')).to_contain_text('2주차 이자')
   page.screenshot(path=f'work/weekly-home-{width}.png',full_page=True)
   load(100000);finish_week()
-  page.get_by_role('button',name='이자 납부 · 행동 소모 없음 · 100,000 원',exact=True).click()
+  page.get_by_role('button',name='이자 납부 후 다음 주 시작 · 100,000 원',exact=True).click()
   expect(page.locator('.action-layer')).to_have_count(0)
   assert read()['cash']==0 and read()['status']=='playing'
   page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()

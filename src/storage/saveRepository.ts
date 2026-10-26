@@ -2,7 +2,7 @@ import { openDB } from 'idb';
 import type { Game, MarketId } from '../domain/game';
 import { isMarketId, isActiveMarketId } from '../content/markets';
 import { isGame } from './validation';
-import { toDailyActions } from '../domain/time';
+import { toWeeklyActions } from '../domain/time';
 export interface SaveData {
   version: 2;
   game: Game;
@@ -38,7 +38,7 @@ export function parseSave(value: unknown): SaveData {
     throw Error(
       '저장 형식이 올바르지 않습니다. 기존 데이터는 덮어쓰지 않았습니다.',
     );
-  const game = toDailyActions(value.game);
+  const game = toWeeklyActions(value.game);
   return {
     version: 2,
     game,

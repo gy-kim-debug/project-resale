@@ -127,7 +127,8 @@ export function isGame(v: unknown): v is Game {
   if (
     !record(v) ||
     v.version !== 2 ||
-    (v.timeMode !== undefined && v.timeMode !== 'daily-actions') ||
+    (v.timeMode !== undefined &&
+      !['daily-actions', 'weekly-actions'].includes(String(v.timeMode))) ||
     !['playing', 'bankrupt', 'dead', 'cleared'].includes(String(v.status))
   )
     return false;
@@ -143,7 +144,13 @@ export function isGame(v: unknown): v is Game {
     )
   )
     return false;
-  if (v.timeMode === 'daily-actions' && Number(v.minute) % 480 !== 0)
+  if (v.timeMode !== undefined && Number(v.minute) % 480 !== 0) return false;
+  if (
+    v.timeMode === 'weekly-actions' &&
+    (!integer(v.weekActions, 30) ||
+      typeof v.settling !== 'boolean' ||
+      !integer(v.interestWeek))
+  )
     return false;
   if (!integer(v.marketFactor, 200) || !kind(v.trend)) return false;
   if (
@@ -223,7 +230,12 @@ export function isGame(v: unknown): v is Game {
     !Array.isArray(v.logs) ||
     v.logs.length > 80 ||
     !v.logs.every(
-      (l) => record(l) && integer(l.id) && integer(l.minute) && text(l.text),
+      (l) =>
+        record(l) &&
+        integer(l.id) &&
+        integer(l.minute) &&
+        (l.week === undefined || (integer(l.week) && Number(l.week) > 0)) &&
+        text(l.text),
     )
   )
     return false;
@@ -248,7 +260,12 @@ export function isGame(v: unknown): v is Game {
     return false;
   if (
     v.interestWeek !== undefined &&
-    !integer(v.interestWeek, Math.floor(Number(v.minute) / 10080))
+    !integer(
+      v.interestWeek,
+      Math.floor(
+        Number(v.minute) / (v.timeMode === 'weekly-actions' ? 14400 : 10080),
+      ),
+    )
   )
     return false;
   if (v.status === 'cleared' && Number(v.principal) + Number(v.interest) !== 0)

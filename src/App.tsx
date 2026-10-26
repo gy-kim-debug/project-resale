@@ -18,7 +18,7 @@ import {
   type Route,
 } from './components/GameViews';
 import type { Game } from './domain/game';
-import { dayOf, actionsLeft, won } from './domain/game';
+import { weekOf, actionsLeft, won } from './domain/game';
 import { listingLimit, tier } from './domain/engine';
 import { ActionBudget, ActionProgress } from './components/ActionProgress';
 import type {
@@ -34,7 +34,6 @@ import {
   interestAmount,
   paymentWeek,
   weeklyRateText,
-  daysUntilInterest,
 } from './domain/debt';
 
 const nav: { tab: Tab; icon: IconName }[] = [
@@ -147,9 +146,9 @@ function Header({
             <ActionBudget key={action.id} action={action} />
           ) : (
             <>
-              <span className="status-day">{dayOf(g)}일째</span>{' '}
+              <span className="status-day">{weekOf(g)}주차</span>{' '}
               <strong className="status-clock">
-                남은 행동 {actionsLeft(g)}/3
+                남은 행동 {actionsLeft(g)}/30
               </strong>
             </>
           )}
@@ -167,9 +166,7 @@ function Header({
       </div>
       <div className="header-interest-date">
         <span>주 {weeklyRateText(paymentWeek(g))}</span>
-        <span>
-          {interestPending(g) ? '납부 필요' : `${daysUntilInterest(g)}일 남음`}
-        </span>
+        <span>{interestPending(g) ? '납부 필요' : '이번 주 정산 시 납부'}</span>
       </div>
       <div key={`debt-${actionId}`} className={`header-debt${changed('debt')}`}>
         <span>남은 채무</span>
@@ -184,12 +181,14 @@ function Sheet({
   locked,
   onBack,
   onClose,
+  footer,
 }: {
   routes: Route[];
   children: ReactNode;
   locked: boolean;
   onBack: () => void;
   onClose: () => void;
+  footer?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
@@ -246,7 +245,7 @@ function Sheet({
       <div className="sheet-toolbar">
         {locked ? (
           <span>
-            {current.kind === '이자 납부' ? '납부 필요' : '응답 필요'}
+            {current.kind === '주간 정산' ? '납부 필요' : '응답 필요'}
           </span>
         ) : (
           <button onClick={routes.length > 1 ? onBack : onClose}>
@@ -262,15 +261,24 @@ function Sheet({
       <div className="sheet-content" ref={ref}>
         {children}
       </div>
+      {footer}
     </div>
   );
 }
-function ActivityHome({ g, open }: { g: Game; open: (r: Route) => void }) {
+function ActivityHome({
+  g,
+  open,
+  settle,
+}: {
+  g: Game;
+  open: (r: Route) => void;
+  settle: () => void;
+}) {
   return (
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">오늘의 선택</p>
+          <p className="eyebrow">이번 주 활동</p>
           <h1>활동</h1>
         </div>
         <span className="tier-label">{TIERS[tier(g)].name}</span>
@@ -298,6 +306,9 @@ function ActivityHome({ g, open }: { g: Game; open: (r: Route) => void }) {
           </Button>
         </section>
       )}
+      {actionsLeft(g) > 0 && (
+        <Button onClick={settle}>이번 주 마무리하기</Button>
+      )}
       {g.event && (
         <Button onClick={() => open({ kind: '특별 제안' })}>
           새 특별 제안 · {g.event.title}
@@ -318,7 +329,7 @@ export default function App() {
   const over = !!g && g.status !== 'playing';
   // Pending inquiries override every route, including when restored from a save.
   const shownRoutes: Route[] = due
-    ? [{ kind: '이자 납부' }]
+    ? [{ kind: '주간 정산' }]
     : pending
       ? [{ kind: '문의' }]
       : routes;
@@ -369,6 +380,18 @@ export default function App() {
           state.dismiss();
         }}
       />
+      {actionsLeft(g) === 0 &&
+        !due &&
+        !over &&
+        !state.action &&
+        !pending &&
+        shownRoutes.length === 0 && (
+          <aside className="weekly-settlement-bar">
+            <Button onClick={() => setRoutes([{ kind: '주간 정산' }])}>
+              이번주 정산하기
+            </Button>
+          </aside>
+        )}
       <div
         className="game-scene"
         aria-busy={!!state.action}
@@ -378,7 +401,11 @@ export default function App() {
         <div className="base-content" inert={shownRoutes.length > 0 || over}>
           <main>
             {state.tab === '활동' ? (
-              <ActivityHome g={g} open={open} />
+              <ActivityHome
+                g={g}
+                open={open}
+                settle={() => setRoutes([{ kind: '주간 정산' }])}
+              />
             ) : state.tab === '내 정보' ? (
               <InfoView g={g} />
             ) : state.tab === '채무' ? (
@@ -423,6 +450,17 @@ export default function App() {
             locked={pending}
             onBack={() => setRoutes((prev) => prev.slice(0, -1))}
             onClose={close}
+            footer={
+              actionsLeft(g) === 0 &&
+              !pending &&
+              shownRoutes.at(-1)?.kind !== '주간 정산' ? (
+                <aside className="sheet-settlement-bar">
+                  <Button onClick={() => setRoutes([{ kind: '주간 정산' }])}>
+                    이번주 정산하기
+                  </Button>
+                </aside>
+              ) : null
+            }
           >
             {state.saveError && shownRoutes.at(-1)?.kind === '저장 관리' && (
               <p className="warning">{state.saveError}</p>
@@ -479,7 +517,7 @@ export default function App() {
                   : '이 이야기는 여기까지.'}
               </h1>
               <p>
-                {dayOf(g)}일 동안 거래 {g.stats.sales}회 · 누적 상환{' '}
+                {weekOf(g)}주차 · 거래 {g.stats.sales}회 · 누적 상환{' '}
                 {won(g.stats.repaid)}
               </p>
               <p>

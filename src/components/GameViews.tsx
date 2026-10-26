@@ -6,7 +6,7 @@ import { ItemTags, ItemFindings } from './ItemTags';
 import { mailboxLogs, unreadCount } from '../app/notifications';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, Kind, MarketId } from '../domain/game';
-import { won, dayOf, durationText } from '../domain/game';
+import { won, weekOf, actionsLeft, durationText } from '../domain/game';
 import {
   level,
   listingLimit,
@@ -22,7 +22,6 @@ import {
   interestAmount,
   paymentWeek,
   weeklyRateText,
-  daysUntilInterest,
 } from '../domain/debt';
 
 export type Route = {
@@ -37,6 +36,7 @@ export type Route = {
     | '판매 등록'
     | '문의'
     | '이자 납부'
+    | '주간 정산'
     | '특별 제안'
     | '기록'
     | '저장 관리'
@@ -224,13 +224,27 @@ export function InventoryView({ g, open }: { g: Game; open: Open }) {
     </>
   );
 }
-export function DebtView({ g, act }: { g: Game; act: Act }) {
+export function DebtView({
+  g,
+  act,
+  settlement = false,
+}: {
+  g: Game;
+  act: Act;
+  settlement?: boolean;
+}) {
   const due = interestPending(g);
   const amount = interestAmount(g);
   const cost = due ? '행동 소모 없음' : '행동 1회';
+  const canRepay = due || actionsLeft(g) > 0;
   return (
     <>
-      <h1>채무</h1>
+      <h1>{settlement ? `${paymentWeek(g)}주차 정산` : '채무'}</h1>
+      {settlement && !due && (
+        <Button onClick={() => act({ type: 'startSettlement' })}>
+          이번 주 마무리 · 정산 시작
+        </Button>
+      )}
       <div className="card debt">
         <small>남은 총 채무</small>
         <strong>{won(g.principal + g.interest)}</strong>
@@ -248,7 +262,7 @@ export function DebtView({ g, act }: { g: Game; act: Act }) {
         </div>
         <div>
           <dt>납부 기한</dt>
-          <dd>{due ? '납부 필요' : `${daysUntilInterest(g)}일 남음`}</dd>
+          <dd>{due ? '납부 필요' : '이번 주 정산 시'}</dd>
         </div>
         <div>
           <dt>누적 상환</dt>
@@ -264,17 +278,19 @@ export function DebtView({ g, act }: { g: Game; act: Act }) {
           disabled={g.cash < (due ? amount : g.interest)}
           onClick={() => act({ type: 'payInterest' })}
         >
-          이자 납부 · 행동 소모 없음 · {won(due ? amount : g.interest)}
+          이자 납부 후 다음 주 시작 · {won(due ? amount : g.interest)}
         </Button>
       )}
-      <AmountForm
-        title={`입력 금액 상환 · ${cost}`}
-        label="상환 금액"
-        max={Math.min(g.cash, g.principal)}
-        submit={(amount) => act({ type: 'repay', amount })}
-      />
+      {canRepay && (
+        <AmountForm
+          title={`입력 금액 상환 · ${cost}`}
+          label="상환 금액"
+          max={Math.min(g.cash, g.principal)}
+          submit={(amount) => act({ type: 'repay', amount })}
+        />
+      )}
       <Button
-        disabled={!g.cash || !g.principal}
+        disabled={!canRepay || !g.cash || !g.principal}
         onClick={() =>
           act({ type: 'repay', amount: Math.min(g.cash, g.principal) })
         }
@@ -319,7 +335,7 @@ export function MarketView({
   return (
     <>
       <p className="market-trend">
-        오늘의 시장: {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}
+        시장 동향: {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}
         {g.marketFactor - 100}%
       </p>
       {!free && (
@@ -737,7 +753,7 @@ export function StorageView() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `game-day-${dayOf(s.game)}.json`;
+    a.download = `game-week-${weekOf(s.game)}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -945,6 +961,8 @@ export function RouteView({
       ) : (
         <p>현재 특별 제안이 없습니다.</p>
       );
+    case '주간 정산':
+      return <DebtView g={g} act={act} settlement />;
     case '이자 납부':
       return <DebtView g={g} act={act} />;
     case '우편함':
@@ -960,7 +978,9 @@ export function RouteView({
         <ol className="journal">
           {g.logs.map((l) => (
             <li key={l.id}>
-              <small>{Math.floor(l.minute / 1440) + 1}일째</small>
+              <small>
+                {l.week ?? Math.floor(l.minute / (30 * 480)) + 1}주차
+              </small>
               <p>{l.text}</p>
             </li>
           ))}
@@ -999,7 +1019,9 @@ function MailboxView({ g, open }: { g: Game; open: (route: Route) => void }) {
                 aria-pressed={isRead}
               >
                 <span className="mail-meta">
-                  <small>{dayOf({ ...g, minute: log.minute })}일째</small>
+                  <small>
+                    {log.week ?? Math.floor(log.minute / (30 * 480)) + 1}주차
+                  </small>
                   <span className="mail-state">
                     {isRead ? '읽음' : '안 읽음'}
                   </span>
