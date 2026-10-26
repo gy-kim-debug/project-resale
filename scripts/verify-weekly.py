@@ -37,7 +37,7 @@ with sync_playwright() as p:
   page.get_by_role('button',name='이자 납부 후 다음 주 시작 · 100,000 원',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   expect(page.locator('.status-day')).to_have_text('2주차');expect(page.locator('.status-clock')).to_have_text('남은 행동 20/20')
   paid=read();assert paid['cash']==350000 and paid['interestWeek']==1 and paid['principalRepaidThisWeek']==0
-  expect(page.locator('.header-interest')).to_contain_text(['100,000 원','299,996 원'])
+  expect(page.locator('.header-interest')).to_contain_text(['100,000 원','300,000 원'])
   page.reload();expect(page.locator('.status-day')).to_have_text('2주차');assert read()==paid
   # Last available action shows settlement rather than advancing automatically.
   data=json.loads(json.dumps(original));data['game']['weekActions']=19;data['game']['minute']=19*480
@@ -51,8 +51,8 @@ with sync_playwright() as p:
   page.get_by_label('상환 금액',exact=True).fill('100000')
   page.get_by_role('button',name='입력 금액 상환 · 행동 소모 없음',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   assert read()['principalRepaidThisWeek']==100000
-  page.get_by_role('button',name='이자 납부 후 다음 주 시작 · 99,999 원',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
-  assert read()['cash']==309001 and read()['weekActions']==0 and read()['principalRepaidThisWeek']==0
+  page.get_by_role('button',name='이자 납부 후 다음 주 시작 · 100,000 원',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  assert read()['cash']==309000 and read()['weekActions']==0 and read()['principalRepaidThisWeek']==0
   # Voluntary prepayment reduces this week's mandatory amount.
   load(original);page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name='채무',exact=True).click()
   page.get_by_label('상환 금액',exact=True).fill('20000')
@@ -65,7 +65,7 @@ with sync_playwright() as p:
   assert read()['cash']==0 and read()['status']=='playing'
   page.get_by_role('button',name='아르바이트',exact=True).click();page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
   expect(page.locator('.action-layer')).to_have_count(0);assert read()['cash']==9000
-  poor=json.loads(json.dumps(original));poor['game']['cash']=149999;load(poor);finish()
+  poor=json.loads(json.dumps(original));poor['game']['cash']=149900;load(poor);finish()
   expect(page.get_by_role('heading',name='이 이야기는 여기까지.',exact=True)).to_be_visible();assert read()['status']=='bankrupt'
   # An old 30-action save with 25 actions used migrates to 0/20 without resetting finances.
   old=json.loads(json.dumps(original));g=old['game'];g.pop('weeklyRulesVersion');g.pop('principalRepaidThisWeek')

@@ -53,7 +53,7 @@ with sync_playwright() as pw:
         page.get_by_role('button',name='가치 확인 ·',exact=False).click()
         expect(page.locator('.sheet-layer .item-comparison [data-field=value]')).not_to_contain_text('미확인')
         click('닫기');page.locator('.item-row').first.click()
-        click('중고 장터에 판매 등록');page.get_by_label('판매 가격 (원)').fill('1');click('판매 글 등록 확정')
+        click('중고 장터에 판매 등록');page.get_by_label('판매 가격 (원)').fill('100');click('판매 글 등록 확정')
         expect(page.get_by_label('판매 가격 (원)')).to_have_count(0)
         for _ in range(8):
             if page.get_by_role('heading',name='문의',exact=True).count():break

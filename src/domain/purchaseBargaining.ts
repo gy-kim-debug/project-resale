@@ -1,3 +1,4 @@
+import { roundMoney, moneyRatio } from './money';
 import type { Item, MarketId } from './game';
 import { BARGAINING_MARKETS } from '../content/bargaining';
 import { sellerProfile } from './listingTags';
@@ -16,7 +17,7 @@ export function openingPurchaseOffers(
   return [
     ...new Set(
       bargainingMarket(marketId).opening.map((percent) =>
-        Math.floor((price * percent) / 100),
+        moneyRatio(price, percent),
       ),
     ),
   ].filter((p) => p > 0 && p < price);
@@ -84,9 +85,7 @@ export function nextPurchaseOffers(
   const gap = current - previous;
   return [
     ...new Set(
-      [0.25, 0.5, 0.75].map(
-        (share) => previous + Math.max(1, Math.floor(gap * share)),
-      ),
+      [0.25, 0.5, 0.75].map((share) => roundMoney(previous + gap * share)),
     ),
   ].filter((price) => price > previous && price < current);
 }

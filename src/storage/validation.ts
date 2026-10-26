@@ -1,3 +1,4 @@
+import { allMoneyAligned } from '../domain/moneyMigration';
 import type { Game, Item } from '../domain/game';
 import {
   KIND_TAGS,
@@ -290,6 +291,11 @@ export function isGame(v: unknown): v is Game {
   )
     return false;
   if (v.status === 'cleared' && Number(v.principal) + Number(v.interest) !== 0)
+    return false;
+  if (
+    v.moneyUnit !== undefined &&
+    (v.moneyUnit !== 100 || !allMoneyAligned(v as unknown as Game))
+  )
     return false;
   return true;
 }

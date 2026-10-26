@@ -1,3 +1,4 @@
+import { MONEY_UNIT, roundMoney, moneyRatio, isHundredWon } from './money';
 import type { Command, Game, Item, Result, Kind, MarketId } from './game';
 import { dayOf, isMoney, won, ACTION_TICK, actionsLeft, weekOf } from './game';
 import { instantSalePrice } from './instantSale';
@@ -50,21 +51,19 @@ export function tier(g: Game) {
   );
 }
 export function marketValue(g: Game, item: Item) {
-  return Math.max(
-    1,
-    Math.floor(
-      (item.value * (g.marketFactor + (item.kind === g.trend ? 20 : 0))) / 100,
-    ),
+  return moneyRatio(
+    item.value,
+    g.marketFactor + (item.kind === g.trend ? 20 : 0),
   );
 }
 export function checkCost(g: Game, item: Item) {
   return Math.max(
-    50,
-    Math.floor(((item.base / 100) * (100 - level(g, 'checks') * 5)) / 100),
+    MONEY_UNIT,
+    moneyRatio(item.base, 100 - level(g, 'checks') * 5, 10000),
   );
 }
 export function repairCost(item: Item) {
-  return Math.max(300, Math.floor((item.base * 12) / 100));
+  return Math.max(300, moneyRatio(item.base, 12));
 }
 export function log(g: Game, text: string) {
   g.logs.unshift({ id: ++g.serial, minute: g.minute, week: weekOf(g), text });
@@ -72,6 +71,7 @@ export function log(g: Game, text: string) {
 }
 function money(g: Game, amount: number) {
   if (
+    !isHundredWon(Math.abs(amount)) ||
     !Number.isSafeInteger(g.cash + amount) ||
     g.cash + amount < 0 ||
     g.cash + amount > RULES.maxMoney
@@ -94,11 +94,9 @@ function makeItem(
     (best, t, i) => (base >= t.base ? i : best),
     0,
   );
-  const categoryBase = Math.floor(
-    marketItem
-      ? base
-      : (base * CATEGORY_PRICING[template.kind].valuePercent) / 100,
-  );
+  const categoryBase = marketItem
+    ? roundMoney(base)
+    : moneyRatio(base, CATEGORY_PRICING[template.kind].valuePercent);
   const quality = roll(g);
   const rarity = roll(g);
   const condition =
@@ -123,10 +121,7 @@ function makeItem(
         : rarity > 0.86
           ? 150
           : 100;
-  const actualBase = Math.max(
-    100,
-    Math.floor((categoryBase * rarityPercent) / 100),
-  );
+  const actualBase = Math.max(100, moneyRatio(categoryBase, rarityPercent));
   let price = free
     ? 0
     : Math.max(
@@ -151,10 +146,9 @@ function makeItem(
     title: marketItem?.product.title ?? TIER_TITLES[tierIndex][templateIndex],
     kind: template.kind,
     base: actualBase,
-    value: Math.floor(
-      (actualBase *
-        (condition === '고장' ? 18 : condition === '사용감' ? 75 : 100)) /
-        100,
+    value: moneyRatio(
+      actualBase,
+      condition === '고장' ? 18 : condition === '사용감' ? 75 : 100,
     ),
     condition,
     defect: (listing ? !listing.facts.authentic : rarityPercent < 10)
@@ -204,7 +198,7 @@ function board(g: Game, selected?: MarketId) {
           : market.min +
             Math.floor(roll(g) * ((market.max - market.min) / 1000 + 1)) * 1000;
       list.push(
-        makeItem(g, Math.floor((asking * 100) / 55), false, true, {
+        makeItem(g, moneyRatio(asking, 100, 55), false, true, {
           marketId: market.id,
           product,
           asking,
@@ -270,7 +264,10 @@ function inquiries(g: Game) {
     const ratio = sale.price / value;
     if (roll(g) > (ratio <= 1.1 ? 0.85 : ratio <= 1.6 ? 0.5 : 0.2)) continue;
     for (let n = 0; n < 2; n++) {
-      const max = Math.max(1, Math.floor(value * (0.9 + roll(g) * 0.3)));
+      const max = Math.max(
+        MONEY_UNIT,
+        roundMoney(value * (0.9 + roll(g) * 0.3)),
+      );
       const full = sale.price <= max && roll(g) < 0.5;
       const price = full
         ? sale.price
@@ -278,7 +275,7 @@ function inquiries(g: Game) {
             sale.price,
             Math.max(
               1,
-              Math.floor(Math.min(max, sale.price) * (0.75 + roll(g) * 0.2)),
+              roundMoney(Math.min(max, sale.price) * (0.75 + roll(g) * 0.2)),
             ),
           );
       g.inquiries.push({
@@ -388,6 +385,7 @@ function preItem(g: Game, itemId: string) {
 export function newGame(seed = 1): Game {
   const g: Game = {
     version: 2,
+    moneyUnit: 100,
     timeMode: 'weekly-actions',
     weekActions: 0,
     weeklyRulesVersion: 2,
@@ -620,27 +618,22 @@ export function execute(original: Game, command: Command): Result {
       case 'post': {
         const item = owned(g, command.id);
         unlisted(g, command.id);
-        if (
-          !isMoney(command.price) ||
-          command.price < 1 ||
-          command.price > RULES.maxMoney
-        )
-          throw Error(
-            '판매 가격은 1원 이상 1,000조 원 이하의 정수여야 합니다.',
-          );
+        const price = isMoney(command.price) ? roundMoney(command.price) : NaN;
+        if (!isMoney(price) || price < MONEY_UNIT || price > RULES.maxMoney)
+          throw Error('판매 가격은 100원 이상 1,000조 원 이하여야 합니다.');
         if (g.sales.length >= listingLimit(g))
           throw Error('동시 판매 등록 한도에 도달했습니다.');
         const sale = {
           marketId: marketOf(item),
           id: id(g),
           itemId: command.id,
-          price: command.price,
+          price,
           created: g.minute + ACTION_TICK,
           expires: g.minute + ACTION_TICK + 2880,
           nextCheck: g.minute + ACTION_TICK * 2,
         };
         g.sales.push(sale);
-        message = `판매 글 등록: ${won(command.price)}.`;
+        message = `판매 글 등록: ${won(price)}.`;
         log(g, message);
         advance(g, 1);
         break;
@@ -739,9 +732,11 @@ export function execute(original: Game, command: Command): Result {
         break;
       }
       case 'repay': {
-        const amount = command.amount;
-        if (!isMoney(amount) || amount < 1 || amount > g.principal)
-          throw Error('남은 원금 이내의 정수 금액을 입력하세요.');
+        const amount = isMoney(command.amount)
+          ? roundMoney(command.amount)
+          : NaN;
+        if (!isMoney(amount) || amount < MONEY_UNIT || amount > g.principal)
+          throw Error('남은 원금 이내의 100원 단위 금액을 입력하세요.');
         affordable(g, amount);
         const due = interestPending(g);
         money(g, -amount);

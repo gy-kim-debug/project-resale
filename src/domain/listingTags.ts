@@ -1,4 +1,4 @@
-import { MARKET_PRICING } from '../content/market';
+import { MONEY_UNIT, moneyRatio } from './money';
 import type { Item, Kind, ListingInfo, ListingTag, SellerTrait } from './game';
 import {
   FEATURE_TAGS,
@@ -85,11 +85,7 @@ export function tagIsTrue(
 
 export function listingAskPrice(price: number, info?: ListingInfo): number {
   if (price === 0 || info?.facts.seller !== 'urgent') return price;
-  const step = MARKET_PRICING.priceStep;
-  return Math.max(
-    step,
-    Math.floor((price * TAG_RULES.urgentAskPercent) / 100 / step) * step,
-  );
+  return Math.max(MONEY_UNIT, moneyRatio(price, TAG_RULES.urgentAskPercent));
 }
 
 export function integrityLabel(kind: Kind, valid: boolean): string {

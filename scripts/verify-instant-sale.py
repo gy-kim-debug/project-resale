@@ -12,7 +12,7 @@ with sync_playwright() as p:
   ctx=browser.new_context(viewport={'width':width,'height':844},is_mobile=True,has_touch=True)
   page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for()
-  data=json.loads(Path('work/rich.json').read_text());g=data['game'];item=g['board'].pop(0)
+  data=json.loads(Path('work/rich.json').read_text());g=data['game'];g.pop('moneyUnit',None);item=g['board'].pop(0)
   item.update({'value':100001,'checked':False,'acquiredFor':1,'price':9999999})
   g['inventory']=[item];g['marketFactor']=200;g['trend']=item['kind']
   g['quotes']={'outlet':'collector','at':0,'prices':{item['id']:99999999}}

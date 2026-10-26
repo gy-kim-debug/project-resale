@@ -1,3 +1,4 @@
+import { roundMoney } from './money';
 /** Serializable game types. KRW uses safe integers; the legacy minute field stores discrete action ticks. */
 export type Kind =
   | '생활'
@@ -124,6 +125,7 @@ export interface Event {
 }
 export interface Game {
   version: 2;
+  moneyUnit?: 100;
   timeMode?: 'daily-actions' | 'weekly-actions';
   weekActions?: number;
   weeklyRulesVersion?: 2;
@@ -189,7 +191,7 @@ export interface Result {
   ok: boolean;
   message: string;
 }
-export const won = (n: number) => `${n.toLocaleString('ko-KR')} 원`;
+export const won = (n: number) => `${roundMoney(n).toLocaleString('ko-KR')} 원`;
 export const dayOf = (g: Game) => Math.floor(g.minute / 1440) + 1;
 export const ACTIONS_PER_DAY = 3;
 export const ACTION_TICK = 480;

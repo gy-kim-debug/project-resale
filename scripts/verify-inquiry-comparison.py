@@ -13,13 +13,13 @@ with sync_playwright() as p:
   page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for()
   for checked,cost,value in [(True,32000,100000),(False,0,100000),(True,999999999999999,100000000000000)]:
-   data=json.loads(Path('work/seller-counter.json').read_text());g=data['game'];item=g['inventory'][0]
+   data=json.loads(Path('work/seller-counter.json').read_text());g=data['game'];g.pop('moneyUnit',None);item=g['inventory'][0]
    item.update({'checked':checked,'acquiredFor':cost,'value':value});g['marketFactor']=100;g['trend']=item['kind']
    page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='문의',exact=True).wait_for()
    comparisons=page.locator('.sheet-layer .item-comparison');assert comparisons.count()==len(g['inquiries'])
    for box in comparisons.all():
-    expect(box.locator('[data-field=cost]')).to_have_text(f'{cost:,} 원')
-    expect(box.locator('[data-field=value]')).to_have_text(f'{value*120//100:,} 원' if checked else '미확인')
+    expect(box.locator('[data-field=cost]')).to_have_text(f'{(cost+50)//100*100:,} 원')
+    expect(box.locator('[data-field=value]')).to_have_text(f'{(value*120+5000)//10000*100:,} 원' if checked else '미확인')
     if not checked:expect(box.locator('[data-field=difference]')).to_have_text('미확인')
    assert page.evaluate(READ)['game']==g
    assert page.locator('.action-layer').count()==0

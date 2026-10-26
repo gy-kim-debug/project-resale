@@ -1,3 +1,5 @@
+import { roundMoney, moneyRatio, MONEY_UNIT } from '../src/domain/money';
+import { normalizeMoney, allMoneyAligned } from '../src/domain/moneyMigration';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -92,7 +94,7 @@ test('start, deterministic RNG, pure engine, rejected commands do not change tim
   assert.equal(g.principal, 10_000_000_000);
   assert.deepEqual(g.inventory, []);
   assert.deepEqual(newGame(42), g);
-  g.board[0].price = g.cash + 1;
+  g.board[0].price = g.cash + 100;
   const snapshot = structuredClone(g);
   const failed = execute(g, { type: 'buy', id: g.board[0].id });
   assert.equal(failed.ok, false);
@@ -206,7 +208,7 @@ test('purchase costs are atomic, no transport fee, value needs separate check', 
 test('stale purchase offers are rejected and current seller quote is charged once', () => {
   let g = rich(11);
   const i = g.board[0];
-  assert.equal(execute(g, { type: 'offer', id: i.id, price: 1 }).ok, false);
+  assert.equal(execute(g, { type: 'offer', id: i.id, price: 100 }).ok, false);
   g = run(g, { type: 'offer', id: i.id, price: i.offers[1] });
   assert.equal(
     execute(g, { type: 'offer', id: i.id, price: i.offers[0] }).ok,
@@ -244,7 +246,7 @@ test('pending inquiries block actions; breaking one chat preserves listing and o
   );
   assert.deepEqual(serialized.game, g);
   for (const c of [
-    { type: 'repay', amount: 1 },
+    { type: 'repay', amount: 100 },
     { type: 'discard', id: g.inventory[0].id },
     { type: 'refresh' },
   ] as Command[])
@@ -328,11 +330,11 @@ test('principal repayments are separate from interest; legacy interest remains p
   g.interest = 100;
   g = run(g, { type: 'repay', amount: 150 });
   assert.equal(g.interest, 100);
-  assert.equal(g.principal, RULES.debt - 150);
+  assert.equal(g.principal, RULES.debt - 200);
   g = rich();
-  g.principal = 101;
-  g.interest = 7;
-  g = run(g, { type: 'repay', amount: 101 });
+  g.principal = 100;
+  g.interest = 100;
+  g = run(g, { type: 'repay', amount: 100 });
   assert.equal(g.status, 'playing');
   g = run(g, { type: 'payInterest' });
   assert.equal(g.status, 'cleared');
@@ -503,11 +505,11 @@ test('action costs distinguish major commands from free operations; inquiries st
     g.inventory[0].condition = '고장';
     const command: Command =
       type === 'post'
-        ? { type, id: g.inventory[0].id, price: 1 }
+        ? { type, id: g.inventory[0].id, price: 100 }
         : type === 'visit'
           ? { type, id: 'scrap' }
           : type === 'repay'
-            ? { type, amount: 1 }
+            ? { type, amount: 100 }
             : { type, id: g.inventory[0].id };
     cases.push({
       game: g,
@@ -515,7 +517,11 @@ test('action costs distinguish major commands from free operations; inquiries st
       cost: ['visit', 'check', 'repair'].includes(type) ? 0 : 1,
     });
   }
-  let g = run(owned(), { type: 'post', id: owned().inventory[0].id, price: 1 });
+  let g = run(owned(), {
+    type: 'post',
+    id: owned().inventory[0].id,
+    price: 100,
+  });
   assert.equal(
     g.inquiries.length,
     0,
@@ -801,7 +807,7 @@ test('seller counteroffers can be accepted or countered; failed negotiation keep
   assert.equal(sold.minute - base.minute, ACTION_TICK);
   assert.equal(sold.inventory.length, 0);
   assert.equal(sold.sales.length, 0);
-  for (const price of [-1, 0, 100, 1.5, 1001, Infinity, NaN]) {
+  for (const price of [-1, 0, 100, 1.5, 1050, Infinity, NaN]) {
     const snapshot = structuredClone(base);
     const invalid = execute(base, { type: 'counter', id: q.id, price });
     assert.equal(invalid.ok, false);
@@ -919,13 +925,13 @@ test('weekly rates increase by 0.002 percentage points and round won exactly', (
     assert.equal(weeklyRateText(week), rate);
     assert.equal(weeklyInterest(RULES.debt, week), amount);
   }
-  assert.equal(weeklyInterest(1, 1), 1);
-  assert.equal(weeklyInterest(100001, 1), 2);
+  assert.equal(weeklyInterest(1, 1), 0);
+  assert.equal(weeklyInterest(100001, 1), 0);
   assert.equal(weeklyInterest(0, 10), 0);
   const principal = 999999999999999;
   assert.equal(
     BigInt(weeklyInterest(principal, 101)),
-    (BigInt(principal) * 201n + 99999n) / 100000n,
+    ((BigInt(principal) * 201n + 5000000n) / 10000000n) * 100n,
   );
 });
 
@@ -971,7 +977,7 @@ test('week boundary locks progress until payment, then increases the rate withou
   assert.equal(g.status, 'playing');
   assert.equal(g.interestWeek, 1);
   assert.equal(interestPending(g), false);
-  assert.equal(interestAmount(g), 299996);
+  assert.equal(interestAmount(g), 300000);
   assert.equal(execute(g, { type: 'payInterest' }).ok, false);
   assert.equal(run(g, { type: 'job', id: 'flyer' }).cash, 9000);
 });
@@ -984,6 +990,7 @@ test('migration retains active listings, chats, prices and finances and refuses 
   old.interestWeek = 1;
   old.sales[0].expires = old.minute + 2880;
   old.sales[0].nextCheck = old.minute + 30;
+  delete old.moneyUnit;
   old.quotes = {
     outlet: 'scrap',
     at: old.minute - 15,
@@ -1001,7 +1008,7 @@ test('migration retains active listings, chats, prices and finances and refuses 
   assert.equal(g.sales[0].price, old.sales[0].price);
   assert.equal(g.sales[0].expires - g.minute, 2880);
   assert.equal(g.sales[0].nextCheck - g.minute, ACTION_TICK);
-  assert.deepEqual(g.quotes?.prices, old.quotes.prices);
+  assert.deepEqual(g.quotes?.prices, { [old.inventory[0].id]: 100 });
   for (const key of ['cash', 'principal', 'interest', 'seed'] as const)
     assert.equal(g[key], old[key]);
   assert.deepEqual(parseSave(saved), saved);
@@ -1032,13 +1039,13 @@ test('repaying all cash toward principal stays playable; final full principal re
 test('insufficient funds refuse atomically; one remaining won keeps playing', () => {
   const g = rich();
   const price = g.board[0].price;
-  g.cash = price - 1;
+  g.cash = price - 100;
   const snapshot = structuredClone(g);
   assert.equal(execute(g, { type: 'buy', id: g.board[0].id }).ok, false);
   assert.deepEqual(g, snapshot);
-  g.cash = price + 1;
+  g.cash = price + 100;
   const after = run(g, { type: 'buy', id: g.board[0].id });
-  assert.equal(after.cash, 1);
+  assert.equal(after.cash, 100);
   assert.equal(after.status, 'playing');
 });
 
@@ -1065,12 +1072,12 @@ test('insufficient cash at the weekly deadline ends play even when cash and inve
   const g = owned();
   g.minute = WEEK_TICKS - ACTION_TICK;
   g.weekActions = 19;
-  g.cash = 99999;
+  g.cash = 99900;
   const exhausted = run(g, { type: 'wait' });
   assert.equal(exhausted.status, 'playing');
   const after = run(exhausted, { type: 'startSettlement' });
   assert.equal(after.status, 'bankrupt');
-  assert.equal(after.cash, 99999);
+  assert.equal(after.cash, 99900);
   assert.equal(after.inventory.length, 1);
   assert.equal(execute(after, { type: 'job', id: 'flyer' }).ok, false);
   assert.deepEqual(
@@ -1086,23 +1093,24 @@ test('repayment while payment is due reprices the invoice and costs no action', 
   g.settling = true;
   g = run(g, { type: 'repay', amount: 100000 });
   assert.equal(g.minute, WEEK_TICKS);
-  assert.equal(interestAmount(g), 99999);
+  assert.equal(interestAmount(g), 100000);
   g = run(g, { type: 'payInterest' });
-  assert.equal(g.cash, 1);
+  assert.equal(g.cash, 0);
   assert.equal(g.interestWeek, 1);
 });
 test('legacy saves keep arrears but begin weekly billing without retroactive invoices', () => {
   const g = rich();
+  delete g.moneyUnit;
   g.timeMode = 'daily-actions';
   g.minute = 10080 * 5 + ACTION_TICK;
   g.interest = 1234;
   delete g.interestWeek;
   const result = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
   assert.equal(result.interestWeek, 5);
-  assert.equal(result.interest, 1234);
+  assert.equal(result.interest, 1200);
   assert.equal(result.cash, g.cash);
   assert.equal(interestPending(result), false);
-  assert.equal(interestAmount(result), 1101058);
+  assert.equal(interestAmount(result), 1101000);
 });
 
 test('each market generates its own bounded prices and products while the entry market remains affordable', () => {
@@ -1118,7 +1126,7 @@ test('each market generates its own bounded prices and products while the entry 
       assert.equal(paid.length, 8);
       for (const item of paid) {
         assert.ok(item.price >= market.min && item.price <= market.max);
-        assert.equal(item.price % 1000, 0);
+        assert.equal(item.price % 100, 0);
         assert.ok(
           market.products.some(
             (p) => p.title === item.title && p.kind === item.kind,
@@ -1142,9 +1150,10 @@ test('each market generates its own bounded prices and products while the entry 
 test('high-tier generation stays within safe won amounts and existing owned items are not repriced', () => {
   const original = owned();
   original.inventory[0].price = 1234;
+  delete original.moneyUnit;
   original.inventory[0].acquiredFor = 1234;
   const saved = parseSave({ version: 2, game: original, favoriteIds: [] }).game;
-  assert.deepEqual(saved.inventory, original.inventory);
+  assert.deepEqual(saved.inventory, normalizeMoney(original).inventory);
   saved.cash = 5000000000;
   saved.stats.peakCash = saved.cash;
   const next = run(saved, { type: 'refresh' });
@@ -1159,7 +1168,7 @@ test('high-tier generation stays within safe won amounts and existing owned item
     );
     assert.ok(i.value <= RULES.maxMoney);
   }
-  assert.deepEqual(next.inventory, original.inventory);
+  assert.deepEqual(next.inventory, normalizeMoney(original).inventory);
 });
 
 test('appraisal and repair spend money without using the last action, expiring listings or triggering weekly payment', () => {
@@ -1309,7 +1318,7 @@ test('seller holds, concessions, agreements, final prices and walkaways vary wit
       assert.equal(rejected.ok, false);
       assert.deepEqual(rejected.game, g);
     }
-    const again = execute(g, { type: 'offer', id, price: 1 });
+    const again = execute(g, { type: 'offer', id, price: 100 });
     assert.equal(again.ok, false);
     assert.deepEqual(again.game, g);
   }
@@ -1413,7 +1422,7 @@ test('real urgency adjusts price and deadline while false urgency does not guara
         duration,
         seller === 'urgent' || seller === 'moving' ? 2 : 3,
       );
-      assert.equal(item.price % 1000, 0);
+      assert.equal(item.price % 100, 0);
       if (item.listing!.tags.includes('urgent')) {
         if (seller === 'urgent') real++;
         else {
@@ -1591,12 +1600,13 @@ test('legacy boards and assets are retained; new markets are introduced by an ac
   old.board = old.board.filter((i) => i.marketId === 'street');
   for (const item of old.board) delete item.marketId;
   old.board[0].price = 1234567;
+  delete old.moneyUnit;
   const parsed = parseSave({ version: 2, game: old, favoriteIds: [] }).game;
-  assert.deepEqual(parsed, old);
-  assert.equal(parsed.board[0].price, 1234567);
+  assert.deepEqual(parsed, normalizeMoney(old));
+  assert.equal(parsed.board[0].price, 1234600);
   const after = run(parsed, { type: 'refresh', marketId: 'property' });
   assert.ok(after.board.some((i) => i.marketId === 'property'));
-  assert.equal(after.board[0].price, 1234567);
+  assert.equal(after.board[0].price, 1234600);
   assert.equal(after.minute, old.minute + ACTION_TICK);
 });
 
@@ -1707,7 +1717,7 @@ test('auction bidding is free and stable, rival replies are bounded, and only wo
       assert.ok(next > last);
       last = next;
       const original = structuredClone(g);
-      const duplicate = execute(g, { type: 'bid', id: lot.id, amount: 1 });
+      const duplicate = execute(g, { type: 'bid', id: lot.id, amount: 100 });
       assert.equal(duplicate.ok, false);
       assert.deepEqual(duplicate.game, original);
       g = run(g, { type: 'bid', id: lot.id, amount: next });
@@ -1786,7 +1796,7 @@ test('won auction settlement rechecks cash, inventory and weekly locks without l
   }
   const live = game.board.find((i) => i.id === lot.id)!;
   const lowCash = structuredClone(game);
-  lowCash.cash = live.auction!.currentBid - 1;
+  lowCash.cash = live.auction!.currentBid - 100;
   const refused = execute(lowCash, { type: 'buy', id: lot.id });
   assert.equal(refused.ok, false);
   assert.deepEqual(refused.game, lowCash);
@@ -1827,7 +1837,7 @@ test('early settlement charges the full current rate once and discards unused ac
   assert.equal(actionsLeft(g), 20);
   assert.equal(g.minute, WEEK_TICKS);
   assert.equal(execute(g, { type: 'payInterest' }).ok, false);
-  assert.equal(interestAmount(g), 299996);
+  assert.equal(interestAmount(g), 300000);
 });
 
 test('zero budget allows free owned-item verification but refuses every paid transaction atomically', () => {
@@ -1844,7 +1854,7 @@ test('zero budget allows free owned-item verification but refuses every paid tra
     { type: 'scavenge' },
     { type: 'buy', id: g.board[0].id },
     { type: 'post', id: g.inventory[0].id, price: 10000 },
-    { type: 'repay', amount: 1 },
+    { type: 'repay', amount: 100 },
   ] as Command[]) {
     const before = structuredClone(g);
     const result = execute(g, command);
@@ -1883,10 +1893,7 @@ test('daily saves retain paid weeks, used actions, asset deadlines and settlemen
 
 test('instant selling always pays actual value times sixty percent, ignoring trends and old quotes', () => {
   for (const value of [1, 100001, 100000000000001])
-    assert.equal(
-      instantSalePrice({ value }),
-      Number((BigInt(value) * 60n) / 100n),
-    );
+    assert.equal(instantSalePrice({ value }), moneyRatio(value, 60));
   const g = owned();
   g.inventory[0].value = 100001;
   g.inventory[0].checked = false;
@@ -2080,7 +2087,7 @@ test('shared sale reply preserves buyer limits, two-round budget, immutability a
     saleReply({ ...q, rounds: 2 }, 1000, null, () => 0.99).inquiry,
     null,
   );
-  assert.throws(() => saleReply(q, 1000, 1001, () => 0));
+  assert.throws(() => saleReply(q, 1000, 1050, () => 0));
 });
 
 test('mandatory weekly principal doubles from 50000 and is capped by remaining debt safely', () => {
@@ -2095,12 +2102,12 @@ test('mandatory weekly principal doubles from 50000 and is capped by remaining d
   const g = newGame();
   assert.equal(settlementAmount(g), 150000);
   g.principal = 12345;
-  assert.equal(mandatoryPrincipal(g), 12345);
+  assert.equal(mandatoryPrincipal(g), 12300);
   assert.equal(interestAmount(g), 0);
-  assert.equal(settlementAmount(g), 12345);
+  assert.equal(settlementAmount(g), 12300);
   assert.equal(weeklyPrincipalTarget(1000000), RULES.maxMoney);
   g.interestWeek = 1000000;
-  assert.equal(mandatoryPrincipal(g), 12345);
+  assert.equal(mandatoryPrincipal(g), 12300);
 });
 
 test('voluntary partial principal prepayments count this week and payment order cannot be bypassed', () => {
@@ -2124,7 +2131,7 @@ test('voluntary partial principal prepayments count this week and payment order 
   assert.equal(g.principalRepaidThisWeek, 0);
   assert.equal(g.interestWeek, 1);
   assert.equal(mandatoryPrincipal(g), 100000);
-  assert.equal(interestAmount(g), 299996);
+  assert.equal(interestAmount(g), 300000);
   assert.equal(actionsLeft(g), 20);
   assert.equal(execute(g, { type: 'payInterest' }).ok, false);
 });
@@ -2133,17 +2140,17 @@ test('excess voluntary repayments reduce interest but do not prepay next weeks o
   let g = newGame();
   g = run(g, { type: 'repay', amount: 100000 });
   assert.equal(mandatoryPrincipal(g), 0);
-  assert.equal(interestAmount(g), 99999);
+  assert.equal(interestAmount(g), 100000);
   g = run(g, { type: 'startSettlement' });
   g = run(g, { type: 'payInterest' });
-  assert.equal(g.cash, 300001);
+  assert.equal(g.cash, 300000);
   assert.equal(mandatoryPrincipal(g), 100000);
-  assert.equal(g.stats.repaid, 199999);
+  assert.equal(g.stats.repaid, 200000);
   assert.equal(g.principal, RULES.debt - 100000);
 });
 
 test('mandatory principal or interest shortfalls end play while exact funds resume with zero cash', () => {
-  for (const cash of [0, 49999, 100000, 149999]) {
+  for (const cash of [0, 49900, 100000, 149900]) {
     const g = newGame();
     g.cash = cash;
     const after = run(g, { type: 'startSettlement' });
@@ -2171,13 +2178,13 @@ test('final remaining principal clears without excess mandatory charge and legac
   assert.equal(final.cash, 0);
   let arrears = newGame();
   arrears.interest = 1234;
-  assert.equal(settlementAmount(arrears), 151234);
+  assert.equal(settlementAmount(arrears), 151200);
   arrears = run(arrears, { type: 'startSettlement' });
   arrears = run(arrears, { type: 'repay', amount: 50000 });
-  assert.equal(interestAmount(arrears), 101234);
+  assert.equal(interestAmount(arrears), 101200);
   arrears = run(arrears, { type: 'payInterest' });
   assert.equal(arrears.interest, 0);
-  assert.equal(arrears.cash, 348766);
+  assert.equal(arrears.cash, 348800);
 });
 
 test('old thirty-action saves migrate once preserving assets, relative deadlines and known principal prepayments', () => {
@@ -2223,4 +2230,192 @@ test('old thirty-action saves migrate once preserving assets, relative deadlines
     { weeklyRulesVersion: 3 },
   ])
     assert.equal(isGame({ ...g, ...changes }), false);
+});
+
+test('hundred-won rounding handles half boundaries, zero and exact large integer ratios', () => {
+  for (const [input, expected] of [
+    [0, 0],
+    [1, 0],
+    [49, 0],
+    [50, 100],
+    [99, 100],
+    [1049, 1000],
+    [1050, 1100],
+    [1099, 1100],
+  ])
+    assert.equal(roundMoney(input), expected);
+  const large = 999999999999999;
+  assert.equal(
+    moneyRatio(large, 201, 100000),
+    Number(((BigInt(large) * 201n + 5000000n) / 10000000n) * 100n),
+  );
+  assert.equal(weeklyInterest(14949999, 1), 100);
+  assert.equal(weeklyInterest(15000000, 1), 200);
+  assert.equal(instantSalePrice({ value: 1050 }), 600);
+  assert.equal(instantSalePrice({ value: 1250 }), 800);
+  assert.throws(() => roundMoney(Infinity));
+  assert.equal(Object.is(roundMoney(-49), -0), false);
+});
+
+test('typed repayment and listing amounts round before charging or recording without hidden residuals', () => {
+  for (const [input, expected] of [
+    [1049, 1000],
+    [1050, 1100],
+  ]) {
+    const g = owned();
+    const repaid = run(g, { type: 'repay', amount: input });
+    assert.equal(g.cash - repaid.cash, expected);
+    assert.equal(g.principal - repaid.principal, expected);
+    assert.equal(repaid.principalRepaidThisWeek, expected);
+    const posted = run(g, {
+      type: 'post',
+      id: g.inventory[0].id,
+      price: input,
+    });
+    assert.equal(posted.sales[0].price, expected);
+    assert.ok(allMoneyAligned(repaid));
+    assert.ok(allMoneyAligned(posted));
+  }
+  const g = owned();
+  for (const command of [
+    { type: 'post', id: g.inventory[0].id, price: 49 },
+    { type: 'repay', amount: 49 },
+  ] as Command[]) {
+    assert.equal(execute(g, command).ok, false);
+    assert.equal(g.weekActions, 0);
+  }
+});
+
+test('rounded bargaining offers remain distinct and strictly improve, ending when no hundred-won gap remains', () => {
+  assert.deepEqual(openingPurchaseOffers(10100), [7100, 8600]);
+  assert.deepEqual(nextPurchaseOffers(100000, 99900), []);
+  const options = nextPurchaseOffers(100000, 99500);
+  assert.equal(new Set(options).size, options.length);
+  assert.ok(
+    options.every((p) => p % MONEY_UNIT === 0 && p > 99500 && p < 100000),
+  );
+  const item = bargainFixture('street', 100000);
+  item.price = 100000;
+  item.negotiatedPrice = 100000;
+  item.offers = [99900];
+  item.purchaseBargain!.previousOffer = 99800;
+  const last = purchaseReply(item, 99900, () => 0.99).item;
+  assert.equal(last.chatSettled, true);
+  assert.deepEqual(last.offers, []);
+  assert.equal(last.negotiatedPrice, 100000);
+});
+
+test('new games and mixed trade/weekly payment sequences keep every ledger field on the hundred-won grid', () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    let g = newGame(seed);
+    assert.ok(allMoneyAligned(g));
+    g.cash = 10000000;
+    g.stats.peakCash = g.cash;
+    const item = g.board.find((i) => i.price > 0 && i.marketId === 'street')!;
+    g = run(g, { type: 'buy', id: item.id });
+    g = run(g, { type: 'check', id: item.id });
+    g = run(g, { type: 'outletSell', id: item.id });
+    for (let week = 0; week < 4; week++) {
+      g = run(g, { type: 'startSettlement' });
+      g = run(g, { type: 'repay', amount: mandatoryPrincipal(g) });
+      g = run(g, { type: 'payInterest' });
+      assert.ok(allMoneyAligned(g));
+      assert.deepEqual(
+        parseSave({ version: 2, game: g, favoriteIds: [] }).game,
+        g,
+      );
+    }
+  }
+});
+
+test('legacy money migration rounds once without RNG, asset loss or duplicate offers', () => {
+  const old = owned();
+  delete old.moneyUnit;
+  old.cash = 123456;
+  old.principal = RULES.debt - 1234;
+  old.interest = 567;
+  old.principalRepaidThisWeek = 1234;
+  const item = old.inventory[0];
+  item.acquiredFor = 1050;
+  item.base = 20001;
+  item.value = 10001;
+  item.chat = [{ speaker: 'other', text: '1,049 원에 거래했습니다.' }];
+  old.sales = [
+    {
+      id: 'rounded-sale',
+      itemId: item.id,
+      price: 54321,
+      created: 0,
+      expires: 2880,
+      nextCheck: 480,
+    },
+  ];
+  old.inquiries = [
+    {
+      id: 'rounded-inquiry',
+      saleId: 'rounded-sale',
+      name: '구매자',
+      price: 32549,
+      max: 49999,
+      rounds: 0,
+    },
+  ];
+  const snapshot = structuredClone(old);
+  const data = parseSave({ version: 2, game: old, favoriteIds: ['keep'] });
+  assert.equal(data.game.cash, 123500);
+  assert.equal(data.game.principal, RULES.debt - 1200);
+  assert.equal(data.game.interest, 600);
+  assert.equal(data.game.principalRepaidThisWeek, 1200);
+  assert.equal(data.game.inventory[0].acquiredFor, 1100);
+  assert.equal(
+    data.game.inventory[0].chat![0].text,
+    '1,000 원에 거래했습니다.',
+  );
+  assert.equal(data.game.sales[0].price, 54300);
+  assert.equal(data.game.inquiries[0].price, 32500);
+  assert.equal(data.game.seed, old.seed);
+  assert.equal(data.game.minute, old.minute);
+  assert.deepEqual(
+    data.game.inventory.map((i) => i.id),
+    old.inventory.map((i) => i.id),
+  );
+  assert.ok(allMoneyAligned(data.game));
+  assert.deepEqual(parseSave(data), data);
+  assert.deepEqual(old, snapshot);
+  assert.equal(isGame({ ...data.game, cash: 123501 }), false);
+});
+
+test('legacy sub-unit current offers keep paid quotes consistent with the rounded contract', () => {
+  const g = owned();
+  delete g.moneyUnit;
+  g.sales = [
+    {
+      id: 'tiny-sale',
+      itemId: g.inventory[0].id,
+      price: 1,
+      created: 0,
+      expires: 2880,
+      nextCheck: 480,
+    },
+  ];
+  g.inquiries = [
+    {
+      id: 'tiny-inquiry',
+      saleId: 'tiny-sale',
+      name: '구매자',
+      price: 1,
+      max: 100,
+      rounds: 0,
+      chat: [{ speaker: 'other', text: '1 원에 거래할 수 있을까요?' }],
+    },
+  ];
+  const rounded = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.equal(rounded.sales[0].price, 100);
+  assert.equal(rounded.inquiries[0].price, 100);
+  assert.equal(
+    rounded.inquiries[0].chat![0].text,
+    '100 원에 거래할 수 있을까요?',
+  );
+  const paid = run(rounded, { type: 'accept', id: 'tiny-inquiry' });
+  assert.equal(paid.cash - rounded.cash, 100);
 });

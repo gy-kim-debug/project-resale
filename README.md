@@ -60,3 +60,5 @@ Python Playwright와 Chromium이 필요합니다. `SCREEN_BASE_URL`, `CHROMIUM_P
 주간 납부 화면과 미납 종료는 프로덕션 preview 실행 후 `python scripts/verify-economy.py`로 검증합니다.
 
 물품 종류와 단계별 가격표는 [매물 카테고리·가격대](docs/design/items/CATEGORIES_AND_PRICES.md), 실행 설정은 `src/content/market.ts`에서 관리합니다. 가격 상향은 새로 생성하는 매물부터 적용합니다.
+
+모든 화폐는 100원 단위로 반올림하며 입력 미리보기와 실제 지급/차감 금액을 일치시킵니다.

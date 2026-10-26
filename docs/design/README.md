@@ -118,3 +118,7 @@
 ### 시장별 흥정
 
 - [시장별 공략·공통 처리·조정 가능한 밸런스](trading/bargaining/MARKET_STRATEGIES.md)
+
+### 화폐
+
+- [100원 단위 반올림·입력·저장 변환](economy/MONEY_UNITS.md)

@@ -45,7 +45,7 @@ with sync_playwright() as p:
    comp=comparisons.nth(idx)
    expect(comp.locator('[data-field=cost]')).to_have_text(money(cost))
    if item['checked']:
-    value=max(1,item['value']*(g['marketFactor']+(20 if item['kind']==g['trend'] else 0))//100)
+    value=(item['value']*(g['marketFactor']+(20 if item['kind']==g['trend'] else 0))+5000)//10000*100
     delta=value-cost
     expect(comp.locator('[data-field=value]')).to_have_text(money(value))
     expect(comp.locator('[data-field=difference]')).to_have_text(('+' if delta>0 else '−' if delta<0 else '')+money(abs(delta)))

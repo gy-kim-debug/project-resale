@@ -1,3 +1,4 @@
+import { MONEY_UNIT, roundMoney } from '../domain/money';
 import { useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
 import { ItemComparison } from './ItemComparison';
@@ -80,7 +81,7 @@ export function AmountForm({
   title,
   label,
   initial = '',
-  min = 1,
+  min = MONEY_UNIT,
   max,
   submit,
 }: {
@@ -92,17 +93,21 @@ export function AmountForm({
   submit: (n: number) => void;
 }) {
   const [amount, setAmount] = useState(initial);
+  const rounded =
+    /^\d+$/.test(amount) && Number.isSafeInteger(Number(amount))
+      ? roundMoney(Number(amount))
+      : NaN;
   const valid =
     /^\d+$/.test(amount) &&
     Number.isSafeInteger(Number(amount)) &&
-    Number(amount) >= min &&
-    Number(amount) <= max;
+    rounded >= min &&
+    rounded <= max;
   return (
     <form
       className="amount-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid) submit(Number(amount));
+        if (valid) submit(rounded);
       }}
     >
       <label>
@@ -111,15 +116,15 @@ export function AmountForm({
           inputMode="numeric"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="원 단위 숫자"
+          placeholder="금액 입력"
           required
           pattern="[0-9]+"
           maxLength={16}
         />
       </label>
       <p>
-        {amount && Number.isSafeInteger(Number(amount))
-          ? won(Number(amount))
+        {Number.isFinite(rounded)
+          ? `${won(rounded)} · 100원 단위 반올림`
           : '정수 금액을 입력하세요.'}
       </p>
       <button className="action-button primary" type="submit" disabled={!valid}>
@@ -726,7 +731,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
                   key={`${q.id}-${q.rounds}`}
                   title="가격 제안 · 행동 소모 없음"
                   label="제안할 판매 가격 (원)"
-                  min={q.price + 1}
+                  min={q.price + MONEY_UNIT}
                   max={sale.price}
                   submit={(price) => act({ type: 'counter', id: q.id, price })}
                 />

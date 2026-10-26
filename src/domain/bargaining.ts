@@ -1,3 +1,4 @@
+import { MONEY_UNIT, roundMoney } from './money';
 import { isMoney, won, type Item, type Inquiry } from './game';
 import {
   bargainingMarket,
@@ -32,8 +33,8 @@ export function purchaseReply(
   const state = (item.purchaseBargain ??= {
     rounds: 0,
     floor: Math.max(
-      1,
-      Math.floor(
+      MONEY_UNIT,
+      roundMoney(
         item.price *
           (profile.floorMin + random() * (profile.floorMax - profile.floorMin)),
       ),
@@ -83,8 +84,8 @@ export function purchaseReply(
       random() < holdChance
         ? 0
         : Math.max(
-            1,
-            Math.floor(
+            MONEY_UNIT,
+            roundMoney(
               (current - price) *
                 (profile.concessionMin +
                   random() * (profile.concessionMax - profile.concessionMin)) *
@@ -120,9 +121,13 @@ export function saleReply(
   random: () => number,
 ): { inquiry: Inquiry | null; message: string } {
   const q = structuredClone(original);
+  if (proposed !== null) {
+    if (!isMoney(proposed)) throw Error('100원 단위 금액을 입력하세요.');
+    proposed = roundMoney(proposed);
+  }
   const counter = proposed !== null;
   if (
-    counter &&
+    proposed !== null &&
     (!isMoney(proposed) || proposed <= q.price || proposed > asking)
   )
     throw Error(
@@ -164,8 +169,8 @@ export function saleReply(
   q.price = Math.min(
     q.max,
     Math.max(
-      q.price + 1,
-      Math.floor(counter ? (q.price + q.max) / 2 : q.price * 1.12),
+      q.price + MONEY_UNIT,
+      roundMoney(counter ? (q.price + q.max) / 2 : q.price * 1.12),
     ),
   );
   q.chat.push({

@@ -1,3 +1,4 @@
+import { normalizeMoney } from './moneyMigration';
 import { ACTION_TICK, ACTIONS_PER_WEEK, dayOf, type Game } from './game';
 import { settlementAmount } from './debt';
 
@@ -17,7 +18,8 @@ export function toWeeklyActions(original: Game): Game {
   delete g.health;
   delete g.fatigue;
   delete g.fatigueRemainder;
-  if (g.timeMode === 'weekly-actions' && g.weeklyRulesVersion === 2) return g;
+  if (g.timeMode === 'weekly-actions' && g.weeklyRulesVersion === 2)
+    return normalizeMoney(g);
   const oldWeekTicks = g.timeMode === 'weekly-actions' ? 14400 : 10080;
   const legacyWeek = Math.floor(g.minute / oldWeekTicks);
   g.interestWeek ??= legacyWeek;
@@ -72,7 +74,7 @@ export function toWeeklyActions(original: Game): Game {
       g.status = 'bankrupt';
       g.inquiries = [];
     }
-    return g;
+    return normalizeMoney(g);
   };
   if (g.timeMode === 'weekly-actions' || g.timeMode === 'daily-actions')
     return migrate();

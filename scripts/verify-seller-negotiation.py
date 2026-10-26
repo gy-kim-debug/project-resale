@@ -23,7 +23,7 @@ with sync_playwright() as p:
    assert page.locator('.action-layer').count()==0
   g=load()
   field=page.get_by_label('제안할 판매 가격 (원)',exact=True).first
-  for invalid in ['100','1001','1.5']:
+  for invalid in ['100','1050','1.5']:
    field.fill(invalid);assert page.get_by_role('button',name='가격 제안 · 행동 소모 없음',exact=True).first.is_disabled()
   propose(200)
   expect(page.get_by_role('log').first).to_contain_text('좋아요. 200 원에 거래해요.')

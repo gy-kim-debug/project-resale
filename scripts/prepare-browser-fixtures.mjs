@@ -27,7 +27,7 @@ pending.inventory.push(pending.board.shift());
 let p = execute(pending, {
   type: 'post',
   id: pending.inventory[0].id,
-  price: 1,
+  price: 100,
 }).game;
 for (let n = 0; n < 10 && !p.inquiries.length; n++)
   p = execute(p, { type: 'wait' }).game;
