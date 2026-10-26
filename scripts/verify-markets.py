@@ -6,7 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 subprocess.run(['node','scripts/prepare-browser-fixtures.mjs'],check=True)
 BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
-MARKETS=[('street','장터',10000,500000),('computers','컴퓨터시장',800000,1200000),('instruments','악기시장',1500000,10000000),('cars','중고차시장',10000000,80000000),('property','부동산 시장',100000000,1000000000),('auction','고가 경매시장',1000000000,10000000000)]
+MARKETS=[('street','중고 장터',10000,500000),('computers','컴퓨터시장',800000,1200000),('instruments','악기시장',1500000,10000000),('cars','중고차시장',10000000,80000000),('property','부동산 시장',100000000,1000000000),('auction','고가 경매시장',1000000000,10000000000)]
 READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result)}})}"""
 WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""
 with sync_playwright() as p:
@@ -44,7 +44,7 @@ with sync_playwright() as p:
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    page.get_by_role('button',name='닫기',exact=True).click()
   # A previous market preference must never hijack the street entrance.
-  open_market('장터');expect(page.locator('.market-selection strong')).to_have_text('장터');page.get_by_role('button',name='닫기',exact=True).click()
+  open_market('중고 장터');expect(page.locator('.market-selection strong')).to_have_text('중고 장터');page.get_by_role('button',name='닫기',exact=True).click()
   open_market('매각처')
   expect(page.locator('.market-selection')).to_have_count(0)
   expect(page.get_by_role('button',name='판매자와 채팅',exact=True)).to_have_count(0)

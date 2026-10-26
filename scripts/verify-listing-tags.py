@@ -17,7 +17,7 @@ with sync_playwright() as p:
   def load(name):
    data=json.loads(Path(f'work/tag-{name}.json').read_text())
    page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();return data
-  def market():page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click()
+  def market():page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click()
   def buy_and_check(expected):
    page.get_by_role('button',name='구매 내용 확인').click()
    page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click()

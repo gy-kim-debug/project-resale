@@ -20,7 +20,7 @@ const products = (kind: Kind, titles: string[]): MarketProduct[] =>
 const MARKET_DEFINITIONS: MarketDefinition[] = [
   {
     id: 'street',
-    name: '장터',
+    name: '중고 장터',
     min: 10000,
     max: 500000,
     products: [

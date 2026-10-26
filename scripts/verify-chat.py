@@ -24,7 +24,7 @@ with sync_playwright() as p:
   def read():return page.evaluate(READ)
   def settled():expect(page.locator('.action-layer')).to_have_count(0)
   def purchase_chat():
-   page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click()
+   page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click()
    page.locator('.item-row').first.click()
    page.get_by_role('button',name='판매자와 채팅',exact=True).click()
   start=load('rich');purchase_chat()
@@ -36,7 +36,7 @@ with sync_playwright() as p:
   expect(page.locator('.chat-message')).to_have_count(3)
   page.wait_for_function("async()=>!!(await ("+READ+")()).board[0].chat")
   assert read()['minute']==start['minute']
-  page.reload();page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click();page.locator('.item-row').first.click()
+  page.reload();page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click();page.locator('.item-row').first.click()
   expect(page.locator('.chat-message')).to_have_count(3)
   page.get_by_role('log').scroll_into_view_if_needed()
   page.screenshot(path=f'work/chat-purchase-{width}.png',full_page=True)

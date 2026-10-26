@@ -19,7 +19,7 @@ with sync_playwright() as p:
   if data['game']['board'][0].get('listing'): data['game']['board'][0]['listing']['facts']['seller']='ordinary'
   page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   def open_item():
-   page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click()
+   page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click()
    page.locator('.item-row').first.click()
   open_item();page.get_by_role('button',name='판매자와 채팅',exact=True).click()
   for round in range(2):

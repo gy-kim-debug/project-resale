@@ -39,7 +39,7 @@ with sync_playwright() as pw:
         expect(page.get_by_role('button',name='플레이 안내',exact=True)).to_have_count(0)
         assert page.get_by_text('무료 급식은 언제나',exact=False).count()==0
         assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','상점']
-        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','매각처']
+        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','중고 장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','매각처']
         expect(page.locator('.header-debt')).to_contain_text('10,000,000,000 원')
         assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==[]
         layout();page.screenshot(path=f'work/playable-home-{width}.png',full_page=True)
@@ -53,7 +53,7 @@ with sync_playwright() as pw:
         page.get_by_role('button',name='가치 확인 ·',exact=False).click()
         expect(page.locator('.sheet-layer .item-comparison [data-field=value]')).not_to_contain_text('미확인')
         click('닫기');page.locator('.item-row').first.click()
-        click('장터에 판매 등록');page.get_by_label('판매 가격 (원)').fill('1');click('판매 글 등록 확정')
+        click('중고 장터에 판매 등록');page.get_by_label('판매 가격 (원)').fill('1');click('판매 글 등록 확정')
         expect(page.get_by_label('판매 가격 (원)')).to_have_count(0)
         for _ in range(8):
             if page.get_by_role('heading',name='문의',exact=True).count():break
@@ -70,7 +70,7 @@ with sync_playwright() as pw:
         tab('보관함')
         expect(page.get_by_text('아직 보유한 물품이 없습니다.')).to_be_visible()
         # Real buy, negotiation, outlet and archive flows from a non-production fixture.
-        fixture('rich');activity('장터');page.locator('.item-row').first.click();layout()
+        fixture('rich');activity('중고 장터');page.locator('.item-row').first.click();layout()
         expect(page.get_by_role('button',name='구매 전',exact=False)).to_have_count(0)
         expect(page.get_by_text('상태:',exact=False)).to_have_count(0)
         click('판매자와 채팅')

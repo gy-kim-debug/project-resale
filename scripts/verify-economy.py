@@ -17,7 +17,7 @@ with sync_playwright() as p:
   expect(page.locator('.header-cash')).to_contain_text('500,000 원')
   expect(page.locator('.header-interest')).to_contain_text('1주차 이자')
   expect(page.locator('.header-interest')).to_contain_text('100,000 원')
-  assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','매각처']
+  assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','중고 장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','매각처']
   def read(): return page.evaluate(READ)
   def load(cash=200000,minute=14400-480):
    data=json.loads(Path('work/rich.json').read_text())
