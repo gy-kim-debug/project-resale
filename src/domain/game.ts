@@ -65,6 +65,7 @@ export interface Item {
   marketId?: MarketId;
   listing?: ListingInfo;
   purchaseBargain?: {
+    previousOffer?: number;
     rounds: number;
     floor: number;
     patience: number;

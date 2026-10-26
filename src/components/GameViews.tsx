@@ -15,6 +15,8 @@ import {
   repairCost,
 } from '../domain/engine';
 import { marketDefinition, marketOf } from '../content/markets';
+import { canPurchaseOffer } from '../domain/purchaseBargaining';
+import { SALE_BARGAINING } from '../content/bargaining';
 import { auctionBidOptions } from '../domain/auction';
 import { instantSalePrice } from '../domain/instantSale';
 import { JOBS, RULES } from '../content/rules';
@@ -450,9 +452,7 @@ export function ListingView({
                   ]
                 }
               />
-              {!item.chatSettled &&
-                (item.negotiation === 'none' ||
-                  (item.purchaseBargain && item.negotiation !== 'accepted')) &&
+              {canPurchaseOffer(item) &&
                 item.offers.map((p) => (
                   <Button
                     key={p}
@@ -681,16 +681,18 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
                 ]
               }
             />
-            {sale && q.rounds < 2 && q.price < sale.price && (
-              <AmountForm
-                key={`${q.id}-${q.rounds}`}
-                title="가격 제안 · 행동 소모 없음"
-                label="제안할 판매 가격 (원)"
-                min={q.price + 1}
-                max={sale.price}
-                submit={(price) => act({ type: 'counter', id: q.id, price })}
-              />
-            )}
+            {sale &&
+              q.rounds < SALE_BARGAINING.maxRounds &&
+              q.price < sale.price && (
+                <AmountForm
+                  key={`${q.id}-${q.rounds}`}
+                  title="가격 제안 · 행동 소모 없음"
+                  label="제안할 판매 가격 (원)"
+                  min={q.price + 1}
+                  max={sale.price}
+                  submit={(price) => act({ type: 'counter', id: q.id, price })}
+                />
+              )}
             <Button onClick={() => act({ type: 'accept', id: q.id })}>
               수락하고 거래 · 행동 1회
             </Button>

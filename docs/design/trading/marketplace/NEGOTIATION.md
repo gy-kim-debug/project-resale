@@ -19,3 +19,7 @@
 - 대화 내용과 제안 금액은 즉시 저장하며 기존 v2 저장 형식을 유지한다.
 
 [판매 글 유지/만료](LISTING_LIFECYCLE.md) · [실제 거래](TRANSACTION.md)
+
+## 공통 처리
+
+플레이어 가격 역제안과 거절 응답을 `domain/bargaining.ts`의 `saleReply`로 통합했다. 최대 재제안 횟수와 파토 확률은 `content/bargaining.ts`가 관리하며 UI도 같은 한도를 읽는다. 기존 2회 한도·가격 범위·현금/행동 비용·글 유지 규칙은 바꾸지 않는다. 시장별 공략 차이는 이번에는 [NPC 구매 흥정](../bargaining/MARKET_STRATEGIES.md)에 적용하며 판매 문의의 시장별 차이는 추후 조정 대상으로 둔다.

@@ -15,7 +15,7 @@ const products = (kind: Kind, titles: string[]): MarketProduct[] =>
   titles.map((title) => ({
     title,
     kind,
-    description: '보관 중인 자산을 판매합니다. 가격 협의 가능합니다.',
+    description: '보관 중인 자산을 판매합니다.',
   }));
 const MARKET_DEFINITIONS: MarketDefinition[] = [
   {

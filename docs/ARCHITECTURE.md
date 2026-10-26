@@ -4,23 +4,26 @@ React·TypeScript·Vite·Tailwind CSS v4·Zustand·IndexedDB(idb) 기반 클라�
 
 ## 책임
 
-| 위치                         | 책임                                                         |
-| ---------------------------- | ------------------------------------------------------------ |
-| src/domain/game.ts           | 직렬화 가능한 게임/아이템/명령/결과 타입·정수 금액/시각 표시 |
-| src/domain/engine.ts         | 순수 명령 실행·시드 난수·시간·거래·이자·이벤트·능력치        |
-| src/content/market.ts        | 카테고리 기준 가치·가격 단계·매입가 범위·나눔/수집 금액      |
-| src/content/rules.ts         | 행동·즉시 판매 비율·등급·콘텐츠·밸런스                       |
-| src/app/store.ts             | 명령 결과 반영, 탐색 탭, 관심 상태, 저장 직렬화·오류·복원    |
-| src/storage                  | 저장 인터페이스·IndexedDB·전체 스냅샷 검증·이전 저장 보존    |
-| src/App.tsx                  | 공통 3줄 헤더·홈·5개 탭·하단 창 스택·필수 문의·종료 화면     |
-| src/components/GameViews.tsx | 각 화면·입력·구매/판매 확인·결과·백업 파일 조작              |
-| src/components/Icon.tsx      | 로컬 SVG 아이콘                                              |
-| src/styles.css               | 모바일·safe-area·고정 헤더·하단 탐색·스크롤·하단 창          |
-| scripts/build-offline.mjs    | 빌드 결과 해시를 사용한 앱 파일 캐시·서비스 워커 생성        |
-| tests/engine.test.ts         | 도메인 규칙·무변경 실패·장기 플레이·저장 검증                |
-| scripts/verify-screens.py    | 모바일 Chromium UI·저장/복원·오프라인·종료 검증              |
-| docs/design                  | 사용자 확정 규칙·주제별 개발자 위임 결정·UI·v1 정책          |
-| work                         | 커밋 제외 번들·스냅샷·검증 스크린샷·배포 아카이브            |
+| 위치                             | 책임                                                             |
+| -------------------------------- | ---------------------------------------------------------------- |
+| src/domain/game.ts               | 직렬화 가능한 게임/아이템/명령/결과 타입·정수 금액/시각 표시     |
+| src/content/bargaining.ts        | 일반 시장별 흥정 프로필·초기 가격·전략·판매 문의 제한            |
+| src/domain/bargaining.ts         | 구매/판매 문의의 순수 상태 전이·채팅 응답                        |
+| src/domain/purchaseBargaining.ts | 시장/판매 성향 결합·가격 선택지·접근 방식·UI/엔진 공통 가능 조건 |
+| src/domain/engine.ts             | 순수 명령 실행·시드 난수·시간·거래·이자·이벤트·능력치            |
+| src/content/market.ts            | 카테고리 기준 가치·가격 단계·매입가 범위·나눔/수집 금액          |
+| src/content/rules.ts             | 행동·즉시 판매 비율·등급·콘텐츠·밸런스                           |
+| src/app/store.ts                 | 명령 결과 반영, 탐색 탭, 관심 상태, 저장 직렬화·오류·복원        |
+| src/storage                      | 저장 인터페이스·IndexedDB·전체 스냅샷 검증·이전 저장 보존        |
+| src/App.tsx                      | 공통 3줄 헤더·홈·5개 탭·하단 창 스택·필수 문의·종료 화면         |
+| src/components/GameViews.tsx     | 각 화면·입력·구매/판매 확인·결과·백업 파일 조작                  |
+| src/components/Icon.tsx          | 로컬 SVG 아이콘                                                  |
+| src/styles.css                   | 모바일·safe-area·고정 헤더·하단 탐색·스크롤·하단 창              |
+| scripts/build-offline.mjs        | 빌드 결과 해시를 사용한 앱 파일 캐시·서비스 워커 생성            |
+| tests/engine.test.ts             | 도메인 규칙·무변경 실패·장기 플레이·저장 검증                    |
+| scripts/verify-screens.py        | 모바일 Chromium UI·저장/복원·오프라인·종료 검증                  |
+| docs/design                      | 사용자 확정 규칙·주제별 개발자 위임 결정·UI·v1 정책              |
+| work                             | 커밋 제외 번들·스냅샷·검증 스크린샷·배포 아카이브                |
 
 ## 게임 실행
 
@@ -77,3 +80,9 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 고가 경매 로직은 `domain/auction.ts`, 수치는 `content/auction.ts`로 분리한다. `Item.auction`의 상태·금액·진행 대화는 백업에서도 검증하며 입찰에는 난수나 시간이 진행하지 않는다. 실제 결제만 기존 매입 경로에서 원자적으로 처리한다.
 
 시장 UI 경로는 `Route.marketId`로 고정한다. 활동에서 각 시장으로 직접 열고 목록/상세 왕복 시 원래 시장을 유지한다. `selectedMarket`은 마지막 방문 기록이며 명시적인 장터 경로를 덮어쓰지 않는다.
+
+## 시장별 흥정 공통화
+
+일반 시장은 모두 같은 `ListingView`와 `purchaseReply`를 사용한다. 시장별 가격 선택지·프로필·접근 방식은 콘텐츠 설정으로 분리한다. 구매자의 역제안·거절은 `saleReply`로 묶어 중복 분기를 제거한다. 구매와 판매는 역할/상태가 다르므로 각각의 순수 함수로 유지하며 엔진은 난수를 주입하고 결과만 적용한다. 경매 입찰·즉시 판매는 별도 거래 방식으로 유지한다.
+
+`previousOffer`는 구 저장과 호환되는 선택 필드이며 이전 흥정의 최소 수락가·인내심·가격·제안 선택지를 재생성하지 않는다. UI와 엔진이 `canPurchaseOffer`를 함께 사용한다. [시장별 공략과 수치](design/trading/bargaining/MARKET_STRATEGIES.md)는 개발자 초기 밸런스안으로 구분한다.

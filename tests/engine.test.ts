@@ -38,6 +38,14 @@ import {
   interestPending,
   WEEK_TICKS,
 } from '../src/domain/debt';
+import { purchaseReply, saleReply } from '../src/domain/bargaining';
+import {
+  openingPurchaseOffers,
+  purchaseApproach,
+  purchaseProfile,
+  nextPurchaseOffers,
+} from '../src/domain/purchaseBargaining';
+import { BARGAINING_MARKETS } from '../src/content/bargaining';
 import { instantSalePrice } from '../src/domain/instantSale';
 import { acquisitionCost, compareItem } from '../src/domain/inventory';
 function run(g: Game, c: Command) {
@@ -1889,4 +1897,177 @@ test('instant selling always pays actual value times sixty percent, ignoring tre
   const denied = execute(exhausted, { type: 'outletSell', id: item.id });
   assert.equal(denied.ok, false);
   assert.deepEqual(denied.game, exhausted);
+});
+
+test('all five ordinary markets share free repeated purchase negotiations and market-specific opening prices', () => {
+  for (const market of MARKETS.filter((m) => m.id !== 'auction')) {
+    let g = newGame(7);
+    g.cash = 100000000000;
+    const item = g.board.find((i) => i.marketId === market.id && i.price > 0)!;
+    assert.deepEqual(item.offers, openingPurchaseOffers(item.price, market.id));
+    item.listing!.facts.seller = 'ordinary';
+    const before = structuredClone(g);
+    g = run(g, { type: 'offer', id: item.id, price: item.offers[1] });
+    assert.equal(g.minute, before.minute);
+    assert.equal(g.cash, before.cash);
+    assert.equal(g.weekActions, before.weekActions);
+    const live = g.board.find((i) => i.id === item.id)!;
+    assert.ok(live.purchaseBargain);
+    assert.equal(live.chat!.length, 3);
+    assert.equal(live.purchaseBargain!.previousOffer, item.offers[1]);
+    assert.deepEqual(
+      parseSave({ version: 2, game: g, favoriteIds: [] }).game,
+      g,
+    );
+    assert.deepEqual(
+      BARGAINING_MARKETS[
+        market.id as keyof typeof BARGAINING_MARKETS
+      ].opening.map((n) => Math.floor((item.price * n) / 100)),
+      item.offers,
+    );
+  }
+  assert.deepEqual(openingPurchaseOffers(100000, 'auction'), []);
+  assert.deepEqual(openingPurchaseOffers(0, 'street'), []);
+  assert.deepEqual(openingPurchaseOffers(100000), [70000, 85000]);
+});
+
+function bargainFixture(
+  marketId: Game['board'][number]['marketId'],
+  floor = 50000,
+) {
+  const item = structuredClone(
+    newGame(1).board.find((i) => i.marketId === marketId && i.price > 0)!,
+  );
+  item.price = 100000;
+  item.negotiatedPrice = 100000;
+  item.negotiation = 'rejected';
+  item.chatSettled = false;
+  item.listing!.facts.seller = 'ordinary';
+  item.purchaseBargain = {
+    rounds: 1,
+    floor,
+    patience: 6,
+    walked: false,
+    previousOffer: 10000,
+  };
+  item.offers = nextPurchaseOffers(100000, 10000);
+  item.chat = [{ speaker: 'other', text: '가격을 다시 제안해 주세요.' }];
+  return item;
+}
+
+test('instrument gradual offers and property patience produce larger concessions with equal randomness', () => {
+  const street = bargainFixture('street');
+  const music = bargainFixture('instruments');
+  const amount = music.offers[0];
+  const unchanged = structuredClone(music);
+  const baseline = purchaseReply(street, amount, () => 0.99);
+  const gradual = purchaseReply(music, amount, () => 0.99);
+  assert.ok(gradual.item.negotiatedPrice! < baseline.item.negotiatedPrice!);
+  assert.equal(purchaseApproach(music, amount, 2).favorable, true);
+  assert.deepEqual(music, unchanged, 'pure transition cannot mutate its input');
+  const property = bargainFixture('property');
+  const early = purchaseReply(property, amount, () => 0.99);
+  property.purchaseBargain!.rounds = 2;
+  const patient = purchaseReply(property, amount, () => 0.99);
+  assert.ok(patient.item.negotiatedPrice! < early.item.negotiatedPrice!);
+  assert.ok(patient.message.includes('몇 차례 조율'));
+});
+
+test('cars favor a decisive raise and computers favor close quotes but may walk on extreme lowballs', () => {
+  const car = bargainFixture('cars', 90000);
+  const amount = car.offers[2];
+  assert.equal(purchaseApproach(car, amount, 2).favorable, true);
+  assert.equal(purchaseApproach(car, car.offers[0], 2).favorable, false);
+  const decisive = purchaseReply(car, amount, () => 0.99);
+  assert.ok(decisive.message.includes('조건을 올려'));
+  const computer = bargainFixture('computers', 95000);
+  computer.offers = [80000, 90000];
+  assert.equal(purchaseApproach(computer, 90000, 2).favorable, true);
+  const walked = purchaseReply(computer, 80000, () => 0);
+  assert.equal(walked.item.purchaseBargain!.walked, true);
+  const precise = purchaseReply(computer, 90000, () => 0.99);
+  assert.equal(precise.item.purchaseBargain!.walked, false);
+  assert.ok(precise.item.negotiatedPrice! >= 95000);
+  const street = bargainFixture('street', 95000);
+  street.offers = [80000];
+  assert.equal(
+    purchaseReply(street, 80000, () => 0).item.purchaseBargain!.walked,
+    false,
+  );
+});
+
+test('true firm sellers never discount in any ordinary market and market tactics cannot bypass price floors', () => {
+  for (const market of MARKETS.filter((m) => m.id !== 'auction')) {
+    let item = bargainFixture(market.id);
+    delete item.purchaseBargain;
+    item.negotiation = 'none';
+    item.negotiatedPrice = null;
+    item.chat = undefined;
+    item.listing!.facts.seller = 'firm';
+    item.offers = openingPurchaseOffers(item.price, market.id);
+    assert.equal(purchaseProfile(item).floorMin, 1);
+    assert.equal(purchaseProfile(item).holdChance, 1);
+    while (!item.chatSettled) {
+      const reply = purchaseReply(item, item.offers[0], () => 0.99);
+      item = reply.item;
+      assert.equal(item.negotiatedPrice, item.price);
+      assert.equal(item.purchaseBargain!.floor, item.price);
+      assert.ok(item.purchaseBargain!.rounds <= 6);
+    }
+    assert.throws(() => purchaseReply(item, item.price - 1, () => 0));
+  }
+});
+
+test('bargaining is independent of hidden item value and validates previous offers without resetting legacy chats', () => {
+  const item = bargainFixture('instruments');
+  const alternate = structuredClone(item);
+  alternate.value = 1;
+  alternate.base = 999999;
+  alternate.checked = true;
+  alternate.condition = '고장';
+  const a = purchaseReply(item, item.offers[0], () => 0.8);
+  const b = purchaseReply(alternate, item.offers[0], () => 0.8);
+  for (const key of [
+    'negotiatedPrice',
+    'negotiation',
+    'offers',
+    'purchaseBargain',
+    'chat',
+  ] as const)
+    assert.deepEqual(a.item[key], b.item[key]);
+  const g = newGame();
+  const legacy = g.board[0];
+  g.board[0] = purchaseReply(legacy, legacy.offers[0], () => 0.9).item;
+  delete g.board[0].purchaseBargain!.previousOffer;
+  const restored = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.deepEqual(restored, g);
+  for (const previousOffer of [-1, 0, 1.5, restored.board[0].price + 1]) {
+    const invalid = structuredClone(restored);
+    invalid.board[0].purchaseBargain!.previousOffer = previousOffer;
+    assert.equal(isGame(invalid), false);
+  }
+  assert.deepEqual(g.board[0].offers, restored.board[0].offers);
+});
+
+test('shared sale reply preserves buyer limits, two-round budget, immutability and one-inquiry walkaway', () => {
+  const g = pending();
+  const q = g.inquiries[0];
+  q.price = 100;
+  q.max = 500;
+  q.rounds = 0;
+  const before = structuredClone(q);
+  const raised = saleReply(q, 1000, 800, () => 0.99);
+  assert.deepEqual(q, before);
+  assert.equal(raised.inquiry!.price, 300);
+  assert.equal(raised.inquiry!.rounds, 1);
+  const agreed = saleReply(raised.inquiry!, 1000, 400, () => 0.99);
+  assert.equal(agreed.inquiry!.price, 400);
+  assert.equal(agreed.inquiry!.rounds, 2);
+  assert.throws(() => saleReply(agreed.inquiry!, 1000, 450, () => 0));
+  assert.equal(saleReply(q, 1000, 800, () => 0).inquiry, null);
+  assert.equal(
+    saleReply({ ...q, rounds: 2 }, 1000, null, () => 0.99).inquiry,
+    null,
+  );
+  assert.throws(() => saleReply(q, 1000, 1001, () => 0));
 });

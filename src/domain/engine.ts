@@ -1,13 +1,13 @@
 import type { Command, Game, Item, Result, Kind, MarketId } from './game';
 import { dayOf, isMoney, won, ACTION_TICK, actionsLeft, weekOf } from './game';
 import { instantSalePrice } from './instantSale';
-import { nextPurchaseOffers } from './purchaseBargaining';
+import { openingPurchaseOffers } from './purchaseBargaining';
+import { purchaseReply, saleReply } from './bargaining';
 import {
   createListingInfo,
   listingAskPrice,
   listingValuePercent,
   listingFindings,
-  sellerProfile,
   integrityLabel,
 } from './listingTags';
 import {
@@ -173,7 +173,7 @@ function makeItem(
         (listing && ['urgent', 'moving'].includes(listing.facts.seller)
           ? TAG_RULES.shortLifetimeActions
           : TAG_RULES.normalLifetimeActions),
-    offers: [Math.floor(price * 0.7), Math.floor(price * 0.85)],
+    offers: openingPurchaseOffers(price, marketItem?.marketId),
     negotiation: 'none',
     negotiatedPrice: null,
   };
@@ -514,88 +514,13 @@ export function execute(original: Game, command: Command): Result {
         break;
       }
       case 'offer': {
-        const i = preItem(g, command.id);
-        if (
-          i.marketId === 'auction' ||
-          i.price === 0 ||
-          i.chatSettled ||
-          (i.purchaseBargain &&
-            i.purchaseBargain.rounds >= i.purchaseBargain.patience) ||
-          i.negotiation === 'accepted' ||
-          (i.negotiation === 'rejected' && !i.purchaseBargain) ||
-          !i.offers.includes(command.price)
-        )
-          throw Error('선택할 수 없는 구매 제안입니다.');
-        const profile = sellerProfile(i);
-        const state = (i.purchaseBargain ??= {
-          rounds: 0,
-          floor: Math.max(
-            1,
-            Math.floor(
-              i.price *
-                (profile.floorMin +
-                  roll(g) * (profile.floorMax - profile.floorMin)),
-            ),
-          ),
-          patience:
-            profile.patienceMin +
-            Math.floor(
-              roll(g) * (profile.patienceMax - profile.patienceMin + 1),
-            ),
-          walked: false,
-        });
-        const current = i.negotiatedPrice ?? i.price;
-        state.rounds++;
-        i.chat ??= [
-          { speaker: 'other', text: `판매 가격은 ${won(i.price)}입니다.` },
-        ];
-        i.chat.push({
-          speaker: 'player',
-          text: `${won(command.price)}에 거래할 수 있을까요?`,
-        });
-        if (command.price >= state.floor) {
-          i.negotiation = 'accepted';
-          i.negotiatedPrice = command.price;
-          i.offers = [];
-          message = `좋아요. ${won(command.price)}에 거래해요.`;
-        } else if (state.rounds >= state.patience && roll(g) < 0.3) {
-          state.walked = true;
-          i.negotiation = 'rejected';
-          i.negotiatedPrice = null;
-          i.offers = [];
-          i.chatSettled = true;
-          message = '가격이 안 맞네요. 이번 거래는 여기까지 할게요.';
-        } else {
-          // Small concessions and occasional holds make each reply meaningful.
-          const concession =
-            roll(g) < profile.holdChance
-              ? 0
-              : Math.max(
-                  1,
-                  Math.floor(
-                    (current - command.price) *
-                      (profile.concessionMin +
-                        roll(g) *
-                          (profile.concessionMax - profile.concessionMin)),
-                  ),
-                );
-          const counter = Math.max(state.floor, current - concession);
-          i.negotiation = 'rejected';
-          i.negotiatedPrice = counter;
-          i.offers =
-            state.rounds < state.patience
-              ? nextPurchaseOffers(counter, command.price)
-              : [];
-          const final = !i.offers.length;
-          i.chatSettled = final;
-          message = final
-            ? `${won(counter)}가 마지막 가격입니다. 더는 어렵겠어요.`
-            : counter === current
-              ? `그 가격은 어렵네요. ${won(counter)}는 받아야 해요.`
-              : `${won(counter)}까지는 맞춰드릴게요. 어떠세요?`;
-        }
-        i.chat.push({ speaker: 'other', text: message });
-        log(g, `${i.seller}: ${message}`);
+        const originalItem = preItem(g, command.id);
+        const reply = purchaseReply(originalItem, command.price, () => roll(g));
+        g.board = g.board.map((item) =>
+          item.id === originalItem.id ? reply.item : item,
+        );
+        message = reply.message;
+        log(g, `${originalItem.seller}: ${message}`);
         break;
       }
       case 'closeChat': {
@@ -736,74 +661,24 @@ export function execute(original: Game, command: Command): Result {
         advance(g, 1, false);
         break;
       }
-      case 'counter': {
+      case 'counter':
+      case 'reject': {
         const q = g.inquiries.find((q) => q.id === command.id);
         if (!q) throw Error('종료된 문의입니다.');
         const sale = g.sales.find((s) => s.id === q.saleId);
         if (!sale) throw Error('판매 글이 없습니다.');
-        if (
-          !isMoney(command.price) ||
-          command.price <= q.price ||
-          command.price > sale.price
-        )
-          throw Error(
-            '구매자 제안보다 높고 등록 가격 이하인 정수 금액을 입력하세요.',
+        const reply = saleReply(
+          q,
+          sale.price,
+          command.type === 'counter' ? command.price : null,
+          () => roll(g),
+        );
+        if (reply.inquiry)
+          g.inquiries = g.inquiries.map((inquiry) =>
+            inquiry.id === q.id ? reply.inquiry! : inquiry,
           );
-        if (q.rounds >= 2) throw Error('더 이상 가격을 제안할 수 없습니다.');
-        q.chat ??= [
-          { speaker: 'other', text: `${won(q.price)}에 거래할 수 있을까요?` },
-        ];
-        q.chat.push({
-          speaker: 'player',
-          text: `${won(command.price)}에 판매하고 싶습니다.`,
-        });
-        q.rounds++;
-        if (command.price <= q.max) {
-          q.price = command.price;
-          q.chat.push({
-            speaker: 'other',
-            text: `좋아요. ${won(q.price)}에 거래해요.`,
-          });
-          message = `구매자가 ${won(q.price)} 제안을 수락했습니다.`;
-        } else if (q.price >= q.max || roll(g) < 0.3) {
-          endInquiry(g, q.id);
-          message = '구매자가 거래를 파토냈습니다. 판매 글은 유지됩니다.';
-        } else {
-          q.price = Math.min(
-            q.max,
-            Math.max(q.price + 1, Math.floor((q.price + q.max) / 2)),
-          );
-          q.chat.push({
-            speaker: 'other',
-            text: `그 가격은 어렵습니다. ${won(q.price)}은 어떠세요?`,
-          });
-          message = `구매자가 ${won(q.price)}으로 다시 제안했습니다.`;
-        }
-        log(g, message);
-        break;
-      }
-      case 'reject': {
-        const q = g.inquiries.find((q) => q.id === command.id);
-        if (!q) throw Error('종료된 문의입니다.');
-        q.chat ??= [
-          { speaker: 'other', text: `${won(q.price)}에 거래할 수 있을까요?` },
-        ];
-        q.chat.push({ speaker: 'player', text: '그 가격에는 어렵습니다.' });
-        if (q.rounds >= 2 || q.price >= q.max || roll(g) < 0.3) {
-          endInquiry(g, q.id);
-          message = '구매자가 거래를 파토냈습니다. 판매 글은 유지됩니다.';
-        } else {
-          q.rounds++;
-          q.price = Math.min(
-            q.max,
-            Math.max(q.price + 1, Math.floor(q.price * 1.12)),
-          );
-          q.chat.push({
-            speaker: 'other',
-            text: `그러면 ${won(q.price)}은 어떠세요?`,
-          });
-          message = `구매자가 ${won(q.price)}으로 다시 제안했습니다.`;
-        }
+        else endInquiry(g, q.id);
+        message = reply.message;
         log(g, message);
         break;
       }

@@ -103,7 +103,11 @@ function item(v: unknown): v is Item {
         integer(v.purchaseBargain.patience, 6) &&
         v.purchaseBargain.patience >= 4 &&
         v.purchaseBargain.rounds <= v.purchaseBargain.patience &&
-        typeof v.purchaseBargain.walked === 'boolean')) &&
+        typeof v.purchaseBargain.walked === 'boolean' &&
+        (v.purchaseBargain.previousOffer === undefined ||
+          (integer(v.purchaseBargain.previousOffer, RULES.maxMoney) &&
+            v.purchaseBargain.previousOffer > 0 &&
+            v.purchaseBargain.previousOffer <= Number(v.price))))) &&
     (v.chatSettled === undefined || typeof v.chatSettled === 'boolean') &&
     kind(v.kind) &&
     (v.marketId === undefined ||
