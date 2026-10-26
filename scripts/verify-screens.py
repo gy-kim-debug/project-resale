@@ -39,7 +39,7 @@ with sync_playwright() as pw:
         expect(page.get_by_role('button',name='플레이 안내',exact=True)).to_have_count(0)
         assert page.get_by_text('무료 급식은 언제나',exact=False).count()==0
         assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','상점']
-        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','중고 장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','매각처']
+        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','중고 장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','즉시 판매']
         expect(page.locator('.header-debt')).to_contain_text('10,000,000,000 원')
         assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==[]
         layout();page.screenshot(path=f'work/playable-home-{width}.png',full_page=True)
@@ -77,8 +77,8 @@ with sync_playwright() as pw:
         page.get_by_role('button',name=' 제안',exact=False).first.click()
         page.get_by_role('button',name='구매 내용 확인',exact=False).click();click('지불·수령 확정')
         click('받은 물품 확인');expect(page.get_by_text('상태:',exact=False)).to_be_visible();layout();page.screenshot(path=f'work/playable-item-{width}.png',full_page=True)
-        click('매각처 방문');page.get_by_role('button',name='고물상 방문',exact=True).click()
-        page.locator('.item-row').first.click();click('제시 가격으로 판매 확정')
+        click('즉시 판매')
+        page.locator('.item-row').first.click();click('판매 확정 · 행동 1회')
         while page.get_by_role('button',name='← 뒤로',exact=True).count():click('← 뒤로')
         click('닫기')
         tab('내 정보');expect(page.get_by_role('heading',name='거래 감각',exact=False)).to_be_visible();layout()

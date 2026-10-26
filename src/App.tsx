@@ -61,8 +61,8 @@ const groups: {
     })),
   },
   {
-    title: '매각',
-    activities: [{ label: '매각처', route: { kind: '매각처' } }],
+    title: '판매',
+    activities: [{ label: '즉시 판매', route: { kind: '즉시 판매' } }],
   },
 ];
 function Header({

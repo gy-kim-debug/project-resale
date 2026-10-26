@@ -18,7 +18,7 @@ with sync_playwright() as p:
   data=json.loads(Path('work/rich.json').read_text());page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   def read():return page.evaluate(READ)
   def open_market(name):page.locator('.activity-grid').get_by_role('button',name=name,exact=True).click()
-  expected=['무료나눔','아르바이트','물건 수집']+[m[1] for m in MARKETS]+['매각처']
+  expected=['무료나눔','아르바이트','물건 수집']+[m[1] for m in MARKETS]+['즉시 판매']
   assert page.locator('.activity-grid button').all_text_contents()==expected
   page.screenshot(path=f'work/activity-direct-markets-{width}.png',full_page=True)
   original=read()['game']
@@ -45,10 +45,10 @@ with sync_playwright() as p:
    page.get_by_role('button',name='닫기',exact=True).click()
   # A previous market preference must never hijack the street entrance.
   open_market('중고 장터');expect(page.locator('.market-selection strong')).to_have_text('중고 장터');page.get_by_role('button',name='닫기',exact=True).click()
-  open_market('매각처')
+  open_market('즉시 판매')
   expect(page.locator('.market-selection')).to_have_count(0)
   expect(page.get_by_role('button',name='판매자와 채팅',exact=True)).to_have_count(0)
-  expect(page.get_by_role('button',name='중고 상점 방문',exact=True)).to_be_visible()
+  expect(page.get_by_text('실제 가치의 60%로 판매합니다.',exact=True)).to_be_visible()
   page.get_by_role('button',name='닫기',exact=True).click()
   open_market('컴퓨터시장');before=read()['game']
   page.get_by_role('button',name='새 매물 탐색 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)

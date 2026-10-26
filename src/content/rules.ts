@@ -27,30 +27,7 @@ export const JOBS = [
     reward: 38_000,
   },
 ];
-export const OUTLETS = [
-  {
-    id: 'scrap',
-    title: '고물상',
-    kinds: ['생활', '디지털', '가구', '수집품'],
-    percent: 45,
-  },
-  { id: 'used', title: '중고 상점', kinds: ['디지털', '가구'], percent: 72 },
-  { id: 'collector', title: '수집품 상점', kinds: ['수집품'], percent: 85 },
-  { id: 'music', title: '악기 매입점', kinds: ['악기'], percent: 80 },
-  { id: 'carDealer', title: '중고차 매입점', kinds: ['자동차'], percent: 75 },
-  {
-    id: 'propertyBroker',
-    title: '부동산 매입처',
-    kinds: ['부동산'],
-    percent: 80,
-  },
-  {
-    id: 'aircraftBroker',
-    title: '항공기 매입처',
-    kinds: ['항공기'],
-    percent: 80,
-  },
-];
+export const INSTANT_SALE_PERCENT = 60;
 export { TIERS } from './market';
 export const CATALOG = [
   {

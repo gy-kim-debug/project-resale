@@ -83,7 +83,11 @@
 - [물건 판매 경로](trading/SALES_CHANNELS.md)
 - [판매 경로 전환](trading/CHANNEL_SWITCHING.md)
 
-### 고물상·상점 등 매각처
+### 즉시 판매
+
+- [실제 가치 60% 즉시 판매](trading/INSTANT_SALE.md)
+
+이전 매각처 정책은 폐기된 기록으로 보관한다.
 
 - [매각처별 취급 물품과 가격](trading/outlets/ITEMS_AND_PRICES.md)
 - [매각 가격 확인 방식](trading/outlets/PRICE_CHECKS.md)

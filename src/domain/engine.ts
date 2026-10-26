@@ -1,5 +1,6 @@
 import type { Command, Game, Item, Result, Kind, MarketId } from './game';
 import { dayOf, isMoney, won, ACTION_TICK, actionsLeft, weekOf } from './game';
+import { instantSalePrice } from './instantSale';
 import { nextPurchaseOffers } from './purchaseBargaining';
 import {
   createListingInfo,
@@ -21,14 +22,7 @@ import { TAG_RULES } from '../content/listingTags';
 import { toWeeklyActions } from './time';
 import { interestPending, interestAmount, paymentWeek } from './debt';
 import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
-import {
-  CATALOG,
-  JOBS,
-  OUTLETS,
-  RULES,
-  TIERS,
-  TIER_TITLES,
-} from '../content/rules';
+import { CATALOG, JOBS, RULES, TIERS, TIER_TITLES } from '../content/rules';
 
 function roll(g: Game) {
   g.seed = (Math.imul(1664525, g.seed) + 1013904223) >>> 0;
@@ -822,35 +816,41 @@ export function execute(original: Game, command: Command): Result {
         break;
       }
       case 'visit': {
-        const outlet = OUTLETS.find((o) => o.id === command.id);
-        if (!outlet) throw Error('없는 매각처입니다.');
-        const prices: Record<string, number> = {};
-        for (const i of g.inventory)
-          if (outlet.kinds.includes(i.kind))
-            prices[i.id] = Math.max(
-              1,
-              Math.floor((marketValue(g, i) * outlet.percent) / 100),
-            );
-        g.quotes = { outlet: outlet.id, at: g.minute, prices };
-        message = `${outlet.title} 방문.`;
+        // Legacy command compatibility: all former outlets now use one rule.
+        if (
+          ![
+            'instant',
+            'scrap',
+            'used',
+            'collector',
+            'music',
+            'carDealer',
+            'propertyBroker',
+            'aircraftBroker',
+          ].includes(command.id)
+        )
+          throw Error('없는 판매 경로입니다.');
+        g.quotes = {
+          outlet: command.id,
+          at: g.minute,
+          prices: Object.fromEntries(
+            g.inventory.map((i) => [i.id, instantSalePrice(i)]),
+          ),
+        };
+        message = '즉시 판매';
         break;
       }
       case 'outletSell': {
         const i = owned(g, command.id);
         unlisted(g, i.id);
-        const quote = g.quotes;
-        if (
-          !quote ||
-          g.minute - quote.at >= ACTION_TICK * 2 ||
-          !quote.prices[i.id]
-        )
-          throw Error('유효한 매각 견적이 없습니다.');
-        const price = quote.prices[i.id];
+        // Old persisted quotes cannot override the unified rate or sell stale value.
+        const price = instantSalePrice(i);
+        if (price < 1) throw Error('판매 가능한 금액이 없습니다.');
         money(g, price);
         g.inventory = g.inventory.filter((i) => i.id !== command.id);
-        delete quote.prices[i.id];
+        if (g.quotes) delete g.quotes.prices[i.id];
         g.stats.sales++;
-        message = `${i.title}을 제시 가격 ${won(price)}에 매각했습니다.`;
+        message = `${i.title}을 ${won(price)}에 즉시 판매했습니다.`;
         log(g, message);
         advance(g, 1);
         break;

@@ -38,6 +38,7 @@ import {
   interestPending,
   WEEK_TICKS,
 } from '../src/domain/debt';
+import { instantSalePrice } from '../src/domain/instantSale';
 import { acquisitionCost, compareItem } from '../src/domain/inventory';
 function run(g: Game, c: Command) {
   const r = execute(g, c);
@@ -279,18 +280,17 @@ test('accepted sale transfers item and exact money once, improves trade ability'
   assert.equal(listingLimit(g), 4);
   assert.equal(execute(g, { type: 'accept', id: q.id }).ok, false);
 });
-test('outlet requires visit, exact fixed price, quote expiry and listed blocking', () => {
+test('instant sale needs no visit, transfers exactly once and blocks listed assets', () => {
   let g = owned();
   const id = g.inventory[0].id;
-  assert.equal(execute(g, { type: 'outletSell', id }).ok, false);
+  assert.equal(execute(g, { type: 'outletSell', id }).ok, true);
   g = run(g, { type: 'visit', id: 'scrap' });
   const price = g.quotes!.prices[id],
     cash = g.cash;
   const sale = run(g, { type: 'outletSell', id });
   assert.equal(sale.cash, cash + price);
   assert.equal(sale.inventory.length, 0);
-  g.minute += ACTION_TICK * 2;
-  assert.equal(execute(g, { type: 'outletSell', id }).ok, false);
+  assert.equal(execute(sale, { type: 'outletSell', id }).ok, false);
   g = owned();
   g = run(g, { type: 'post', id: g.inventory[0].id, price: 99999999 });
   g = run(g, { type: 'visit', id: 'scrap' });
@@ -1860,4 +1860,33 @@ test('daily saves retain paid weeks, used actions, asset deadlines and settlemen
   assert.equal(data.game.cash, old.cash);
   assert.deepEqual(parseSave(data), data);
   assert.deepEqual(old, before);
+});
+
+test('instant selling always pays actual value times sixty percent, ignoring trends and old quotes', () => {
+  for (const value of [1, 100001, 100000000000001])
+    assert.equal(
+      instantSalePrice({ value }),
+      Number((BigInt(value) * 60n) / 100n),
+    );
+  const g = owned();
+  g.inventory[0].value = 100001;
+  g.inventory[0].checked = false;
+  g.marketFactor = 200;
+  g.trend = g.inventory[0].kind;
+  g.inventory[0].price = 9999999;
+  g.inventory[0].acquiredFor = 1;
+  const item = g.inventory[0];
+  g.quotes = { outlet: 'collector', at: 0, prices: { [item.id]: 99999999 } };
+  const before = structuredClone(g);
+  const sold = run(g, { type: 'outletSell', id: item.id });
+  assert.equal(sold.cash - before.cash, 60000);
+  assert.equal(sold.inventory.length, 0);
+  assert.equal(sold.stats.sales, before.stats.sales + 1);
+  assert.equal(sold.minute - before.minute, ACTION_TICK);
+  assert.equal(execute(sold, { type: 'outletSell', id: item.id }).ok, false);
+  const exhausted = structuredClone(before);
+  exhausted.weekActions = 30;
+  const denied = execute(exhausted, { type: 'outletSell', id: item.id });
+  assert.equal(denied.ok, false);
+  assert.deepEqual(denied.game, exhausted);
 });

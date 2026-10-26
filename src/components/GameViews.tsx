@@ -16,7 +16,8 @@ import {
 } from '../domain/engine';
 import { marketDefinition, marketOf } from '../content/markets';
 import { auctionBidOptions } from '../domain/auction';
-import { JOBS, OUTLETS, RULES } from '../content/rules';
+import { instantSalePrice } from '../domain/instantSale';
+import { JOBS, RULES } from '../content/rules';
 import {
   interestPending,
   interestAmount,
@@ -30,7 +31,7 @@ export type Route = {
     | '무료나눔'
     | '아르바이트'
     | '물건 수집'
-    | '매각처'
+    | '즉시 판매'
     | '매물'
     | '물품'
     | '판매 등록'
@@ -585,7 +586,7 @@ export function OwnedView({
             : `${marketDefinition(marketOf(item)).name}에 판매 등록`}
         </Button>
       )}
-      <Button onClick={() => open({ kind: '매각처' })}>매각처 방문</Button>
+      <Button onClick={() => open({ kind: '즉시 판매' })}>즉시 판매</Button>
       {!discard ? (
         <Button danger disabled={!!sale} onClick={() => setDiscard(true)}>
           물품 버리기
@@ -602,78 +603,54 @@ export function OwnedView({
     </>
   );
 }
-export function OutletView({ g, act }: { g: Game; act: Act }) {
-  const outlet = OUTLETS.find((o) => o.id === g.quotes?.outlet);
+export function InstantSaleView({ g, act }: { g: Game; act: Act }) {
   const [selected, setSelected] = useState<string | null>(null);
   const item = g.inventory.find((i) => i.id === selected);
-  const quote = item && g.quotes?.prices[item.id];
   return (
     <>
-      {OUTLETS.filter(
-        (o) =>
-          o.id !== 'aircraftBroker' ||
-          g.inventory.some((item) => item.kind === '항공기'),
-      ).map((o) => (
-        <Button
-          key={o.id}
-          onClick={() => {
-            setSelected(null);
-            act({ type: 'visit', id: o.id });
-          }}
-        >
-          {o.title} 방문
-        </Button>
-      ))}
-      {g.quotes && outlet && (
-        <section className="card">
-          <h2>{outlet.title} 제시 가격</h2>
-          <p>
-            {durationText(960 - (g.minute - g.quotes.at))} 유효 · 판매 행동 1회
-          </p>
-          {g.inventory.length ? (
-            g.inventory.map((i) => (
-              <button
-                className="item-row"
-                key={i.id}
-                disabled={
-                  !g.quotes?.prices[i.id] ||
-                  g.sales.some((s) => s.itemId === i.id)
-                }
-                onClick={() => setSelected(i.id)}
-              >
-                <ItemArt item={i} />
-                <span className="item-row-label">
-                  <strong>{i.title}</strong>
-                  <small>
-                    {g.sales.some((s) => s.itemId === i.id)
-                      ? '장터 등록 취소 필요'
-                      : g.quotes?.prices[i.id]
-                        ? won(g.quotes.prices[i.id])
-                        : '취급하지 않는 품목'}
-                  </small>
-                </span>
-              </button>
-            ))
-          ) : (
-            <p>보유한 물품이 없습니다.</p>
-          )}
-        </section>
+      <p>실제 가치의 60%로 판매합니다.</p>
+      {g.inventory.length ? (
+        g.inventory.map((i) => (
+          <button
+            className="item-row"
+            key={i.id}
+            disabled={
+              g.sales.some((s) => s.itemId === i.id) || instantSalePrice(i) < 1
+            }
+            onClick={() => setSelected(i.id)}
+          >
+            <ItemArt item={i} />
+            <span className="item-row-label">
+              <strong>{i.title}</strong>
+              <small>
+                {g.sales.some((s) => s.itemId === i.id)
+                  ? '판매 등록 취소 필요'
+                  : won(instantSalePrice(i))}
+              </small>
+            </span>
+          </button>
+        ))
+      ) : (
+        <p>보유한 물품이 없습니다.</p>
       )}
-      {item && quote && (
+      {item && (
         <section className="card">
-          <h3>매각 확인</h3>
+          <h3>판매 확인</h3>
           <p>
-            {item.title} · {won(quote)}
+            {item.title} · {won(instantSalePrice(item))}
           </p>
           <Button
-            onClick={() => {
-              act({ type: 'outletSell', id: item.id });
-              setSelected(null);
+            disabled={
+              actionsLeft(g) === 0 || g.sales.some((s) => s.itemId === item.id)
+            }
+            onClick={async () => {
+              if (await act({ type: 'outletSell', id: item.id }))
+                setSelected(null);
             }}
           >
-            제시 가격으로 판매 확정 · 행동 1회
+            판매 확정 · 행동 1회
           </Button>
-          <Button onClick={() => setSelected(null)}>보관하기</Button>
+          <Button onClick={() => setSelected(null)}>계속 보관</Button>
         </section>
       )}
     </>
@@ -937,8 +914,8 @@ export function RouteView({
           </Button>
         </>
       );
-    case '매각처':
-      return <OutletView g={g} act={act} />;
+    case '즉시 판매':
+      return <InstantSaleView g={g} act={act} />;
     case '문의':
       return g.inquiries.length ? (
         <InquiriesView g={g} act={act} />
