@@ -1045,38 +1045,6 @@ html {
   line-height: 1.6;
 }
 
-.market-selector {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 14px 0;
-}
-.market-selector button {
-  min-height: 64px;
-  padding: 10px 8px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  text-align: left;
-  background: #202b1f;
-  color: #d3ddc8;
-}
-.market-selector button[aria-pressed='true'] {
-  border-color: #c8d99d;
-  background: #34442b;
-}
-.market-selector strong,
-.market-selector small {
-  display: block;
-}
-.market-selector strong {
-  font-size: 13px;
-}
-.market-selector small {
-  font-size: 10px;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-  margin-top: 5px;
-}
 .market-selection span {
   display: block;
   margin-top: 6px;

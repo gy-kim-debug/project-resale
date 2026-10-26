@@ -75,3 +75,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 시장 정의와 고유 품목·게시가 범위는 `content/markets.ts`, 정책은 `docs/design/markets/`에 둔다. `Item.marketId`와 `Sale.marketId`로 출처를 보존하고 `Game.board`는 6개 시장의 매물을 함께 저장한다. UI는 선택 시장만 필터링한다. 선택 시장은 게임 계산 밖 `SaveData.selectedMarket` 메타데이터로 저장한다. 구 물품은 시장 ID가 없으면 장터로 취급하며 소급 재생성하지 않는다. 단일 시장 탐색은 그 시장만 교체하고 날짜 경계에서는 전체를 한 번 갱신한다.
 
 고가 경매 로직은 `domain/auction.ts`, 수치는 `content/auction.ts`로 분리한다. `Item.auction`의 상태·금액·진행 대화는 백업에서도 검증하며 입찰에는 난수나 시간이 진행하지 않는다. 실제 결제만 기존 매입 경로에서 원자적으로 처리한다.
+
+시장 UI 경로는 `Route.marketId`로 고정한다. 활동에서 각 시장으로 직접 열고 목록/상세 왕복 시 원래 시장을 유지한다. `selectedMarket`은 마지막 방문 기록이며 명시적인 장터 경로를 덮어쓰지 않는다.

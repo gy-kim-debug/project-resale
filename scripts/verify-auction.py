@@ -17,7 +17,7 @@ with sync_playwright() as p:
   data=json.loads(Path('work/rich.json').read_text());data['selectedMarket']='auction'
   def load(payload):
    page.evaluate(WRITE,payload);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
-   page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click()
+   page.locator('.activity-grid').get_by_role('button',name='고가 경매시장',exact=True).click()
   def read():return page.evaluate(READ)
   def first_lot():page.locator('.item-row').first.click()
   load(data);expect(page.locator('.market-selection strong')).to_have_text('고가 경매시장');expect(page.locator('.item-row')).to_have_count(8)
@@ -34,7 +34,7 @@ with sync_playwright() as p:
   saved=read()['game'];assert saved['cash']==before['cash'] and saved['minute']==before['minute'] and saved['seed']==before['seed']
   page.wait_for_function('!!navigator.serviceWorker.controller',timeout=15000)
   ctx.set_offline(True);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
-  page.locator('.activity-grid').get_by_role('button',name='장터',exact=True).click();first_lot();expect(page.locator('.chat-message')).to_have_count(3)
+  page.locator('.activity-grid').get_by_role('button',name='고가 경매시장',exact=True).click();first_lot();expect(page.locator('.chat-message')).to_have_count(3)
   while page.get_by_role('button',name=' 입찰 · 행동 소모 없음').count():
    page.get_by_role('button',name=' 입찰 · 행동 소모 없음').first.click()
    assert page.locator('.action-layer').count()==0

@@ -27,6 +27,7 @@ import type {
   ChangeKey,
 } from './app/actionPresentation';
 import { unreadCount } from './app/notifications';
+import { MARKETS, marketDefinition } from './content/markets';
 import { TIERS } from './content/rules';
 import {
   interestPending,
@@ -43,9 +44,27 @@ const nav: { tab: Tab; icon: IconName }[] = [
   { tab: '보관함', icon: 'bag' },
   { tab: '상점', icon: 'market' },
 ];
-const groups: { title: string; activities: Route['kind'][] }[] = [
-  { title: '돈 벌기', activities: ['무료나눔', '아르바이트', '물건 수집'] },
-  { title: '거래', activities: ['장터', '매각처'] },
+const groups: {
+  title: string;
+  activities: { label: string; route: Route }[];
+}[] = [
+  {
+    title: '돈 벌기',
+    activities: (['무료나눔', '아르바이트', '물건 수집'] as const).map(
+      (kind) => ({ label: kind, route: { kind } }),
+    ),
+  },
+  {
+    title: '시장',
+    activities: MARKETS.map((market) => ({
+      label: market.name,
+      route: { kind: '장터', marketId: market.id },
+    })),
+  },
+  {
+    title: '매각',
+    activities: [{ label: '매각처', route: { kind: '매각처' } }],
+  },
 ];
 function Header({
   g,
@@ -187,7 +206,7 @@ function Sheet({
   useEffect(() => {
     title.current?.focus();
     ref.current?.scrollTo(0, 0);
-  }, [current.kind, current.id, routes.length]);
+  }, [current.kind, current.id, current.marketId, routes.length]);
   function keydown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -235,7 +254,9 @@ function Sheet({
           </button>
         )}
         <h1 id="sheet-title" tabIndex={-1} ref={title}>
-          {current.kind}
+          {current.kind === '장터'
+            ? marketDefinition(current.marketId ?? 'street').name
+            : current.kind}
         </h1>
       </div>
       <div className="sheet-content" ref={ref}>
@@ -258,9 +279,9 @@ function ActivityHome({ g, open }: { g: Game; open: (r: Route) => void }) {
         <section className="activity-group" key={group.title}>
           <h2>{group.title}</h2>
           <div className="activity-grid">
-            {group.activities.map((kind) => (
-              <button key={kind} onClick={() => open({ kind })}>
-                {kind}
+            {group.activities.map((activity) => (
+              <button key={activity.label} onClick={() => open(activity.route)}>
+                {activity.label}
               </button>
             ))}
           </div>
@@ -304,7 +325,11 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [state.tab]);
-  const open = (r: Route) => setRoutes((prev) => [...prev, r]);
+  const open = (r: Route) => {
+    if (state.action || pending || over) return;
+    if (r.kind === '장터') state.selectMarket(r.marketId ?? 'street');
+    setRoutes((prev) => [...prev, r]);
+  };
   async function act(c: Parameters<typeof state.act>[0]) {
     const ok = await state.act(c);
     if (
@@ -403,7 +428,7 @@ export default function App() {
               <p className="warning">{state.saveError}</p>
             )}
             <RouteView
-              key={`${shownRoutes[shownRoutes.length - 1].kind}-${shownRoutes[shownRoutes.length - 1].id ?? ''}`}
+              key={`${shownRoutes[shownRoutes.length - 1].kind}-${shownRoutes[shownRoutes.length - 1].marketId ?? ''}-${shownRoutes[shownRoutes.length - 1].id ?? ''}`}
               route={shownRoutes[shownRoutes.length - 1]}
               g={g}
               open={open}

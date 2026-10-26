@@ -5,7 +5,7 @@ import { TradeChat } from './TradeChat';
 import { ItemTags, ItemFindings } from './ItemTags';
 import { mailboxLogs, unreadCount } from '../app/notifications';
 import { useGameStore, type Act } from '../app/store';
-import type { Game, Item, Kind } from '../domain/game';
+import type { Game, Item, Kind, MarketId } from '../domain/game';
 import { won, dayOf, durationText } from '../domain/game';
 import {
   level,
@@ -14,7 +14,7 @@ import {
   checkCost,
   repairCost,
 } from '../domain/engine';
-import { MARKETS, marketDefinition, marketOf } from '../content/markets';
+import { marketDefinition, marketOf } from '../content/markets';
 import { auctionBidOptions } from '../domain/auction';
 import { JOBS, OUTLETS, RULES } from '../content/rules';
 import {
@@ -43,6 +43,7 @@ export type Route = {
     | '우편함'
     | '설정';
   id?: string;
+  marketId?: MarketId;
 };
 export type Open = (r: Route) => void;
 export function Button({
@@ -295,15 +296,15 @@ export function MarketView({
   g,
   open,
   free = false,
+  marketId = 'street',
 }: {
   g: Game;
   open: Open;
   free?: boolean;
+  marketId?: MarketId;
 }) {
   const [category, setCategory] = useState<Kind | '전체'>('전체');
-  const selectedMarket = useGameStore((s) => s.selectedMarket);
-  const selectMarket = useGameStore((s) => s.selectMarket);
-  const market = marketDefinition(free ? 'street' : selectedMarket);
+  const market = marketDefinition(free ? 'street' : marketId);
   const categories = [...new Set(market.products.map((p) => p.kind))];
   const act = useGameStore((s) => s.act);
   const favorites = useGameStore((s) => s.favoriteIds);
@@ -323,24 +324,6 @@ export function MarketView({
       </p>
       {!free && (
         <>
-          <div className="market-selector" aria-label="시장 선택">
-            {MARKETS.map((m) => (
-              <button
-                key={m.id}
-                aria-label={m.name}
-                aria-pressed={market.id === m.id}
-                onClick={() => {
-                  selectMarket(m.id);
-                  setCategory('전체');
-                }}
-              >
-                <strong>{m.name}</strong>
-                <small>
-                  {won(m.min)} ~ {won(m.max)}
-                </small>
-              </button>
-            ))}
-          </div>
           <p className="market-selection">
             <strong>{market.name}</strong>
             <span>
@@ -839,7 +822,7 @@ export function RouteView({
   const listing = g.board.find((i) => i.id === route.id);
   switch (route.kind) {
     case '장터':
-      return <MarketView g={g} open={open} />;
+      return <MarketView g={g} open={open} marketId={route.marketId} />;
     case '무료나눔':
       return <MarketView g={g} open={open} free />;
     case '매물':
