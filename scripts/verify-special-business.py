@@ -29,10 +29,10 @@ with sync_playwright() as p:
   expect(stand).to_contain_text('주간 수입 5,000 원');expect(stand).to_contain_text('100,000 원')
   before=read();stand.get_by_role('button',name='구매',exact=True).click()
   assert read()==before
-  expect(stand.locator('.action-cost')).to_have_attribute('data-action-cost','1')
+  expect(stand.locator('.action-cost')).to_have_count(0)
   stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   expect(stand).to_contain_text('보유 1/5')
-  bought=read();assert bought['cash']==400000 and bought['weekActions']==1 and len(bought['businesses'])==1 and bought['stats']['purchases']==0
+  bought=read();assert bought['cash']==400000 and bought['weekActions']==0 and len(bought['businesses'])==1 and bought['stats']['purchases']==0
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();assert read()==bought
   tab('사업');expect(page.get_by_role('heading',name='주간 사업 수입',exact=True)).to_be_visible()
   expect(page.get_by_text('보유 1/5',exact=False)).to_be_visible();assert read()==bought
@@ -49,18 +49,19 @@ with sync_playwright() as p:
   assert read()['cash']==400000 and read()['businessIncomeWeek']==2
   page.reload();expect(page.get_by_role('heading',name='2주차 정산',exact=True)).to_be_visible();assert read()['cash']==400000
   pay(100000,300000);assert read()['cash']==0 and read()['status']=='playing'
-  # Zero remaining actions blocks purchase; each of five duplicate purchases spends exactly one.
+  # Business purchases spend no actions, including at zero remaining actions.
   exhausted=json.loads(json.dumps(original));exhausted['game']['weekActions']=20;exhausted['game']['minute']=20*480
   load(exhausted);tab('사업')
   stand=page.locator('section.card').filter(has=page.get_by_role('heading',name='중고 판매대',exact=True))
-  expect(stand.get_by_role('button',name='구매',exact=True)).to_be_disabled()
-  assert read()==exhausted['game']
+  stand.get_by_role('button',name='구매',exact=True).click();expect(stand.locator('.action-cost')).to_have_count(0)
+  stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  assert read()['weekActions']==20 and read()['minute']==20*480 and read()['cash']==400000 and len(read()['businesses'])==1
   load(original);tab('사업')
   for n in range(1,6):
-   stand.get_by_role('button',name='구매',exact=True).click();expect(stand.locator('.action-cost')).to_have_attribute('data-action-cost','1')
+   stand.get_by_role('button',name='구매',exact=True).click();expect(stand.locator('.action-cost')).to_have_count(0)
    stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
    expect(stand).to_contain_text(f'보유 {n}/5')
-   assert len(read()['businesses'])==n and read()['weekActions']==n and read()['cash']==500000-n*100000
+   assert len(read()['businesses'])==n and read()['weekActions']==0 and read()['cash']==500000-n*100000
   expect(stand.get_by_role('button',name='구매',exact=True)).to_have_count(0)
   expect(stand).to_contain_text('최대 보유');expect(stand).to_contain_text('주간 수입 25,000 원')
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();tab('사업')

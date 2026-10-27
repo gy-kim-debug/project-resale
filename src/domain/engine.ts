@@ -489,7 +489,6 @@ export function execute(original: Game, command: Command): Result {
         g.businesses!.push({ id: business.id, purchasedWeek: paymentWeek(g) });
         message = `${business.name} 구매. 주간 수입 ${won(business.income)}.`;
         log(g, message);
-        advance(g, 1);
         break;
       }
       case 'job': {

@@ -2489,7 +2489,7 @@ test('special discounts preserve hidden facts, collectors are not guaranteed gen
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
 });
 
-test('business purchase spends one action and caps each type at five without consuming inventory or purchase XP', () => {
+test('business purchase spends no actions and caps each type at five without consuming inventory or purchase XP', () => {
   for (const business of BUSINESSES) {
     const original = newGame();
     original.cash = business.cost * 6;
@@ -2498,8 +2498,10 @@ test('business purchase spends one action and caps each type at five without con
     for (let n = 1; n <= BUSINESS_LIMIT_PER_TYPE; n++) {
       g = run(g, { type: 'buyBusiness', id: business.id });
       assert.equal(g.cash, original.cash - business.cost * n);
-      assert.equal(g.weekActions, n);
-      assert.equal(g.minute, n * 480);
+      assert.equal(g.weekActions, original.weekActions);
+      assert.equal(g.minute, original.minute);
+      assert.equal(g.seed, original.seed);
+      assert.deepEqual(g.board, original.board);
       assert.equal(g.inventory.length, 0);
       assert.equal(g.stats.purchases, 0);
       assert.equal(g.businesses!.length, n);
@@ -2522,10 +2524,11 @@ test('business purchase spends one action and caps each type at five without con
   const exhausted = newGame();
   exhausted.weekActions = 20;
   exhausted.minute = 20 * 480;
-  assert.equal(
-    execute(exhausted, { type: 'buyBusiness', id: 'stand' }).ok,
-    false,
-  );
+  const boughtExhausted = run(exhausted, { type: 'buyBusiness', id: 'stand' });
+  assert.equal(boughtExhausted.weekActions, 20);
+  assert.equal(boughtExhausted.minute, exhausted.minute);
+  assert.equal(boughtExhausted.businesses!.length, 1);
+  assert.equal(boughtExhausted.cash, exhausted.cash - BUSINESSES[0].cost);
   assert.equal(exhausted.businesses!.length, 0);
   assert.equal(exhausted.cash, RULES.startingCash);
 });

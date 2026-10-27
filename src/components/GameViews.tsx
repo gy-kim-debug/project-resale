@@ -425,8 +425,7 @@ export function BusinessView({ g, act }: { g: Game; act: Act }) {
                 {selected === business.id ? (
                   <>
                     <Button
-                      actionCost={1}
-                      disabled={g.cash < business.cost || actionsLeft(g) === 0}
+                      disabled={g.cash < business.cost}
                       onClick={async () => {
                         if (await act({ type: 'buyBusiness', id: business.id }))
                           setSelected(null);
@@ -438,7 +437,7 @@ export function BusinessView({ g, act }: { g: Game; act: Act }) {
                   </>
                 ) : (
                   <Button
-                    disabled={g.cash < business.cost || actionsLeft(g) === 0}
+                    disabled={g.cash < business.cost}
                     onClick={() => setSelected(business.id)}
                   >
                     구매
