@@ -1,6 +1,7 @@
 import { ABILITIES } from '../content/abilities';
-import { BUSINESSES } from '../content/businesses';
+import { BUSINESS_LIMIT_PER_TYPE, BUSINESSES } from '../content/businesses';
 import {
+  businessCount,
   weeklyBusinessIncome,
   pendingBusinessIncome,
 } from '../domain/business';
@@ -403,20 +404,29 @@ export function BusinessView({ g, act }: { g: Game; act: Act }) {
         <strong>{won(weeklyBusinessIncome(g))}</strong>
       </div>
       {BUSINESSES.map((business) => {
-        const owned = g.businesses?.some((b) => b.id === business.id);
+        const count = businessCount(g, business.id);
+        const full = count >= BUSINESS_LIMIT_PER_TYPE;
         return (
           <section className="card" key={business.id}>
             <h2>{business.name}</h2>
-            <p>주간 수입 {won(business.income)}</p>
-            {owned ? (
-              <p className="owned-business">보유 중</p>
+            <p>구매 금액 {won(business.cost)}</p>
+            <p>
+              개당 주간 수입 {won(business.income)} ·{' '}
+              {(business.income / business.cost) * 100}%
+            </p>
+            <p className={count ? 'owned-business' : undefined}>
+              보유 {count}/{BUSINESS_LIMIT_PER_TYPE} · 주간 수입{' '}
+              {won(count * business.income)}
+            </p>
+            {full ? (
+              <p>최대 보유</p>
             ) : (
               <>
-                <p>{won(business.cost)}</p>
                 {selected === business.id ? (
                   <>
                     <Button
-                      disabled={g.cash < business.cost}
+                      actionCost={1}
+                      disabled={g.cash < business.cost || actionsLeft(g) === 0}
                       onClick={async () => {
                         if (await act({ type: 'buyBusiness', id: business.id }))
                           setSelected(null);
@@ -428,7 +438,7 @@ export function BusinessView({ g, act }: { g: Game; act: Act }) {
                   </>
                 ) : (
                   <Button
-                    disabled={g.cash < business.cost}
+                    disabled={g.cash < business.cost || actionsLeft(g) === 0}
                     onClick={() => setSelected(business.id)}
                   >
                     구매

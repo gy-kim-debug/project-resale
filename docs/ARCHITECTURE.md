@@ -98,3 +98,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 능력치 정의는 `content/abilities.ts`, 레벨 계산은 `domain/abilities.ts`로 통합한다. 기존 경험 기록을 사용하며 새 매입 감각을 구매 협상 시작에 적용한다. 이미 저장된 수락가/인내심은 유지한다.
 
 `content/businesses.ts`가 구매비와 고정 주간 수입을 정의하고 `domain/business.ts`가 수입 예상/미지급액을 계산한다. `businesses`에는 ID/구매 주차만 저장한다. `startSettlement`가 수입을 먼저 지급하고 `businessIncomeWeek`/`businessIncomeAmount`를 저장한 뒤 채무 납부 가능성을 판정한다. 중복 수금은 없다. 화면 진입·오프라인·저장 복원은 수입을 지급하지 않는다. 사업 탭/활동의 사업은 같은 `BusinessView`를 재사용한다.
+
+사업 수량은 기존 `businesses` 배열의 개별 구매 기록으로 유지한다. `businessCount`가 종류별 수량을 세며 콘텐츠의 `BUSINESS_LIMIT_PER_TYPE`(5)을 엔진·검증·UI가 함께 사용한다. 동일 ID의 기록을 허용하되 종류별 6개 이상 및 전체 25개 초과는 백업에서 거절한다. 수입은 모든 개별 기록을 합산한다. 이전 보유 기록/정산 수령액의 스키마 전환은 필요하지 않다.

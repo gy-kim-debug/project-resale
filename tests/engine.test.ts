@@ -1,4 +1,4 @@
-import { BUSINESSES } from '../src/content/businesses';
+import { BUSINESS_LIMIT_PER_TYPE, BUSINESSES } from '../src/content/businesses';
 import {
   pendingBusinessIncome,
   weeklyBusinessIncome,
@@ -2489,36 +2489,77 @@ test('special discounts preserve hidden facts, collectors are not guaranteed gen
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
 });
 
-test('business purchase costs no actions, is one per type and is separate from inventory and purchase experience', () => {
-  const g = newGame();
-  const business = BUSINESSES[0];
-  const bought = run(g, { type: 'buyBusiness', id: business.id });
-  assert.equal(bought.cash, g.cash - business.cost);
-  assert.equal(bought.weekActions, g.weekActions);
-  assert.equal(bought.minute, g.minute);
-  assert.equal(bought.seed, g.seed);
-  assert.deepEqual(bought.board, g.board);
-  assert.equal(bought.inventory.length, 0);
-  assert.equal(bought.stats.purchases, 0);
-  assert.equal(bought.businesses!.length, 1);
-  assert.equal(weeklyBusinessIncome(bought), business.income);
-  for (const command of [
-    { type: 'buyBusiness', id: business.id },
-    { type: 'buyBusiness', id: 'unknown' },
-  ] as Command[])
-    assert.equal(execute(bought, command).ok, false);
+test('business purchase spends one action and caps each type at five without consuming inventory or purchase XP', () => {
+  for (const business of BUSINESSES) {
+    const original = newGame();
+    original.cash = business.cost * 6;
+    original.stats.peakCash = original.cash;
+    let g = original;
+    for (let n = 1; n <= BUSINESS_LIMIT_PER_TYPE; n++) {
+      g = run(g, { type: 'buyBusiness', id: business.id });
+      assert.equal(g.cash, original.cash - business.cost * n);
+      assert.equal(g.weekActions, n);
+      assert.equal(g.minute, n * 480);
+      assert.equal(g.inventory.length, 0);
+      assert.equal(g.stats.purchases, 0);
+      assert.equal(g.businesses!.length, n);
+      assert.equal(weeklyBusinessIncome(g), business.income * n);
+      assert.deepEqual(
+        parseSave({ version: 2, game: g, favoriteIds: [] }).game,
+        g,
+      );
+    }
+    for (const command of [
+      { type: 'buyBusiness', id: business.id },
+      { type: 'buyBusiness', id: 'unknown' },
+    ] as Command[]) {
+      const rejected = execute(g, command);
+      assert.equal(rejected.ok, false);
+      assert.deepEqual(rejected.game, g);
+    }
+    assert.equal(original.businesses!.length, 0);
+  }
   const exhausted = newGame();
   exhausted.weekActions = 20;
-  const afterExhausted = run(exhausted, {
-    type: 'buyBusiness',
-    id: business.id,
-  });
-  assert.equal(afterExhausted.weekActions, 20);
-  assert.equal(afterExhausted.minute, exhausted.minute);
-  assert.equal(afterExhausted.cash, exhausted.cash - business.cost);
-  assert.equal(afterExhausted.businesses!.length, 1);
-  assert.equal(exhausted.cash, g.cash);
+  exhausted.minute = 20 * 480;
+  assert.equal(
+    execute(exhausted, { type: 'buyBusiness', id: 'stand' }).ok,
+    false,
+  );
   assert.equal(exhausted.businesses!.length, 0);
+  assert.equal(exhausted.cash, RULES.startingCash);
+});
+
+test('business yields decrease from at most five percent and imports allow five of every type with aggregate income paid once', () => {
+  let previous = Infinity;
+  for (const business of BUSINESSES) {
+    const rate = business.income / business.cost;
+    assert.ok(rate > 0 && rate <= 0.05 && rate < previous);
+    assert.equal(business.income % 100, 0);
+    previous = rate;
+  }
+  const g = newGame();
+  g.businesses = BUSINESSES.flatMap((b) =>
+    Array.from({ length: BUSINESS_LIMIT_PER_TYPE }, () => ({
+      id: b.id,
+      purchasedWeek: 1,
+    })),
+  );
+  assert.equal(g.businesses.length, 25);
+  const loaded = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  const expected = BUSINESSES.reduce(
+    (sum, b) => sum + b.income * BUSINESS_LIMIT_PER_TYPE,
+    0,
+  );
+  assert.equal(weeklyBusinessIncome(loaded), expected);
+  const settled = run(loaded, { type: 'startSettlement' });
+  assert.equal(settled.cash, loaded.cash + expected);
+  assert.equal(settled.businessIncomeAmount, expected);
+  assert.equal(pendingBusinessIncome(settled), 0);
+  assert.deepEqual(
+    parseSave({ version: 2, game: settled, favoriteIds: [] }).game,
+    settled,
+  );
 });
 
 test('business income is paid before debt eligibility and once per settlement, including after reload and in later weeks', () => {
@@ -2528,36 +2569,36 @@ test('business income is paid before debt eligibility and once per settlement, i
   g = run(g, { type: 'buyBusiness', id: 'stand' });
   const before = structuredClone(g);
   assert.equal(g.cash, 900000);
-  assert.equal(pendingBusinessIncome(g), 20000);
+  assert.equal(pendingBusinessIncome(g), 5000);
   g = run(g, { type: 'startSettlement' });
-  assert.equal(g.cash, 920000);
+  assert.equal(g.cash, 905000);
   assert.equal(g.businessIncomeWeek, 1);
-  assert.equal(g.businessIncomeAmount, 20000);
+  assert.equal(g.businessIncomeAmount, 5000);
   assert.equal(g.minute, before.minute);
   assert.equal(pendingBusinessIncome(g), 0);
   assert.equal(execute(g, { type: 'startSettlement' }).ok, false);
   g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
-  assert.equal(g.cash, 920000);
+  assert.equal(g.cash, 905000);
   assert.equal(pendingBusinessIncome(g), 0);
   g = run(g, { type: 'repay', amount: 50000 });
   g = run(g, { type: 'payInterest' });
-  assert.equal(g.cash, 770000);
-  assert.equal(pendingBusinessIncome(g), 20000);
+  assert.equal(g.cash, 755000);
+  assert.equal(pendingBusinessIncome(g), 5000);
   g = run(g, { type: 'startSettlement' });
-  assert.equal(g.cash, 790000);
+  assert.equal(g.cash, 760000);
   assert.equal(g.businessIncomeWeek, 2);
   g = run(g, { type: 'repay', amount: 100000 });
   g = run(g, { type: 'payInterest' });
-  assert.equal(g.cash, 390000);
+  assert.equal(g.cash, 360000);
   assert.equal(g.businessIncomeWeek, 2);
   assert.ok(allMoneyAligned(g));
 });
 
 test('business income can fund the due bill, is not earned offline or by reading, and caps safely at wallet limits', () => {
   let g = newGame();
-  g.cash = 230000;
+  g.cash = 245000;
   g = run(g, { type: 'buyBusiness', id: 'stand' });
-  assert.equal(g.cash, 130000);
+  assert.equal(g.cash, 145000);
   const read = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
   assert.deepEqual(read, g);
   g = run(g, { type: 'startSettlement' });
@@ -2571,10 +2612,10 @@ test('business income can fund the due bill, is not earned offline or by reading
   full.cash = RULES.maxMoney;
   full.stats.peakCash = full.cash;
   full = run(full, { type: 'buyBusiness', id: 'stand' });
-  full.cash = RULES.maxMoney - 10000;
+  full.cash = RULES.maxMoney - 1000;
   full = run(full, { type: 'startSettlement' });
   assert.equal(full.cash, RULES.maxMoney);
-  assert.equal(full.businessIncomeAmount, 10000);
+  assert.equal(full.businessIncomeAmount, 1000);
 });
 
 test('business ownership and income metadata reject malformed imports while old saves gain no free investments', () => {
@@ -2582,7 +2623,7 @@ test('business ownership and income metadata reject malformed imports while old 
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
   const invalids: ((v: Game) => void)[] = [
     (v) => {
-      v.businesses!.push({ ...v.businesses![0] });
+      v.businesses = Array.from({ length: 6 }, () => ({ ...v.businesses![0] }));
     },
     (v) => {
       v.businesses![0].purchasedWeek = 2;
@@ -2613,6 +2654,20 @@ test('business ownership and income metadata reject malformed imports while old 
   assert.deepEqual(saved.businesses, []);
   assert.equal(saved.cash, old.cash);
   assert.equal(weeklyBusinessIncome(saved), 0);
+  // A receipt paid under the previous rates remains historical cash, never a new claim.
+  const priorRate = structuredClone(g);
+  priorRate.settling = true;
+  priorRate.businessIncomeWeek = 1;
+  priorRate.businessIncomeAmount = 20000;
+  priorRate.cash = 420000;
+  const restored = parseSave({
+    version: 2,
+    game: priorRate,
+    favoriteIds: [],
+  }).game;
+  assert.deepEqual(restored, priorRate);
+  assert.equal(pendingBusinessIncome(restored), 0);
+  assert.equal(execute(restored, { type: 'startSettlement' }).ok, false);
 });
 
 test('purchase experience improves new negotiation floors without changing hidden value or firm-seller rules', () => {

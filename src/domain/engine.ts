@@ -1,7 +1,10 @@
 import { ABILITIES } from '../content/abilities';
 import { abilityLevel } from './abilities';
-import { businessDefinition } from '../content/businesses';
-import { pendingBusinessIncome } from './business';
+import {
+  BUSINESS_LIMIT_PER_TYPE,
+  businessDefinition,
+} from '../content/businesses';
+import { businessCount, pendingBusinessIncome } from './business';
 import {
   SPECIAL_RULES,
   SPECIAL_LISTINGS,
@@ -477,13 +480,16 @@ export function execute(original: Game, command: Command): Result {
       case 'buyBusiness': {
         const business = businessDefinition(command.id);
         if (!business) throw Error('없는 사업입니다.');
-        if (g.businesses!.some((owned) => owned.id === business.id))
-          throw Error('이미 보유한 사업입니다.');
+        if (businessCount(g, business.id) >= BUSINESS_LIMIT_PER_TYPE)
+          throw Error(
+            `이 사업은 최대 ${BUSINESS_LIMIT_PER_TYPE}개까지 보유할 수 있습니다.`,
+          );
         affordable(g, business.cost);
         money(g, -business.cost);
         g.businesses!.push({ id: business.id, purchasedWeek: paymentWeek(g) });
         message = `${business.name} 구매. 주간 수입 ${won(business.income)}.`;
         log(g, message);
+        advance(g, 1);
         break;
       }
       case 'job': {

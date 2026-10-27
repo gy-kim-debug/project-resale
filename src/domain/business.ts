@@ -13,3 +13,6 @@ export const pendingBusinessIncome = (g: Game) =>
   (g.businessIncomeWeek ?? g.interestWeek ?? 0) < weekOf(g)
     ? weeklyBusinessIncome(g)
     : 0;
+
+export const businessCount = (g: Game, id: string) =>
+  (g.businesses ?? []).filter((owned) => owned.id === id).length;

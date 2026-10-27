@@ -2,7 +2,11 @@ import {
   SPECIAL_LISTINGS,
   isSpecialListingId,
 } from '../content/specialListings';
-import { BUSINESSES, businessDefinition } from '../content/businesses';
+import {
+  BUSINESS_LIMIT_PER_TYPE,
+  BUSINESSES,
+  businessDefinition,
+} from '../content/businesses';
 import { allMoneyAligned } from '../domain/moneyMigration';
 import type { Game, Item } from '../domain/game';
 import {
@@ -182,7 +186,7 @@ export function isGame(v: unknown): v is Game {
   if (
     v.businesses !== undefined &&
     (!Array.isArray(v.businesses) ||
-      v.businesses.length > BUSINESSES.length ||
+      v.businesses.length > BUSINESSES.length * BUSINESS_LIMIT_PER_TYPE ||
       !v.businesses.every(
         (b) =>
           record(b) &&
@@ -192,7 +196,11 @@ export function isGame(v: unknown): v is Game {
           b.purchasedWeek >= 1 &&
           b.purchasedWeek <= Number(v.interestWeek ?? 0) + 1,
       ) ||
-      new Set(v.businesses.map((b) => b.id)).size !== v.businesses.length)
+      BUSINESSES.some(
+        (business) =>
+          (v.businesses as { id: string }[]).filter((b) => b.id === business.id)
+            .length > BUSINESS_LIMIT_PER_TYPE,
+      ))
   )
     return false;
   if (

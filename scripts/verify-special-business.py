@@ -26,36 +26,46 @@ with sync_playwright() as p:
    page.get_by_role('button',name=f'이자 납부 후 다음 주 시작 · {interest:,} 원',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   page.locator('.activity-grid').get_by_role('button',name='사업',exact=True).click()
   stand=page.locator('section.card').filter(has=page.get_by_role('heading',name='중고 판매대',exact=True))
-  expect(stand).to_contain_text('주간 수입 20,000 원');expect(stand).to_contain_text('100,000 원')
+  expect(stand).to_contain_text('주간 수입 5,000 원');expect(stand).to_contain_text('100,000 원')
   before=read();stand.get_by_role('button',name='구매',exact=True).click()
   assert read()==before
-  expect(stand.locator('.action-cost')).to_have_count(0)
+  expect(stand.locator('.action-cost')).to_have_attribute('data-action-cost','1')
   stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
-  expect(stand.get_by_text('보유 중',exact=True)).to_be_visible()
-  bought=read();assert bought['cash']==400000 and bought['weekActions']==0 and len(bought['businesses'])==1 and bought['stats']['purchases']==0
+  expect(stand).to_contain_text('보유 1/5')
+  bought=read();assert bought['cash']==400000 and bought['weekActions']==1 and len(bought['businesses'])==1 and bought['stats']['purchases']==0
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();assert read()==bought
   tab('사업');expect(page.get_by_role('heading',name='주간 사업 수입',exact=True)).to_be_visible()
-  expect(page.get_by_text('보유 중',exact=True)).to_be_visible();assert read()==bought
+  expect(page.get_by_text('보유 1/5',exact=False)).to_be_visible();assert read()==bought
   if width==390:page.screenshot(path='work/business-shop-390.png',full_page=True)
   tab('활동');page.get_by_role('button',name='이번 주 마무리하기',exact=True).click();assert read()==bought
   page.get_by_role('button',name='닫기',exact=True).click();finish()
-  assert read()['cash']==420000 and read()['businessIncomeWeek']==1 and read()['businessIncomeAmount']==20000
+  assert read()['cash']==405000 and read()['businessIncomeWeek']==1 and read()['businessIncomeAmount']==5000
   page.reload();expect(page.get_by_role('heading',name='1주차 정산',exact=True)).to_be_visible()
   expect(page.get_by_role('button',name='의무 원금 납부 · 50,000 원',exact=True).locator('.action-cost')).to_have_count(0)
-  assert read()['cash']==420000;pay(50000,100000)
-  assert read()['cash']==270000 and read()['interestWeek']==1 and read()['businessIncomeWeek']==1
+  assert read()['cash']==405000;pay(50000,100000)
+  assert read()['cash']==255000 and read()['interestWeek']==1 and read()['businessIncomeWeek']==1
   # Income is credited before checking the next bill, and cannot be collected twice on reload.
-  bridge=page.evaluate(READ);bridge['game']['cash']=380000;load(bridge);finish()
+  bridge=page.evaluate(READ);bridge['game']['cash']=395000;load(bridge);finish()
   assert read()['cash']==400000 and read()['businessIncomeWeek']==2
   page.reload();expect(page.get_by_role('heading',name='2주차 정산',exact=True)).to_be_visible();assert read()['cash']==400000
   pay(100000,300000);assert read()['cash']==0 and read()['status']=='playing'
-  # The business purchase is also available after the entire weekly action budget is spent.
+  # Zero remaining actions blocks purchase; each of five duplicate purchases spends exactly one.
   exhausted=json.loads(json.dumps(original));exhausted['game']['weekActions']=20;exhausted['game']['minute']=20*480
   load(exhausted);tab('사업')
   stand=page.locator('section.card').filter(has=page.get_by_role('heading',name='중고 판매대',exact=True))
-  stand.get_by_role('button',name='구매',exact=True).click();expect(stand.locator('.action-cost')).to_have_count(0)
-  stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
-  assert read()['weekActions']==20 and read()['minute']==20*480 and read()['cash']==400000
+  expect(stand.get_by_role('button',name='구매',exact=True)).to_be_disabled()
+  assert read()==exhausted['game']
+  load(original);tab('사업')
+  for n in range(1,6):
+   stand.get_by_role('button',name='구매',exact=True).click();expect(stand.locator('.action-cost')).to_have_attribute('data-action-cost','1')
+   stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+   expect(stand).to_contain_text(f'보유 {n}/5')
+   assert len(read()['businesses'])==n and read()['weekActions']==n and read()['cash']==500000-n*100000
+  expect(stand.get_by_role('button',name='구매',exact=True)).to_have_count(0)
+  expect(stand).to_contain_text('최대 보유');expect(stand).to_contain_text('주간 수입 25,000 원')
+  page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();tab('사업')
+  expect(stand).to_contain_text('보유 5/5');assert len(read()['businesses'])==5
+  if width==390:page.screenshot(path='work/business-five-390.png',full_page=True)
   # A midweek repayment costs an action, a settlement payment does not.
   load(original);tab('채무')
   expect(page.get_by_role('button',name='입력 금액 상환',exact=True).locator('.action-cost')).to_have_attribute('data-action-cost','1')
