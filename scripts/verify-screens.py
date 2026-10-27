@@ -38,7 +38,7 @@ with sync_playwright() as pw:
             page.evaluate(WRITE_SAVE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();return data
         expect(page.get_by_role('button',name='플레이 안내',exact=True)).to_have_count(0)
         assert page.get_by_text('무료 급식은 언제나',exact=False).count()==0
-        assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','상점']
+        assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','사업']
         assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','중고 장터','컴퓨터시장','악기시장','중고차시장','부동산 시장','고가 경매시장','즉시 판매','사업']
         expect(page.locator('.header-debt')).to_contain_text('10,000,000,000 원')
         assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==[]
@@ -82,7 +82,7 @@ with sync_playwright() as pw:
         while page.get_by_role('button',name='← 뒤로',exact=True).count():click('← 뒤로')
         click('닫기')
         tab('내 정보');expect(page.get_by_role('heading',name='거래 감각',exact=False)).to_be_visible();layout()
-        tab('상점');expect(page.get_by_role('heading',name='주간 사업 수입',exact=True)).to_be_visible();layout();tab('채무');layout()
+        tab('사업');expect(page.get_by_role('heading',name='주간 사업 수입',exact=True)).to_be_visible();layout();tab('채무');layout()
         page.get_by_label('상환 금액').fill('100');click('입력 금액 상환')
         expect(page.locator('main')).to_contain_text('9,999,999,900 원')
         # Full state export and malformed import rejection, keeping existing progress.

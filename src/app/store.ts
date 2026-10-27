@@ -17,7 +17,7 @@ import {
   type Changes,
 } from './actionPresentation';
 export type Act = (command: Command) => Promise<boolean>;
-export type Tab = '내 정보' | '채무' | '활동' | '보관함' | '상점';
+export type Tab = '내 정보' | '채무' | '활동' | '보관함' | '사업';
 interface State {
   game: Game | null;
   ready: boolean;

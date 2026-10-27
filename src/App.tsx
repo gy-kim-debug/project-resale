@@ -13,7 +13,7 @@ import {
   InfoView,
   InventoryView,
   RouteView,
-  ShopView,
+  BusinessTabView,
   StorageView,
   type Route,
 } from './components/GameViews';
@@ -42,7 +42,7 @@ const nav: { tab: Tab; icon: IconName }[] = [
   { tab: '채무', icon: 'debt' },
   { tab: '활동', icon: 'activity' },
   { tab: '보관함', icon: 'bag' },
-  { tab: '상점', icon: 'market' },
+  { tab: '사업', icon: 'market' },
 ];
 const groups: {
   title: string;
@@ -421,7 +421,7 @@ export default function App() {
             ) : state.tab === '보관함' ? (
               <InventoryView g={g} open={open} />
             ) : (
-              <ShopView g={g} act={act} />
+              <BusinessTabView g={g} act={act} />
             )}
             {state.notice && !shownRoutes.length && !over && (
               <div

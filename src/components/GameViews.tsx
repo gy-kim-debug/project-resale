@@ -401,11 +401,10 @@ export function BusinessView({ g, act }: { g: Game; act: Act }) {
     </>
   );
 }
-export function ShopView({ g, act }: { g: Game; act: Act }) {
+export function BusinessTabView({ g, act }: { g: Game; act: Act }) {
   return (
     <>
-      <h1>상점</h1>
-      <h2>사업</h2>
+      <h1>사업</h1>
       <BusinessView g={g} act={act} />
     </>
   );

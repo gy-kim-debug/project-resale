@@ -33,7 +33,7 @@ with sync_playwright() as p:
   expect(stand.get_by_text('보유 중',exact=True)).to_be_visible()
   bought=read();assert bought['cash']==400000 and bought['weekActions']==1 and len(bought['businesses'])==1 and bought['stats']['purchases']==0
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();assert read()==bought
-  tab('상점');expect(page.get_by_role('heading',name='주간 사업 수입',exact=True)).to_be_visible()
+  tab('사업');expect(page.get_by_role('heading',name='주간 사업 수입',exact=True)).to_be_visible()
   expect(page.get_by_text('보유 중',exact=True)).to_be_visible();assert read()==bought
   if width==390:page.screenshot(path='work/business-shop-390.png',full_page=True)
   tab('활동');page.get_by_role('button',name='이번 주 마무리하기',exact=True).click();assert read()==bought
