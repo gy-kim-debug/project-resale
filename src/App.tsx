@@ -62,8 +62,11 @@ const groups: {
     })),
   },
   {
-    title: '판매',
-    activities: [{ label: '즉시 판매', route: { kind: '즉시 판매' } }],
+    title: '자산',
+    activities: [
+      { label: '즉시 판매', route: { kind: '즉시 판매' } },
+      { label: '사업', route: { kind: '사업' } },
+    ],
   },
 ];
 function Header({
@@ -418,7 +421,7 @@ export default function App() {
             ) : state.tab === '보관함' ? (
               <InventoryView g={g} open={open} />
             ) : (
-              <ShopView />
+              <ShopView g={g} act={act} />
             )}
             {state.notice && !shownRoutes.length && !over && (
               <div

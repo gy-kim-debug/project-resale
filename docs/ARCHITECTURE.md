@@ -90,3 +90,11 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 의무 원금·원금 납부 후 예상 이자·총 필요 금액은 `domain/debt.ts`의 순수 함수에서 공통 계산한다. UI는 원금/이자 순서를 안내하는 납부 버튼을 표시하며 엔진도 원금 미납 시 이자 납부/주차 전환을 거절한다. 구 저장의 명시적 이번 주 상환 기록은 한 번만 복원한다.
 
 `domain/money.ts`가 공통 100원 단위 반올림과 정수 비율 계산을 담당한다. `domain/moneyMigration.ts`는 구 저장 금액·협상·원화 대사를 변환하고 경매 위치와 자산/시간/난수를 보존한다. `moneyUnit: 100` 저장의 통화 필드는 100원 배수 정합성을 검사한다. [금액 정책](design/economy/MONEY_UNITS.md)을 따른다.
+
+## 특별 매물·능력치·사업
+
+`content/specialListings.ts`와 `domain/specialListings.ts`가 확률/이름/할인/소장품과 순수 변환을 분리한다. 일반 시장의 8개 매물 중 최대 1개에만 적용하고 경매·무료나눔·기존 보유품에는 소급하지 않는다. 공통 `ItemTags`로 표시한다.
+
+능력치 정의는 `content/abilities.ts`, 레벨 계산은 `domain/abilities.ts`로 통합한다. 기존 경험 기록을 사용하며 새 매입 감각을 구매 협상 시작에 적용한다. 이미 저장된 수락가/인내심은 유지한다.
+
+`content/businesses.ts`가 구매비와 고정 주간 수입을 정의하고 `domain/business.ts`가 수입 예상/미지급액을 계산한다. `businesses`에는 ID/구매 주차만 저장한다. `startSettlement`가 수입을 먼저 지급하고 `businessIncomeWeek`/`businessIncomeAmount`를 저장한 뒤 채무 납부 가능성을 판정한다. 중복 수금은 없다. 화면 진입·오프라인·저장 복원은 수입을 지급하지 않는다. 상점/활동의 사업은 같은 `BusinessView`를 재사용한다.

@@ -1,3 +1,10 @@
+import { BUSINESSES } from '../src/content/businesses';
+import {
+  pendingBusinessIncome,
+  weeklyBusinessIncome,
+} from '../src/domain/business';
+import { applySpecialListing } from '../src/domain/specialListings';
+import { SPECIAL_LISTINGS } from '../src/content/specialListings';
 import { roundMoney, moneyRatio, MONEY_UNIT } from '../src/domain/money';
 import { normalizeMoney, allMoneyAligned } from '../src/domain/moneyMigration';
 import test from 'node:test';
@@ -2418,4 +2425,225 @@ test('legacy sub-unit current offers keep paid quotes consistent with the rounde
   );
   const paid = run(rounded, { type: 'accept', id: 'tiny-inquiry' });
   assert.equal(paid.cash - rounded.cash, 100);
+});
+
+test('special listings appear occasionally, at most once per ordinary market, without changing stock counts or price bands', () => {
+  const types = new Set<string>();
+  let absent = false,
+    present = false;
+  for (let seed = 1; seed <= 100; seed++) {
+    const g = newGame(seed);
+    let count = 0;
+    for (const market of MARKETS) {
+      const listings = g.board.filter(
+        (i) => i.marketId === market.id && i.price > 0,
+      );
+      assert.equal(listings.length, 8);
+      const special = listings.filter((i) => i.special);
+      assert.ok(special.length <= (market.id === 'auction' ? 0 : 1));
+      count += special.length;
+      for (const item of special) {
+        types.add(item.special!);
+        assert.ok(item.price >= market.min && item.price <= market.max);
+        assert.ok(SPECIAL_LISTINGS[item.special!].markets.includes(market.id));
+      }
+    }
+    absent ||= count === 0;
+    present ||= count > 0;
+    assert.ok(isGame(g));
+    assert.ok(allMoneyAligned(g));
+  }
+  assert.ok(absent && present);
+  assert.deepEqual([...types].sort(), ['clearance', 'collector', 'unverified']);
+});
+
+test('special discounts preserve hidden facts, collectors are not guaranteed genuine, and purchased metadata survives backup', () => {
+  let g = newGame(14);
+  g.cash = 1000000;
+  g.stats.peakCash = g.cash;
+  const item = g.board.find(
+    (i) => i.marketId === 'street' && i.price >= 20000 && !i.special,
+  )!;
+  const original = structuredClone(item);
+  item.listing!.facts.seller = 'ordinary';
+  const clearance = applySpecialListing(item, 'clearance', 10000);
+  assert.ok(clearance.price < item.price);
+  assert.equal(clearance.expires, item.expires - ACTION_TICK);
+  assert.equal(
+    clearance.listing!.facts.authentic,
+    item.listing!.facts.authentic,
+  );
+  assert.equal(clearance.listing!.facts.seller, 'urgent');
+  const real = structuredClone(item);
+  real.listing!.facts.authentic = true;
+  const rare = applySpecialListing(real, 'collector', 10000);
+  assert.equal(rare.value, real.value * 2);
+  real.listing!.facts.authentic = false;
+  assert.equal(applySpecialListing(real, 'collector', 10000).value, real.value);
+  assert.throws(() => applySpecialListing(clearance, 'collector', 10000));
+  assert.equal(item.value, original.value);
+  g.board = g.board.map((i) => (i.id === item.id ? clearance : i));
+  g = run(g, { type: 'buy', id: item.id });
+  assert.equal(g.inventory[0].special, 'clearance');
+  assert.equal(g.inventory[0].value, item.value);
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+});
+
+test('business purchase costs one action, is one per type and is separate from inventory and purchase experience', () => {
+  const g = newGame();
+  const business = BUSINESSES[0];
+  const bought = run(g, { type: 'buyBusiness', id: business.id });
+  assert.equal(bought.cash, g.cash - business.cost);
+  assert.equal(bought.weekActions, 1);
+  assert.equal(bought.inventory.length, 0);
+  assert.equal(bought.stats.purchases, 0);
+  assert.equal(bought.businesses!.length, 1);
+  assert.equal(weeklyBusinessIncome(bought), business.income);
+  for (const command of [
+    { type: 'buyBusiness', id: business.id },
+    { type: 'buyBusiness', id: 'unknown' },
+  ] as Command[])
+    assert.equal(execute(bought, command).ok, false);
+  const exhausted = newGame();
+  exhausted.weekActions = 20;
+  assert.equal(
+    execute(exhausted, { type: 'buyBusiness', id: business.id }).ok,
+    false,
+  );
+  assert.equal(exhausted.cash, g.cash);
+  assert.equal(exhausted.businesses!.length, 0);
+});
+
+test('business income is paid before debt eligibility and once per settlement, including after reload and in later weeks', () => {
+  let g = newGame();
+  g.cash = 1000000;
+  g.stats.peakCash = g.cash;
+  g = run(g, { type: 'buyBusiness', id: 'stand' });
+  const before = structuredClone(g);
+  assert.equal(g.cash, 900000);
+  assert.equal(pendingBusinessIncome(g), 20000);
+  g = run(g, { type: 'startSettlement' });
+  assert.equal(g.cash, 920000);
+  assert.equal(g.businessIncomeWeek, 1);
+  assert.equal(g.businessIncomeAmount, 20000);
+  assert.equal(g.minute, before.minute);
+  assert.equal(pendingBusinessIncome(g), 0);
+  assert.equal(execute(g, { type: 'startSettlement' }).ok, false);
+  g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.equal(g.cash, 920000);
+  assert.equal(pendingBusinessIncome(g), 0);
+  g = run(g, { type: 'repay', amount: 50000 });
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, 770000);
+  assert.equal(pendingBusinessIncome(g), 20000);
+  g = run(g, { type: 'startSettlement' });
+  assert.equal(g.cash, 790000);
+  assert.equal(g.businessIncomeWeek, 2);
+  g = run(g, { type: 'repay', amount: 100000 });
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, 390000);
+  assert.equal(g.businessIncomeWeek, 2);
+  assert.ok(allMoneyAligned(g));
+});
+
+test('business income can fund the due bill, is not earned offline or by reading, and caps safely at wallet limits', () => {
+  let g = newGame();
+  g.cash = 230000;
+  g = run(g, { type: 'buyBusiness', id: 'stand' });
+  assert.equal(g.cash, 130000);
+  const read = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.deepEqual(read, g);
+  g = run(g, { type: 'startSettlement' });
+  assert.equal(g.cash, 150000);
+  assert.equal(g.status, 'playing');
+  g = run(g, { type: 'repay', amount: 50000 });
+  g = run(g, { type: 'payInterest' });
+  assert.equal(g.cash, 0);
+  assert.equal(g.status, 'playing');
+  let full = newGame();
+  full.cash = RULES.maxMoney;
+  full.stats.peakCash = full.cash;
+  full = run(full, { type: 'buyBusiness', id: 'stand' });
+  full.cash = RULES.maxMoney - 10000;
+  full = run(full, { type: 'startSettlement' });
+  assert.equal(full.cash, RULES.maxMoney);
+  assert.equal(full.businessIncomeAmount, 10000);
+});
+
+test('business ownership and income metadata reject malformed imports while old saves gain no free investments', () => {
+  const g = run(newGame(), { type: 'buyBusiness', id: 'stand' });
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  const invalids: ((v: Game) => void)[] = [
+    (v) => {
+      v.businesses!.push({ ...v.businesses![0] });
+    },
+    (v) => {
+      v.businesses![0].purchasedWeek = 2;
+    },
+    (v) => {
+      v.businessIncomeWeek = 99;
+    },
+    (v) => {
+      v.businessIncomeAmount = 51;
+    },
+    (v) => {
+      v.businesses![0].id = 'bad' as 'stand';
+    },
+    (v) => {
+      v.settling = true;
+    },
+  ];
+  for (const edit of invalids) {
+    const invalid = structuredClone(g);
+    edit(invalid);
+    assert.equal(isGame(invalid), false);
+  }
+  const old = newGame();
+  delete old.businesses;
+  delete old.businessIncomeWeek;
+  delete old.businessIncomeAmount;
+  const saved = parseSave({ version: 2, game: old, favoriteIds: [] }).game;
+  assert.deepEqual(saved.businesses, []);
+  assert.equal(saved.cash, old.cash);
+  assert.equal(weeklyBusinessIncome(saved), 0);
+});
+
+test('purchase experience improves new negotiation floors without changing hidden value or firm-seller rules', () => {
+  const original = newGame(7).board.find(
+    (i) => i.marketId === 'street' && !i.special,
+  )!;
+  original.listing!.facts.seller = 'ordinary';
+  const beginner = purchaseReply(
+    original,
+    original.offers[0],
+    () => 0.99,
+    0,
+  ).item;
+  const experienced = purchaseReply(
+    original,
+    original.offers[0],
+    () => 0.99,
+    5,
+  ).item;
+  assert.ok(
+    experienced.purchaseBargain!.floor < beginner.purchaseBargain!.floor,
+  );
+  assert.equal(experienced.value, beginner.value);
+  assert.deepEqual(experienced.listing, beginner.listing);
+  original.listing!.facts.seller = 'firm';
+  assert.equal(
+    purchaseReply(original, original.offers[0], () => 0.99, 10).item
+      .purchaseBargain!.floor,
+    original.price,
+  );
+  const progressed = newGame();
+  progressed.stats.purchases = 4;
+  const item = progressed.board.find(
+    (i) => i.price > 0 && i.marketId === 'street',
+  )!;
+  const result = execute(progressed, { type: 'buy', id: item.id });
+  assert.ok(result.ok);
+  assert.equal(result.game.stats.purchases, 5);
+  assert.ok(result.message.includes('매입 감각 Lv.1'));
+  assert.equal(result.game.inventory[0].value, item.value);
 });

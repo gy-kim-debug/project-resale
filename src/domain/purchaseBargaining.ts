@@ -22,15 +22,27 @@ export function openingPurchaseOffers(
     ),
   ].filter((p) => p > 0 && p < price);
 }
-export function purchaseProfile(item: Item) {
+export function purchaseProfile(item: Item, buyingLevel = 0) {
   const seller = sellerProfile(item);
   const market = bargainingMarket(item.marketId);
   const firm = item.listing?.facts.seller === 'firm';
   const clamp = (value: number) => Math.min(1, Math.max(0, value));
   return {
     ...seller,
-    floorMin: firm ? 1 : clamp(seller.floorMin + market.floorShift),
-    floorMax: firm ? 1 : clamp(seller.floorMax + market.floorShift),
+    floorMin: firm
+      ? 1
+      : clamp(
+          seller.floorMin +
+            market.floorShift -
+            Math.min(10, Math.max(0, buyingLevel)) / 100,
+        ),
+    floorMax: firm
+      ? 1
+      : clamp(
+          seller.floorMax +
+            market.floorShift -
+            Math.min(10, Math.max(0, buyingLevel)) / 100,
+        ),
     patienceMin: Math.min(6, seller.patienceMin + market.patienceBonus),
     patienceMax: Math.min(6, seller.patienceMax + market.patienceBonus),
     holdChance: firm ? 1 : clamp(seller.holdChance + market.holdShift),

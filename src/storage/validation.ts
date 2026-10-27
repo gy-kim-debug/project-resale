@@ -1,3 +1,8 @@
+import {
+  SPECIAL_LISTINGS,
+  isSpecialListingId,
+} from '../content/specialListings';
+import { BUSINESSES, businessDefinition } from '../content/businesses';
 import { allMoneyAligned } from '../domain/moneyMigration';
 import type { Game, Item } from '../domain/game';
 import {
@@ -57,6 +62,11 @@ function listing(v: unknown, itemKind: unknown): boolean {
 function item(v: unknown): v is Item {
   return (
     record(v) &&
+    (v.special === undefined ||
+      (isSpecialListingId(v.special) &&
+        SPECIAL_LISTINGS[v.special].markets.includes(
+          (v.marketId ?? 'street') as Item['marketId'] & string,
+        ))) &&
     ['id', 'title', 'seller', 'description', 'defect'].every((k) =>
       text(v[k]),
     ) &&
@@ -167,6 +177,45 @@ export function isGame(v: unknown): v is Game {
   if (
     v.weeklyRulesVersion === 2 &&
     !integer(v.principalRepaidThisWeek, RULES.maxMoney)
+  )
+    return false;
+  if (
+    v.businesses !== undefined &&
+    (!Array.isArray(v.businesses) ||
+      v.businesses.length > BUSINESSES.length ||
+      !v.businesses.every(
+        (b) =>
+          record(b) &&
+          typeof b.id === 'string' &&
+          !!businessDefinition(b.id) &&
+          integer(b.purchasedWeek) &&
+          b.purchasedWeek >= 1 &&
+          b.purchasedWeek <= Number(v.interestWeek ?? 0) + 1,
+      ) ||
+      new Set(v.businesses.map((b) => b.id)).size !== v.businesses.length)
+  )
+    return false;
+  if (
+    v.businessIncomeWeek !== undefined &&
+    !integer(v.businessIncomeWeek, Number(v.interestWeek ?? 0) + 1)
+  )
+    return false;
+  if (
+    v.businessIncomeAmount !== undefined &&
+    !integer(v.businessIncomeAmount, RULES.maxMoney)
+  )
+    return false;
+  if (
+    Array.isArray(v.businesses) &&
+    v.businesses.length &&
+    (v.businessIncomeWeek === undefined || v.businessIncomeAmount === undefined)
+  )
+    return false;
+  if (
+    Array.isArray(v.businesses) &&
+    v.businesses.length &&
+    v.settling === true &&
+    v.businessIncomeWeek !== Number(v.interestWeek ?? 0) + 1
   )
     return false;
   if (!integer(v.marketFactor, 200) || !kind(v.trend)) return false;

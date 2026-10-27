@@ -12,11 +12,15 @@ const moneyText = (text: string, activeQuote = false) =>
 /** No draws, clocks or commands; all old snapshots retain assets and negotiated outcomes. */
 export function normalizeMoney(original: Game): Game {
   const g = structuredClone(original);
+  g.businesses ??= [];
+  g.businessIncomeWeek ??= g.interestWeek ?? 0;
+  g.businessIncomeAmount ??= 0;
   for (const key of [
     'cash',
     'principal',
     'interest',
     'principalRepaidThisWeek',
+    'businessIncomeAmount',
   ] as const)
     if (g[key] !== undefined) g[key] = roundMoney(g[key]!);
   for (const key of ['earned', 'repaid', 'peakCash'] as const)
@@ -95,6 +99,7 @@ export function normalizeMoney(original: Game): Game {
 }
 export function allMoneyAligned(g: Game): boolean {
   const amounts = [
+    g.businessIncomeAmount ?? 0,
     g.cash,
     g.principal,
     g.interest,

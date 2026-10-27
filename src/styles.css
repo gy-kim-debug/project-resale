@@ -1083,3 +1083,14 @@ html {
   background: #20291d;
   border-top: 1px solid var(--border);
 }
+
+.item-tag.special-listing {
+  color: #f1cf80;
+  border-color: #9f7c3b;
+  background: #3b3320;
+  font-weight: 700;
+}
+.owned-business {
+  color: #c5dc8e;
+  font-weight: 700;
+}

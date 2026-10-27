@@ -1,3 +1,5 @@
+import type { SpecialListingId } from '../content/specialListings';
+import type { BusinessId } from '../content/businesses';
 import { roundMoney } from './money';
 /** Serializable game types. KRW uses safe integers; the legacy minute field stores discrete action ticks. */
 export type Kind =
@@ -62,6 +64,7 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
+  special?: SpecialListingId;
   auction?: Auction;
   marketId?: MarketId;
   listing?: ListingInfo;
@@ -124,6 +127,9 @@ export interface Event {
   expires: number;
 }
 export interface Game {
+  businesses?: { id: BusinessId; purchasedWeek: number }[];
+  businessIncomeWeek?: number;
+  businessIncomeAmount?: number;
   version: 2;
   moneyUnit?: 100;
   timeMode?: 'daily-actions' | 'weekly-actions';
@@ -163,6 +169,7 @@ export interface Game {
 }
 export type Command =
   | { type: 'job'; id: string }
+  | { type: 'buyBusiness'; id: string }
   | { type: 'scavenge' }
   | { type: 'refresh'; marketId?: MarketId }
   | { type: 'wait' }

@@ -18,7 +18,7 @@ with sync_playwright() as p:
   data=json.loads(Path('work/rich.json').read_text());page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   def read():return page.evaluate(READ)
   def open_market(name):page.locator('.activity-grid').get_by_role('button',name=name,exact=True).click()
-  expected=['무료나눔','아르바이트','물건 수집']+[m[1] for m in MARKETS]+['즉시 판매']
+  expected=['무료나눔','아르바이트','물건 수집']+[m[1] for m in MARKETS]+['즉시 판매','사업']
   assert page.locator('.activity-grid button').all_text_contents()==expected
   page.screenshot(path=f'work/activity-direct-markets-{width}.png',full_page=True)
   original=read()['game']
@@ -61,6 +61,12 @@ with sync_playwright() as p:
   page.get_by_role('button',name='판매자와 채팅',exact=True).click();page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
   expect(page.locator('.chat-message')).to_have_count(3)
   assert read()['game']['minute']==rich['game']['minute']
+  purchase=page.get_by_role('button',name='구매 내용 확인')
+  if purchase.is_disabled():
+   # An unlucky opening offer can end a real negotiation. Verify that lock, then
+   # use an untouched snapshot to test the independent direct-purchase path.
+   assert next(i for i in read()['game']['board'] if i.get('marketId')=='computers')['purchaseBargain']['walked']
+   page.evaluate(WRITE,rich);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('컴퓨터시장');page.locator('.item-row').first.click()
   page.get_by_role('button',name='구매 내용 확인').click();page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   paid=read()['game'];assert paid['inventory'][0]['marketId']=='computers' and paid['minute']==rich['game']['minute']+480
   page.get_by_role('button',name='받은 물품 확인',exact=True).click();page.get_by_role('button',name='가치 확인 · 행동 소모 없음',exact=False).click();expect(page.locator('.action-layer')).to_have_count(0)

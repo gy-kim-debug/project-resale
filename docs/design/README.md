@@ -122,3 +122,9 @@
 ### 화폐
 
 - [100원 단위 반올림·입력·저장 변환](economy/MONEY_UNITS.md)
+
+### 새로운 성장 요소
+
+- [기존 거래 방식으로 사고파는 특별 매물](items/SPECIAL_LISTINGS.md)
+- [구매 후 주마다 수입을 받는 사업](business/BUSINESSES.md)
+- [자동 성장 기본안과 매입 감각](character/ABILITIES.md)

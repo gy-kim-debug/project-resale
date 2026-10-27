@@ -1,3 +1,13 @@
+import { ABILITIES } from '../content/abilities';
+import { abilityLevel } from './abilities';
+import { businessDefinition } from '../content/businesses';
+import { pendingBusinessIncome } from './business';
+import {
+  SPECIAL_RULES,
+  SPECIAL_LISTINGS,
+  type SpecialListingId,
+} from '../content/specialListings';
+import { applySpecialListing, specialAsking } from './specialListings';
 import { MONEY_UNIT, roundMoney, moneyRatio, isHundredWon } from './money';
 import type { Command, Game, Item, Result, Kind, MarketId } from './game';
 import { dayOf, isMoney, won, ACTION_TICK, actionsLeft, weekOf } from './game';
@@ -38,9 +48,7 @@ function roll(g: Game) {
 function id(g: Game) {
   return `i${++g.serial}`;
 }
-export function level(g: Game, stat: 'sales' | 'checks' | 'repairs') {
-  return Math.min(10, Math.floor(g.stats[stat] / (stat === 'sales' ? 5 : 4)));
-}
+export const level = abilityLevel;
 export function listingLimit(g: Game) {
   return Math.min(8, 3 + level(g, 'sales'));
 }
@@ -188,6 +196,7 @@ function board(g: Game, selected?: MarketId) {
     ? g.board.filter((item) => marketOf(item) !== selected)
     : [];
   for (const market of MARKETS.filter((m) => !selected || m.id === selected)) {
+    const marketStart = list.length;
     for (let n = 0; n < 8; n++) {
       const product =
         market.products[Math.floor(roll(g) * market.products.length)];
@@ -204,6 +213,27 @@ function board(g: Game, selected?: MarketId) {
           asking,
         }),
       );
+    }
+    if (market.id !== 'auction' && roll(g) < SPECIAL_RULES.chance) {
+      const kinds = (
+        Object.keys(SPECIAL_LISTINGS) as SpecialListingId[]
+      ).filter((id) => SPECIAL_LISTINGS[id].markets.includes(market.id));
+      const special = kinds[Math.floor(roll(g) * kinds.length)];
+      const candidates = list
+        .slice(marketStart)
+        .filter(
+          (item) =>
+            special === 'collector' ||
+            specialAsking(item, special, market.min) < item.price,
+        );
+      if (candidates.length) {
+        const chosen = candidates[Math.floor(roll(g) * candidates.length)];
+        list[list.findIndex((i) => i.id === chosen.id)] = applySpecialListing(
+          chosen,
+          special,
+          market.min,
+        );
+      }
     }
   }
   if ((!selected || selected === 'street') && roll(g) < 0.5) {
@@ -300,7 +330,7 @@ function event(g: Game) {
       id: id(g),
       type: 'repair',
       title: '수리 전문가의 연락',
-      text: '작은 거래들을 지켜봤다며 정비 교육을 제안합니다. 5,000원 · 행동 1회.',
+      text: `작은 거래들을 지켜봤다며 정비 교육을 제안합니다. ${won(5000)} · 행동 1회.`,
       expires: g.minute + 2880,
     };
     g.lastEvent = g.minute;
@@ -309,14 +339,14 @@ function event(g: Game) {
     if (g.minute - g.lastEvent < 1440) return;
     g.eventStage = 3;
     money(g, 10_000);
-    log(g, '수리 전문가가 소개한 단골의 감사금 10,000원을 받았습니다.');
+    log(g, `수리 전문가가 소개한 단골의 감사금 ${won(10000)}을 받았습니다.`);
     g.lastEvent = g.minute;
   } else if (roll(g) < 0.15) {
     g.event = {
       id: id(g),
       type: 'deal',
       title: '이사 정리 일손 제안',
-      text: '급히 일손을 구하는 이웃입니다. 보상 15,000원 · 행동 1회.',
+      text: `급히 일손을 구하는 이웃입니다. 보상 ${won(15000)} · 행동 1회.`,
       expires: g.minute + 1440,
     };
     g.lastEvent = g.minute;
@@ -386,6 +416,9 @@ export function newGame(seed = 1): Game {
   const g: Game = {
     version: 2,
     moneyUnit: 100,
+    businesses: [],
+    businessIncomeWeek: 0,
+    businessIncomeAmount: 0,
     timeMode: 'weekly-actions',
     weekActions: 0,
     weeklyRulesVersion: 2,
@@ -438,8 +471,22 @@ export function execute(original: Game, command: Command): Result {
       throw Error('구매 문의 응답이 필요합니다.');
     if (interestPending(g) && !['repay', 'payInterest'].includes(command.type))
       throw Error('주간 이자 납부가 필요합니다.');
+    const beforeLevels = ABILITIES.map((ability) => level(g, ability.stat));
     let message = '';
     switch (command.type) {
+      case 'buyBusiness': {
+        const business = businessDefinition(command.id);
+        if (!business) throw Error('없는 사업입니다.');
+        if (g.businesses!.some((owned) => owned.id === business.id))
+          throw Error('이미 보유한 사업입니다.');
+        affordable(g, business.cost);
+        money(g, -business.cost);
+        g.businesses!.push({ id: business.id, purchasedWeek: paymentWeek(g) });
+        message = `${business.name} 구매. 주간 수입 ${won(business.income)}.`;
+        log(g, message);
+        advance(g, 1);
+        break;
+      }
       case 'job': {
         const j = JOBS.find((j) => j.id === command.id);
         if (!j) throw Error('없는 일입니다.');
@@ -521,7 +568,12 @@ export function execute(original: Game, command: Command): Result {
       }
       case 'offer': {
         const originalItem = preItem(g, command.id);
-        const reply = purchaseReply(originalItem, command.price, () => roll(g));
+        const reply = purchaseReply(
+          originalItem,
+          command.price,
+          () => roll(g),
+          level(g, 'purchases'),
+        );
         g.board = g.board.map((item) =>
           item.id === originalItem.id ? reply.item : item,
         );
@@ -760,8 +812,17 @@ export function execute(original: Game, command: Command): Result {
       }
       case 'startSettlement': {
         if (g.settling) throw Error('이미 정산 중입니다.');
+        const income = Math.min(
+          pendingBusinessIncome(g),
+          RULES.maxMoney - g.cash,
+        );
+        if ((g.businessIncomeWeek ?? 0) < paymentWeek(g)) {
+          if (income > 0) money(g, income);
+          g.businessIncomeWeek = paymentWeek(g);
+          g.businessIncomeAmount = income;
+        }
         g.settling = true;
-        message = `${paymentWeek(g)}주차 정산을 시작합니다.`;
+        message = `${income > 0 ? `사업 수입 ${won(income)} 수령. ` : ''}${paymentWeek(g)}주차 정산을 시작합니다.`;
         log(g, message);
         break;
       }
@@ -816,7 +877,7 @@ export function execute(original: Game, command: Command): Result {
             '정비 교육을 마쳤습니다. 수리 경험 +4. 전문가가 다음 연락을 약속했습니다.';
         } else {
           money(g, 15000);
-          message = '이사 정리를 도와 15,000원을 받았습니다.';
+          message = `이사 정리를 도와 ${won(15000)}을 받았습니다.`;
         }
         g.event = null;
         log(g, message);
@@ -825,6 +886,14 @@ export function execute(original: Game, command: Command): Result {
       }
       default:
         throw Error('지원하지 않는 행동입니다.');
+    }
+    const upgrades = ABILITIES.filter(
+      (ability, index) => level(g, ability.stat) > beforeLevels[index],
+    ).map((ability) => `${ability.name} Lv.${level(g, ability.stat)}`);
+    if (upgrades.length) {
+      const notice = upgrades.join(' · ');
+      message += ` ${notice}`;
+      if (g.logs[0]) g.logs[0].text += ` ${notice}`;
     }
     const missed = settleWeekly(g);
     if (missed)

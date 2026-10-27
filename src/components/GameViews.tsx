@@ -1,3 +1,9 @@
+import { ABILITIES } from '../content/abilities';
+import { BUSINESSES } from '../content/businesses';
+import {
+  weeklyBusinessIncome,
+  pendingBusinessIncome,
+} from '../domain/business';
 import { MONEY_UNIT, roundMoney } from '../domain/money';
 import { useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
@@ -45,6 +51,7 @@ export type Route = {
     | '이자 납부'
     | '주간 정산'
     | '특별 제안'
+    | '사업'
     | '기록'
     | '저장 관리'
     | '우편함'
@@ -164,33 +171,20 @@ export function InfoView({ g }: { g: Game }) {
     <>
       <h1>내 정보</h1>
       <div className="abilities">
-        {(
-          [
-            {
-              stat: 'sales',
-              name: '거래 감각',
-              effect: `동시 판매 글 ${listingLimit(g)}개`,
-              each: 5,
-            },
-            {
-              stat: 'checks',
-              name: '감정 지식',
-              effect: `가치 확인비 ${level(g, 'checks') * 5}% 절감`,
-              each: 4,
-            },
-            {
-              stat: 'repairs',
-              name: '수리 기술',
-              effect: `수리 성공률 ${Math.min(95, 70 + level(g, 'repairs') * 5)}%`,
-              each: 4,
-            },
-          ] as const
-        ).map((a) => (
+        {ABILITIES.map((a) => (
           <section className="card" key={a.stat}>
             <h2>
               {a.name} <span>Lv.{level(g, a.stat)}</span>
             </h2>
-            <p>{a.effect}</p>
+            <p>
+              {a.stat === 'purchases'
+                ? `협상력 +${level(g, a.stat)}%`
+                : a.stat === 'sales'
+                  ? `동시 판매 글 ${listingLimit(g)}개`
+                  : a.stat === 'checks'
+                    ? `가치 확인비 ${level(g, a.stat) * 5}% 절감`
+                    : `수리 성공률 ${Math.min(95, 70 + level(g, a.stat) * 5)}%`}
+            </p>
             <progress
               value={level(g, a.stat) >= 10 ? a.each : g.stats[a.stat] % a.each}
               max={a.each}
@@ -262,6 +256,20 @@ export function DebtView({
         <strong>{won(g.principal + g.interest)}</strong>
       </div>
       <dl>
+        <div>
+          <dt>
+            {g.businessIncomeWeek === paymentWeek(g)
+              ? '이번 주 수령한 사업 수입'
+              : '정산 시 사업 수입'}
+          </dt>
+          <dd>
+            {won(
+              g.businessIncomeWeek === paymentWeek(g)
+                ? (g.businessIncomeAmount ?? 0)
+                : pendingBusinessIncome(g),
+            )}
+          </dd>
+        </div>
         <div>
           <dt>원금</dt>
           <dd>{won(g.principal)}</dd>
@@ -345,11 +353,60 @@ export function DebtView({
     </>
   );
 }
-export function ShopView() {
+export function BusinessView({ g, act }: { g: Game; act: Act }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  return (
+    <>
+      <div className="card">
+        <h2>주간 사업 수입</h2>
+        <strong>{won(weeklyBusinessIncome(g))}</strong>
+      </div>
+      {BUSINESSES.map((business) => {
+        const owned = g.businesses?.some((b) => b.id === business.id);
+        return (
+          <section className="card" key={business.id}>
+            <h2>{business.name}</h2>
+            <p>주간 수입 {won(business.income)}</p>
+            {owned ? (
+              <p className="owned-business">보유 중</p>
+            ) : (
+              <>
+                <p>{won(business.cost)}</p>
+                {selected === business.id ? (
+                  <>
+                    <Button
+                      disabled={g.cash < business.cost || actionsLeft(g) === 0}
+                      onClick={async () => {
+                        if (await act({ type: 'buyBusiness', id: business.id }))
+                          setSelected(null);
+                      }}
+                    >
+                      사업 구매 확정 · 행동 1회
+                    </Button>
+                    <Button onClick={() => setSelected(null)}>취소</Button>
+                  </>
+                ) : (
+                  <Button
+                    disabled={g.cash < business.cost || actionsLeft(g) === 0}
+                    onClick={() => setSelected(business.id)}
+                  >
+                    구매
+                  </Button>
+                )}
+              </>
+            )}
+          </section>
+        );
+      })}
+    </>
+  );
+}
+export function ShopView({ g, act }: { g: Game; act: Act }) {
   return (
     <>
       <h1>상점</h1>
-      <p className="empty">판매 중인 상품이 없습니다.</p>
+      <h2>사업</h2>
+      <BusinessView g={g} act={act} />
     </>
   );
 }
@@ -967,6 +1024,8 @@ export function RouteView({
       ) : (
         <p>남은 문의가 없습니다.</p>
       );
+    case '사업':
+      return <BusinessView g={g} act={act} />;
     case '특별 제안':
       return g.event ? (
         <>

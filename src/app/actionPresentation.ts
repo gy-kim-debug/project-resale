@@ -26,6 +26,7 @@ export function actionLabel(command: Command): string {
   if (command.type === 'job')
     return `${JOBS.find((j) => j.id === command.id)?.title ?? '일'} 중…`;
   const labels: Record<Exclude<Command['type'], 'job'>, string> = {
+    buyBusiness: '사업을 구매하는 중…',
     scavenge: '물건을 찾는 중…',
     refresh: '새 매물을 찾는 중…',
     wait: '기다리는 중…',

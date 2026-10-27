@@ -24,11 +24,12 @@ export function purchaseReply(
   original: Item,
   price: number,
   random: () => number,
+  buyingLevel = 0,
 ): { item: Item; message: string } {
   if (!canPurchaseOffer(original) || !original.offers.includes(price))
     throw Error('선택할 수 없는 구매 제안입니다.');
   const item = structuredClone(original);
-  const profile = purchaseProfile(item);
+  const profile = purchaseProfile(item, buyingLevel);
   const market = bargainingMarket(item.marketId);
   const state = (item.purchaseBargain ??= {
     rounds: 0,
