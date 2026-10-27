@@ -31,7 +31,7 @@ with sync_playwright() as p:
   expect(page.get_by_role('log')).to_be_visible()
   expect(page.get_by_role('button',name='구매 전',exact=False)).to_have_count(0)
   expect(page.get_by_text('상태:',exact=False)).to_have_count(0)
-  page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
+  page.get_by_role('button',name=' 제안').first.click()
   assert page.locator('.action-layer').count()==0
   expect(page.locator('.chat-message')).to_have_count(3)
   page.wait_for_function("async()=>!!(await ("+READ+")()).board[0].chat")
@@ -41,16 +41,16 @@ with sync_playwright() as p:
   page.get_by_role('log').scroll_into_view_if_needed()
   page.screenshot(path=f'work/chat-purchase-{width}.png',full_page=True)
   page.get_by_role('button',name='구매 내용 확인').click()
-  page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_be_visible();settled()
+  page.get_by_role('button',name='지불·수령 확정',exact=True).click();expect(page.locator('.action-layer')).to_be_visible();settled()
   assert read()['minute']==start['minute']+480
   assert read()['inventory'][0]['chatSettled']
-  start=load('rich');purchase_chat();page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
-  page.get_by_role('button',name='거래하지 않고 흥정 종료 · 행동 소모 없음',exact=True).click();settled()
+  start=load('rich');purchase_chat();page.get_by_role('button',name=' 제안').first.click()
+  page.get_by_role('button',name='거래하지 않고 흥정 종료',exact=True).click();settled()
   page.wait_for_function("async()=>(await ("+READ+")()).board[0].chatSettled")
   assert read()['minute']==start['minute']
   expect(page.get_by_text('대화 종료',exact=True)).to_be_visible()
   start=load('pending',1000)
-  page.get_by_role('button',name='거절 · 행동 소모 없음',exact=True).first.click()
+  page.get_by_role('button',name='거절',exact=True).first.click()
   assert page.locator('.action-layer').count()==0
   expect(page.get_by_role('log').first.locator('.chat-message')).to_have_count(3)
   page.wait_for_function("async()=>(await ("+READ+")()).inquiries[0].rounds===1")
@@ -58,11 +58,11 @@ with sync_playwright() as p:
   page.reload();expect(page.get_by_role('log').first.locator('.chat-message')).to_have_count(3)
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   page.screenshot(path=f'work/chat-inquiry-{width}.png',full_page=True)
-  page.get_by_role('button',name='수락하고 거래 · 행동 1회',exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible();settled()
+  page.get_by_role('button',name='수락하고 거래',exact=True).first.click();expect(page.locator('.action-layer')).to_be_visible();settled()
   assert read()['minute']==start['minute']+480
   for ending in ['walk','break']:
    start=load('pending',1)
-   name='거절 · 행동 소모 없음' if ending=='walk' else '거래 파토 · 행동 소모 없음'
+   name='거절' if ending=='walk' else '거래 파토'
    page.get_by_role('button',name=name,exact=True).first.click();settled()
    page.wait_for_function("async id=>!(await ("+READ+")()).inquiries.some(q=>q.id===id)",arg=start['inquiries'][0]['id'])
    assert read()['minute']==start['minute']

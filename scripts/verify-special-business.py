@@ -24,14 +24,15 @@ with sync_playwright() as p:
   def pay(principal,interest):
    page.get_by_role('button',name=f'의무 원금 납부 · {principal:,} 원',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
    page.get_by_role('button',name=f'이자 납부 후 다음 주 시작 · {interest:,} 원',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
-  page.get_by_role('button',name='사업',exact=True).click()
+  page.locator('.activity-grid').get_by_role('button',name='사업',exact=True).click()
   stand=page.locator('section.card').filter(has=page.get_by_role('heading',name='중고 판매대',exact=True))
   expect(stand).to_contain_text('주간 수입 20,000 원');expect(stand).to_contain_text('100,000 원')
   before=read();stand.get_by_role('button',name='구매',exact=True).click()
   assert read()==before
-  stand.get_by_role('button',name='사업 구매 확정 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  expect(stand.locator('.action-cost')).to_have_count(0)
+  stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   expect(stand.get_by_text('보유 중',exact=True)).to_be_visible()
-  bought=read();assert bought['cash']==400000 and bought['weekActions']==1 and len(bought['businesses'])==1 and bought['stats']['purchases']==0
+  bought=read();assert bought['cash']==400000 and bought['weekActions']==0 and len(bought['businesses'])==1 and bought['stats']['purchases']==0
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();assert read()==bought
   tab('사업');expect(page.get_by_role('heading',name='주간 사업 수입',exact=True)).to_be_visible()
   expect(page.get_by_text('보유 중',exact=True)).to_be_visible();assert read()==bought
@@ -40,6 +41,7 @@ with sync_playwright() as p:
   page.get_by_role('button',name='닫기',exact=True).click();finish()
   assert read()['cash']==420000 and read()['businessIncomeWeek']==1 and read()['businessIncomeAmount']==20000
   page.reload();expect(page.get_by_role('heading',name='1주차 정산',exact=True)).to_be_visible()
+  expect(page.get_by_role('button',name='의무 원금 납부 · 50,000 원',exact=True).locator('.action-cost')).to_have_count(0)
   assert read()['cash']==420000;pay(50000,100000)
   assert read()['cash']==270000 and read()['interestWeek']==1 and read()['businessIncomeWeek']==1
   # Income is credited before checking the next bill, and cannot be collected twice on reload.
@@ -47,11 +49,24 @@ with sync_playwright() as p:
   assert read()['cash']==400000 and read()['businessIncomeWeek']==2
   page.reload();expect(page.get_by_role('heading',name='2주차 정산',exact=True)).to_be_visible();assert read()['cash']==400000
   pay(100000,300000);assert read()['cash']==0 and read()['status']=='playing'
+  # The business purchase is also available after the entire weekly action budget is spent.
+  exhausted=json.loads(json.dumps(original));exhausted['game']['weekActions']=20;exhausted['game']['minute']=20*480
+  load(exhausted);tab('사업')
+  stand=page.locator('section.card').filter(has=page.get_by_role('heading',name='중고 판매대',exact=True))
+  stand.get_by_role('button',name='구매',exact=True).click();expect(stand.locator('.action-cost')).to_have_count(0)
+  stand.get_by_role('button',name='사업 구매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  assert read()['weekActions']==20 and read()['minute']==20*480 and read()['cash']==400000
+  # A midweek repayment costs an action, a settlement payment does not.
+  load(original);tab('채무')
+  expect(page.get_by_role('button',name='입력 금액 상환',exact=True).locator('.action-cost')).to_have_attribute('data-action-cost','1')
+  tab('활동');page.get_by_role('button',name='아르바이트',exact=True).click()
+  expect(page.get_by_role('button',name='일하기',exact=True).first.locator('.action-cost')).to_have_attribute('data-action-cost','1')
+  assert '행동 1회' not in page.locator('.sheet-layer').inner_text()
   # Automatic purchase growth appears in the existing character screen.
   growth=json.loads(json.dumps(original));growth['game']['stats']['purchases']=4;load(growth);tab('내 정보')
   expect(page.get_by_role('heading',name='매입 감각 Lv.0',exact=True)).to_be_visible()
-  tab('활동');page.get_by_role('button',name='중고 장터',exact=True).click();page.locator('.sheet-layer .item-row').first.click()
-  page.get_by_role('button',name='구매 내용 확인',exact=False).click();page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  tab('활동');page.get_by_role('button',name='중고 장터',exact=True).click();expect(page.get_by_role('button',name='새 매물 탐색',exact=True).locator('.action-cost')).to_have_attribute('data-action-cost','1');page.locator('.sheet-layer .item-row').first.click()
+  page.get_by_role('button',name='구매 내용 확인',exact=False).click();expect(page.get_by_role('button',name='지불·수령 확정',exact=True).locator('.action-cost')).to_have_attribute('data-action-cost','1');page.get_by_role('button',name='지불·수령 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   assert read()['stats']['purchases']==5
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();tab('내 정보')
   expect(page.get_by_role('heading',name='매입 감각 Lv.1',exact=True)).to_be_visible()
@@ -63,7 +78,7 @@ with sync_playwright() as p:
    row=page.locator('.sheet-layer .item-row').nth(index);expect(row.locator('.special-listing')).to_have_text('특별 · '+NAMES[sid]);row.click()
    expect(page.locator('.special-listing')).to_have_text('특별 · '+NAMES[sid]);expect(page.locator('.item-findings')).to_have_count(0)
    if width==390:page.screenshot(path=f'work/special-{sid}-390.png',full_page=True)
-   page.get_by_role('button',name='구매 내용 확인',exact=False).click();page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+   page.get_by_role('button',name='구매 내용 확인',exact=False).click();expect(page.get_by_role('button',name='지불·수령 확정',exact=True).locator('.action-cost')).to_have_attribute('data-action-cost','1');page.get_by_role('button',name='지불·수령 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
    saved=read();assert saved['inventory'][0]['special']==sid and saved['inventory'][0]['acquiredFor']==item['price'] and not saved['inventory'][0]['checked']
    page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();tab('보관함')
    expect(page.locator('.special-listing')).to_have_text('특별 · '+NAMES[sid])

@@ -5,8 +5,9 @@ import {
   pendingBusinessIncome,
 } from '../domain/business';
 import { MONEY_UNIT, roundMoney } from '../domain/money';
-import { useState, type ReactNode, type ReactElement } from 'react';
+import { useId, useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
+import { Icon } from './Icon';
 import { ItemComparison } from './ItemComparison';
 import { TradeChat } from './TradeChat';
 import { ItemTags, ItemFindings } from './ItemTags';
@@ -60,25 +61,50 @@ export type Route = {
   marketId?: MarketId;
 };
 export type Open = (r: Route) => void;
+function ActionCost({ count }: { count: number }) {
+  return count > 0 ? (
+    <span
+      className="action-cost"
+      data-action-cost={count}
+      aria-hidden="true"
+      title={`행동 ${count}회 소모`}
+    >
+      <Icon name="activity" size={16} />
+      {count > 1 && count}
+    </span>
+  ) : null;
+}
 export function Button({
   children,
   onClick,
   disabled = false,
   danger = false,
+  actionCost = 0,
 }: {
   children: ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   danger?: boolean;
+  actionCost?: number;
 }) {
+  const costId = useId();
   return (
-    <button
-      className={`action-button${danger ? ' danger' : ''}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
+    <>
+      <button
+        aria-describedby={actionCost > 0 ? costId : undefined}
+        className={`action-button${danger ? ' danger' : ''}`}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+        <ActionCost count={actionCost} />
+      </button>
+      {actionCost > 0 && (
+        <span id={costId} hidden>
+          행동 {actionCost}회 소모
+        </span>
+      )}
+    </>
   );
 }
 function Details({ children }: { children: ReactNode }) {
@@ -88,6 +114,7 @@ export function AmountForm({
   title,
   label,
   initial = '',
+  actionCost = 0,
   min = MONEY_UNIT,
   max,
   submit,
@@ -95,10 +122,12 @@ export function AmountForm({
   title: string;
   label: string;
   initial?: string;
+  actionCost?: number;
   min?: number;
   max: number;
   submit: (n: number) => void;
 }) {
+  const costId = useId();
   const [amount, setAmount] = useState(initial);
   const rounded =
     /^\d+$/.test(amount) && Number.isSafeInteger(Number(amount))
@@ -134,9 +163,20 @@ export function AmountForm({
           ? `${won(rounded)} · 100원 단위 반올림`
           : '정수 금액을 입력하세요.'}
       </p>
-      <button className="action-button primary" type="submit" disabled={!valid}>
+      <button
+        className="action-button primary"
+        type="submit"
+        disabled={!valid}
+        aria-describedby={actionCost > 0 ? costId : undefined}
+      >
         {title}
+        <ActionCost count={actionCost} />
       </button>
+      {actionCost > 0 && (
+        <span id={costId} hidden>
+          행동 {actionCost}회 소모
+        </span>
+      )}
     </form>
   );
 }
@@ -241,7 +281,6 @@ export function DebtView({
   const due = interestPending(g);
   const amount = interestAmount(g);
   const required = mandatoryPrincipal(g);
-  const cost = due ? '행동 소모 없음' : '행동 1회';
   const canRepay = due || actionsLeft(g) > 0;
   return (
     <>
@@ -336,19 +375,21 @@ export function DebtView({
       )}
       {canRepay && (
         <AmountForm
-          title={`입력 금액 상환 · ${cost}`}
+          title="입력 금액 상환"
+          actionCost={due ? 0 : 1}
           label="상환 금액"
           max={Math.min(g.cash, g.principal)}
           submit={(amount) => act({ type: 'repay', amount })}
         />
       )}
       <Button
+        actionCost={due ? 0 : 1}
         disabled={!canRepay || !g.cash || !g.principal}
         onClick={() =>
           act({ type: 'repay', amount: Math.min(g.cash, g.principal) })
         }
       >
-        가능한 만큼 상환 · {cost} · {won(Math.min(g.cash, g.principal))}
+        가능한 만큼 상환 · {won(Math.min(g.cash, g.principal))}
       </Button>
     </>
   );
@@ -375,19 +416,19 @@ export function BusinessView({ g, act }: { g: Game; act: Act }) {
                 {selected === business.id ? (
                   <>
                     <Button
-                      disabled={g.cash < business.cost || actionsLeft(g) === 0}
+                      disabled={g.cash < business.cost}
                       onClick={async () => {
                         if (await act({ type: 'buyBusiness', id: business.id }))
                           setSelected(null);
                       }}
                     >
-                      사업 구매 확정 · 행동 1회
+                      사업 구매 확정
                     </Button>
                     <Button onClick={() => setSelected(null)}>취소</Button>
                   </>
                 ) : (
                   <Button
-                    disabled={g.cash < business.cost || actionsLeft(g) === 0}
+                    disabled={g.cash < business.cost}
                     onClick={() => setSelected(business.id)}
                   >
                     구매
@@ -468,8 +509,11 @@ export function MarketView({
           </label>
         </>
       )}
-      <Button onClick={() => act({ type: 'refresh', marketId: market.id })}>
-        새 매물 탐색 · 행동 1회
+      <Button
+        actionCost={1}
+        onClick={() => act({ type: 'refresh', marketId: market.id })}
+      >
+        새 매물 탐색
       </Button>
       {listings.length ? (
         listings.map((i) => (
@@ -558,12 +602,12 @@ export function ListingView({
                       act({ type: 'offer', id: item.id, price: p })
                     }
                   >
-                    {won(p)} 제안 · 행동 소모 없음
+                    {won(p)} 제안
                   </Button>
                 ))}
               {item.chat && !item.chatSettled && (
                 <Button onClick={() => act({ type: 'closeChat', id: item.id })}>
-                  거래하지 않고 흥정 종료 · 행동 소모 없음
+                  거래하지 않고 흥정 종료
                 </Button>
               )}
               {item.chatSettled && <p className="chat-ended">대화 종료</p>}
@@ -589,16 +633,17 @@ export function ListingView({
       ) : (
         <section className="card">
           <h3>지불·수령 확인</h3>
-          <p>{won(price)} · 행동 1회</p>
+          <p>{won(price)}</p>
           <Button
             disabled={
               !!item.purchaseBargain?.walked ||
               g.cash < price ||
               g.inventory.length >= RULES.capacity
             }
+            actionCost={1}
             onClick={() => act({ type: 'buy', id: item.id })}
           >
-            {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'} · 행동 1회
+            {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'}
           </Button>
           <Button onClick={() => setConfirm(false)}>구매하지 않기</Button>
         </section>
@@ -649,18 +694,18 @@ export function OwnedView({
           disabled={g.cash < checkCost(g, item)}
           onClick={() => act({ type: 'check', id: item.id })}
         >
-          가치 확인 · 행동 소모 없음 · {won(checkCost(g, item))}
+          가치 확인 · {won(checkCost(g, item))}
         </Button>
       )}
       {item.checked && item.condition !== '양호' && !item.repaired && (
         <section className="card">
           <h3>수리</h3>
-          <p>비용 {won(repairCost(item))} · 행동 소모 없음</p>
+          <p>비용 {won(repairCost(item))}</p>
           <Button
             disabled={!!sale || g.cash < repairCost(item)}
             onClick={() => act({ type: 'repair', id: item.id })}
           >
-            수리하기 · 행동 소모 없음
+            수리하기
           </Button>
         </section>
       )}
@@ -670,11 +715,14 @@ export function OwnedView({
           <p>
             {won(sale.price)} · 만료까지 {durationText(sale.expires - g.minute)}
           </p>
-          <Button onClick={() => act({ type: 'wait' })}>
-            구매 문의 기다리기 · 행동 1회
+          <Button actionCost={1} onClick={() => act({ type: 'wait' })}>
+            구매 문의 기다리기
           </Button>
-          <Button onClick={() => act({ type: 'cancel', id: item.id })}>
-            판매 등록 취소 · 행동 1회
+          <Button
+            actionCost={1}
+            onClick={() => act({ type: 'cancel', id: item.id })}
+          >
+            판매 등록 취소
           </Button>
         </section>
       ) : (
@@ -693,7 +741,7 @@ export function OwnedView({
         <section className="card">
           <p>이 물품을 버릴까요?</p>
           <Button danger onClick={() => act({ type: 'discard', id: item.id })}>
-            버리기 확정 · 행동 소모 없음
+            버리기 확정
           </Button>
           <Button onClick={() => setDiscard(false)}>계속 보관</Button>
         </section>
@@ -738,6 +786,7 @@ export function InstantSaleView({ g, act }: { g: Game; act: Act }) {
             {item.title} · {won(instantSalePrice(item))}
           </p>
           <Button
+            actionCost={1}
             disabled={
               actionsLeft(g) === 0 || g.sales.some((s) => s.itemId === item.id)
             }
@@ -746,7 +795,7 @@ export function InstantSaleView({ g, act }: { g: Game; act: Act }) {
                 setSelected(null);
             }}
           >
-            판매 확정 · 행동 1회
+            판매 확정
           </Button>
           <Button onClick={() => setSelected(null)}>계속 보관</Button>
         </section>
@@ -768,7 +817,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
               {item?.title} · 등록 {won(sale?.price ?? 0)}
             </p>
             {item && <ItemComparison g={g} item={item} />}
-            <p className="chat-cost">흥정 · 행동 소모 없음</p>
+
             <TradeChat
               name={q.name}
               messages={
@@ -785,21 +834,24 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
               q.price < sale.price && (
                 <AmountForm
                   key={`${q.id}-${q.rounds}`}
-                  title="가격 제안 · 행동 소모 없음"
+                  title="가격 제안"
                   label="제안할 판매 가격 (원)"
                   min={q.price + MONEY_UNIT}
                   max={sale.price}
                   submit={(price) => act({ type: 'counter', id: q.id, price })}
                 />
               )}
-            <Button onClick={() => act({ type: 'accept', id: q.id })}>
-              수락하고 거래 · 행동 1회
+            <Button
+              actionCost={1}
+              onClick={() => act({ type: 'accept', id: q.id })}
+            >
+              수락하고 거래
             </Button>
             <Button onClick={() => act({ type: 'reject', id: q.id })}>
-              거절 · 행동 소모 없음
+              거절
             </Button>
             <Button danger onClick={() => act({ type: 'break', id: q.id })}>
-              거래 파토 · 행동 소모 없음
+              거래 파토
             </Button>
           </section>
         );
@@ -956,8 +1008,8 @@ export function RouteView({
             <Button onClick={() => open({ kind: '물품', id: item.id })}>
               등록한 물품 확인
             </Button>
-            <Button onClick={() => act({ type: 'wait' })}>
-              구매 문의 기다리기 · 행동 1회
+            <Button actionCost={1} onClick={() => act({ type: 'wait' })}>
+              구매 문의 기다리기
             </Button>
           </>
         ) : (
@@ -966,11 +1018,12 @@ export function RouteView({
             <h2>{item.title}</h2>
             <ItemTags item={item} />
             <p className="lead">
-              등록 · 행동 1회 · {g.sales.length}/{listingLimit(g)}개 등록 중
+              등록 · {g.sales.length}/{listingLimit(g)}개 등록 중
             </p>
             {item.checked && <p>현재 시장 기준 {won(marketValue(g, item))}</p>}
             <AmountForm
-              title="판매 글 등록 확정 · 행동 1회"
+              title="판매 글 등록 확정"
+              actionCost={1}
               label="판매 가격 (원)"
               max={RULES.maxMoney}
               submit={(price) => act({ type: 'post', id: item.id, price })}
@@ -989,12 +1042,13 @@ export function RouteView({
           {JOBS.map((j) => (
             <section key={j.id} className="card">
               <h2>{j.title}</h2>
-              <p>
-                행동 {j.actions}회 · 보상 {won(j.reward)}
-              </p>
+              <p>보상 {won(j.reward)}</p>
 
-              <Button onClick={() => act({ type: 'job', id: j.id })}>
-                일하기 · 행동 {j.actions}회
+              <Button
+                actionCost={j.actions}
+                onClick={() => act({ type: 'job', id: j.id })}
+              >
+                일하기
               </Button>
             </section>
           ))}
@@ -1003,15 +1057,15 @@ export function RouteView({
     case '물건 수집':
       return (
         <>
-          <p>행동 1회</p>
           <p>
             보관함 {g.inventory.length}/{RULES.capacity}
           </p>
           <Button
             disabled={g.inventory.length >= RULES.capacity}
+            actionCost={1}
             onClick={() => act({ type: 'scavenge' })}
           >
-            물건 수집하기 · 행동 1회
+            물건 수집하기
           </Button>
         </>
       );
@@ -1029,13 +1083,18 @@ export function RouteView({
       return g.event ? (
         <>
           <h2>{g.event.title}</h2>
-          <p className="lead">{g.event.text}</p>
+          <p className="lead">
+            {g.event.text.replace(/ · 행동 \d+회\.?/g, '')}
+          </p>
           <p>남은 기간 {durationText(g.event.expires - g.minute)}</p>
-          <Button onClick={() => act({ type: 'event', choice: 'yes' })}>
-            제안 수락 · 행동 1회
+          <Button
+            actionCost={1}
+            onClick={() => act({ type: 'event', choice: 'yes' })}
+          >
+            제안 수락
           </Button>
           <Button onClick={() => act({ type: 'event', choice: 'no' })}>
-            거절 · 행동 소모 없음
+            거절
           </Button>
         </>
       ) : (
@@ -1160,7 +1219,7 @@ function AuctionListingView({
           disabled={g.cash < amount}
           onClick={() => act({ type: 'bid', id: item.id, amount })}
         >
-          {won(amount)} 입찰 · 행동 소모 없음
+          {won(amount)} 입찰
         </Button>
       ))}
       {wonAuction &&
@@ -1171,15 +1230,16 @@ function AuctionListingView({
         ) : (
           <section className="card">
             <h3>낙찰 대금 확인</h3>
-            <p>{won(auction.currentBid)} · 행동 1회</p>
+            <p>{won(auction.currentBid)}</p>
             <Button
               disabled={
                 g.cash < auction.currentBid ||
                 g.inventory.length >= RULES.capacity
               }
+              actionCost={1}
               onClick={() => act({ type: 'buy', id: item.id })}
             >
-              낙찰 대금 결제 · 행동 1회
+              낙찰 대금 결제
             </Button>
             <Button onClick={() => setConfirm(false)}>돌아가기</Button>
           </section>
@@ -1189,7 +1249,7 @@ function AuctionListingView({
           danger
           onClick={() => act({ type: 'withdrawAuction', id: item.id })}
         >
-          {wonAuction ? '낙찰 포기' : '입찰 포기'} · 행동 소모 없음
+          {wonAuction ? '낙찰 포기' : '입찰 포기'}
         </Button>
       )}
       {auction.status === 'withdrawn' && (

@@ -20,7 +20,7 @@ with sync_playwright() as p:
   def market():page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click()
   def buy_and_check(expected):
    page.get_by_role('button',name='구매 내용 확인').click()
-   page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click()
+   page.get_by_role('button',name='지불·수령 확정',exact=True).click()
    expect(page.locator('.action-layer')).to_have_count(0)
    page.get_by_role('button',name='← 뒤로',exact=True).click()
    page.get_by_role('button',name='닫기',exact=True).click()

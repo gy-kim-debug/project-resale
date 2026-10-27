@@ -2489,12 +2489,15 @@ test('special discounts preserve hidden facts, collectors are not guaranteed gen
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
 });
 
-test('business purchase costs one action, is one per type and is separate from inventory and purchase experience', () => {
+test('business purchase costs no actions, is one per type and is separate from inventory and purchase experience', () => {
   const g = newGame();
   const business = BUSINESSES[0];
   const bought = run(g, { type: 'buyBusiness', id: business.id });
   assert.equal(bought.cash, g.cash - business.cost);
-  assert.equal(bought.weekActions, 1);
+  assert.equal(bought.weekActions, g.weekActions);
+  assert.equal(bought.minute, g.minute);
+  assert.equal(bought.seed, g.seed);
+  assert.deepEqual(bought.board, g.board);
   assert.equal(bought.inventory.length, 0);
   assert.equal(bought.stats.purchases, 0);
   assert.equal(bought.businesses!.length, 1);
@@ -2506,10 +2509,14 @@ test('business purchase costs one action, is one per type and is separate from i
     assert.equal(execute(bought, command).ok, false);
   const exhausted = newGame();
   exhausted.weekActions = 20;
-  assert.equal(
-    execute(exhausted, { type: 'buyBusiness', id: business.id }).ok,
-    false,
-  );
+  const afterExhausted = run(exhausted, {
+    type: 'buyBusiness',
+    id: business.id,
+  });
+  assert.equal(afterExhausted.weekActions, 20);
+  assert.equal(afterExhausted.minute, exhausted.minute);
+  assert.equal(afterExhausted.cash, exhausted.cash - business.cost);
+  assert.equal(afterExhausted.businesses!.length, 1);
   assert.equal(exhausted.cash, g.cash);
   assert.equal(exhausted.businesses!.length, 0);
 });

@@ -1,4 +1,5 @@
 """All markets have independent, direct activity entrances; outlets only sell owned assets."""
+import re
 import json
 import os
 import subprocess
@@ -35,10 +36,10 @@ with sync_playwright() as p:
    expect(page.locator('.asset-market')).to_have_text(name)
    if mid=='auction':
     expect(page.get_by_role('button',name='판매자와 채팅',exact=True)).to_have_count(0)
-    assert page.get_by_role('button',name=' 입찰 · 행동 소모 없음').count()==3
+    assert page.get_by_role('button',name=re.compile(r' 원 입찰$')).count()==3
    else:
     expect(page.get_by_role('button',name='판매자와 채팅',exact=True)).to_be_visible()
-    expect(page.get_by_role('button',name=' 입찰 · 행동 소모 없음')).to_have_count(0)
+    expect(page.get_by_role('button',name=re.compile(r' 원 입찰$'))).to_have_count(0)
    page.get_by_role('button',name='← 뒤로',exact=True).click()
    expect(page.get_by_role('heading',name=name,exact=True)).to_be_visible()
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
@@ -51,14 +52,14 @@ with sync_playwright() as p:
   expect(page.get_by_text('실제 가치의 60%로 판매합니다.',exact=True)).to_be_visible()
   page.get_by_role('button',name='닫기',exact=True).click()
   open_market('컴퓨터시장');before=read()['game']
-  page.get_by_role('button',name='새 매물 탐색 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  page.get_by_role('button',name='새 매물 탐색',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   after=read()['game'];assert after['minute']==before['minute']+480
   assert [i for i in after['board'] if i.get('marketId')!='computers']==[i for i in before['board'] if i.get('marketId')!='computers']
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('컴퓨터시장')
   expect(page.get_by_role('heading',name='컴퓨터시장',exact=True)).to_be_visible()
   rich=json.loads(json.dumps(data));rich['game']['cash']=2000000;rich['game']['stats']['peakCash']=2000000
   page.evaluate(WRITE,rich);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('컴퓨터시장');page.locator('.item-row').first.click()
-  page.get_by_role('button',name='판매자와 채팅',exact=True).click();page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
+  page.get_by_role('button',name='판매자와 채팅',exact=True).click();page.get_by_role('button',name=' 제안').first.click()
   expect(page.locator('.chat-message')).to_have_count(3)
   assert read()['game']['minute']==rich['game']['minute']
   purchase=page.get_by_role('button',name='구매 내용 확인')
@@ -67,9 +68,9 @@ with sync_playwright() as p:
    # use an untouched snapshot to test the independent direct-purchase path.
    assert next(i for i in read()['game']['board'] if i.get('marketId')=='computers')['purchaseBargain']['walked']
    page.evaluate(WRITE,rich);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('컴퓨터시장');page.locator('.item-row').first.click()
-  page.get_by_role('button',name='구매 내용 확인').click();page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  page.get_by_role('button',name='구매 내용 확인').click();page.get_by_role('button',name='지불·수령 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   paid=read()['game'];assert paid['inventory'][0]['marketId']=='computers' and paid['minute']==rich['game']['minute']+480
-  page.get_by_role('button',name='받은 물품 확인',exact=True).click();page.get_by_role('button',name='가치 확인 · 행동 소모 없음',exact=False).click();expect(page.locator('.action-layer')).to_have_count(0)
+  page.get_by_role('button',name='받은 물품 확인',exact=True).click();page.get_by_role('button',name='가치 확인',exact=False).click();expect(page.locator('.action-layer')).to_have_count(0)
   assert read()['game']['minute']==paid['minute']
   assert not errors,errors
   print(json.dumps({'width':width,'direct_entrances_five_market_chats_auction_only_outlets_separate':'PASS'}),flush=True)

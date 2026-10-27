@@ -28,7 +28,7 @@ with sync_playwright() as p:
    before=read()
    assert '공략' not in page.locator('.sheet-layer').inner_text()
    for round in range(2):
-    page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
+    page.get_by_role('button',name=' 제안').first.click()
     expect(page.locator('.chat-message')).to_have_count(3+2*round)
     assert page.locator('.action-layer').count()==0
     assert read()['minute']==before['minute'] and read()['weekActions']==before['weekActions'] and read()['cash']==before['cash']
@@ -38,7 +38,7 @@ with sync_playwright() as p:
    assert live()==saved
    price=saved['negotiatedPrice']
    page.get_by_role('button',name='구매 내용 확인',exact=False).click()
-   page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click()
+   page.get_by_role('button',name='지불·수령 확정',exact=True).click()
    expect(page.locator('.action-layer')).to_have_count(0)
    purchased=read();assert purchased['cash']==before['cash']-price and purchased['minute']==before['minute']+480
    assert next(i for i in purchased['inventory'] if i['id']==iid)['acquiredFor']==price

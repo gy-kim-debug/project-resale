@@ -30,12 +30,12 @@ with sync_playwright() as p:
   page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name='활동',exact=True).click()
   page.get_by_role('button',name='즉시 판매',exact=True).click();page.locator('.sheet-layer .item-row').first.click()
   expect(page.locator('.sheet-layer')).to_contain_text('6,000 원')
-  page.get_by_role('button',name='판매 확정 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  page.get_by_role('button',name='판매 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   def read():return page.evaluate(READ)['game']
   assert read()['cash']==506000 and read()['moneyUnit']==100;aligned(read())
   page.get_by_role('button',name='닫기',exact=True).click()
   page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name='채무',exact=True).click()
-  field=page.get_by_label('상환 금액',exact=True);button=page.get_by_role('button',name='입력 금액 상환 · 행동 1회',exact=True)
+  field=page.get_by_label('상환 금액',exact=True);button=page.get_by_role('button',name='입력 금액 상환',exact=True)
   for raw,actual in [('1049',1000),('1050',1100),('50',100)]:
    before=read();field.fill(raw)
    expect(page.locator('.amount-form p')).to_contain_text(f'{actual:,} 원 · 100원 단위 반올림')

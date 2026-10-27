@@ -30,7 +30,7 @@ with sync_playwright() as p:
   page.get_by_role('button',name='← 뒤로',exact=True).click()
   page.get_by_role('button',name='닫기',exact=True).click()
   page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
-  page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
+  page.get_by_role('button',name='일하기',exact=True).first.click()
   expect(page.locator('.action-layer')).to_be_visible()
   assert tools.locator('button:disabled').count()==2
   expect(page.locator('.action-layer')).to_have_count(0)

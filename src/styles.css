@@ -1094,3 +1094,13 @@ html {
   color: #c5dc8e;
   font-weight: 700;
 }
+
+.action-cost {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  gap: 2px;
+  margin-left: 8px;
+  color: #dce7a2;
+  white-space: nowrap;
+}

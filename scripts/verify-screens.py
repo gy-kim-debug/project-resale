@@ -44,8 +44,8 @@ with sync_playwright() as pw:
         assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==[]
         layout();page.screenshot(path=f'work/playable-home-{width}.png',full_page=True)
         activity('아르바이트');layout()
-        assert page.get_by_role('button',name=re.compile('^일하기')).all_text_contents()==['일하기 · 행동 1회','일하기 · 행동 1회','일하기 · 행동 1회']
-        page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
+        assert page.get_by_role('button',name=re.compile('^일하기')).all_text_contents()==['일하기','일하기','일하기']
+        page.get_by_role('button',name='일하기',exact=True).first.click()
         expect(page.locator('.status-top')).to_contain_text('509,000 원')
         expect(page.locator('.status-top')).to_contain_text('남은 행동 19/20')
         click('닫기');activity('물건 수집');click('물건 수집하기');click('닫기');tab('보관함')
@@ -57,7 +57,7 @@ with sync_playwright() as pw:
         expect(page.get_by_label('판매 가격 (원)')).to_have_count(0)
         for _ in range(8):
             if page.get_by_role('heading',name='문의',exact=True).count():break
-            click('구매 문의 기다리기 · 행동 1회')
+            click('구매 문의 기다리기')
         expect(page.get_by_role('heading',name='문의',exact=True)).to_be_visible()
         assert page.get_by_role('button',name='닫기',exact=True).count()==0
         assert all(b.is_disabled() for b in page.locator('.bottom-nav button').all())
@@ -66,7 +66,7 @@ with sync_playwright() as pw:
         page.wait_for_function("async()=> (await ("+READ_SAVE+")())?.game?.inquiries?.length > 0")
         before=saved()['game'];page.reload();expect(page.get_by_role('heading',name='문의',exact=True)).to_be_visible()
         assert saved()['game']['minute']==before['minute']
-        page.get_by_role('button',name='수락하고 거래 · 행동 1회',exact=True).first.click()
+        page.get_by_role('button',name='수락하고 거래',exact=True).first.click()
         tab('보관함')
         expect(page.get_by_text('아직 보유한 물품이 없습니다.')).to_be_visible()
         # Real buy, negotiation, outlet and archive flows from a non-production fixture.
@@ -78,7 +78,7 @@ with sync_playwright() as pw:
         page.get_by_role('button',name='구매 내용 확인',exact=False).click();click('지불·수령 확정')
         click('받은 물품 확인');expect(page.get_by_text('상태:',exact=False)).to_be_visible();layout();page.screenshot(path=f'work/playable-item-{width}.png',full_page=True)
         click('즉시 판매')
-        page.locator('.item-row').first.click();click('판매 확정 · 행동 1회')
+        page.locator('.item-row').first.click();click('판매 확정')
         while page.get_by_role('button',name='← 뒤로',exact=True).count():click('← 뒤로')
         click('닫기')
         tab('내 정보');expect(page.get_by_role('heading',name='거래 감각',exact=False)).to_be_visible();layout()
@@ -109,7 +109,7 @@ with sync_playwright() as pw:
         except Exception:
             print('OFFLINE DIAGNOSTICS',page.locator('body').inner_text(),errors,page.evaluate('async()=>{const keys=await caches.keys();return await Promise.all(keys.map(async k=>[k,(await (await caches.open(k)).keys()).map(r=>r.url)]));}'))
             raise
-        activity('아르바이트');page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
+        activity('아르바이트');page.get_by_role('button',name='일하기',exact=True).first.click()
         expect(page.locator('.status-top')).to_contain_text('509,000 원')
         page.reload();expect(page.locator('.status-top')).to_contain_text('509,000 원')
         # Offline navigations deliberately log failed network fetches; they are expected.

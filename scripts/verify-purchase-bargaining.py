@@ -23,7 +23,7 @@ with sync_playwright() as p:
    page.locator('.item-row').first.click()
   open_item();page.get_by_role('button',name='판매자와 채팅',exact=True).click()
   for round in range(2):
-   page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
+   page.get_by_role('button',name=' 제안').first.click()
    expect(page.locator('.chat-message')).to_have_count(3+2*round)
    assert page.locator('.action-layer').count()==0
   before=page.evaluate(READ)
@@ -33,7 +33,7 @@ with sync_playwright() as p:
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_item()
   expect(page.locator('.chat-message')).to_have_count(5)
   assert page.evaluate(READ)['board'][0]['purchaseBargain']==before['board'][0]['purchaseBargain']
-  page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
+  page.get_by_role('button',name=' 제안').first.click()
   expect(page.locator('.chat-message')).to_have_count(7)
   page.get_by_role('log').scroll_into_view_if_needed()
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
@@ -41,8 +41,8 @@ with sync_playwright() as p:
   current=page.evaluate(READ);quote=current['board'][0]['negotiatedPrice'] or current['board'][0]['price']
   assert quote<=data['game']['board'][0]['price']
   page.get_by_role('button',name='구매 내용 확인').click()
-  expect(page.locator('.sheet-layer')).to_contain_text(f'{quote:,} 원 · 행동 1회')
-  page.get_by_role('button',name='지불·수령 확정 · 행동 1회',exact=True).click()
+  expect(page.locator('.sheet-layer')).to_contain_text(f'{quote:,} 원')
+  page.get_by_role('button',name='지불·수령 확정',exact=True).click()
   expect(page.locator('.action-layer')).to_have_count(0)
   bought=page.evaluate(READ)
   assert bought['minute']==data['game']['minute']+480
@@ -53,9 +53,9 @@ with sync_playwright() as p:
   terminal['game']['seed']=1
   item.update(purchaseBargain={'rounds':3,'floor':item['price'],'patience':4,'walked':False},offers=[item['price']//2],negotiation='rejected',negotiatedPrice=item['price'],chat=[{'speaker':'other','text':'다시 제안해 보세요.'}])
   page.evaluate(WRITE,terminal);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_item()
-  page.get_by_role('button',name=' 제안 · 행동 소모 없음').first.click()
+  page.get_by_role('button',name=' 제안').first.click()
   expect(page.get_by_role('button',name='구매 내용 확인')).to_be_disabled()
-  expect(page.get_by_role('button',name=' 제안 · 행동 소모 없음')).to_have_count(0)
+  expect(page.get_by_role('button',name=' 제안')).to_have_count(0)
   assert page.evaluate(READ)['board'][0]['purchaseBargain']['walked']
   assert not errors,errors
   print(json.dumps({'width':width,'multi_round_reload_quote_purchase_walkaway':'PASS'}),flush=True)

@@ -42,28 +42,28 @@ with sync_playwright() as p:
   # Last available action shows settlement rather than advancing automatically.
   data=json.loads(json.dumps(original));data['game']['weekActions']=19;data['game']['minute']=19*480
   load(data);page.get_by_role('button',name='아르바이트',exact=True).click()
-  page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click();expect(page.locator('.action-layer')).to_have_count(0)
+  page.get_by_role('button',name='일하기',exact=True).first.click();expect(page.locator('.action-layer')).to_have_count(0)
   expect(page.locator('.status-clock')).to_have_text('남은 행동 0/20');expect(page.locator('.status-day')).to_have_text('1주차')
   footer=page.get_by_role('button',name='이번주 정산하기',exact=True);expect(footer).to_be_visible()
   assert footer.bounding_box()['y']+footer.bounding_box()['height']<=844
   page.get_by_role('button',name='닫기',exact=True).click();page.reload();expect(footer).to_be_visible()
   footer.click();page.get_by_role('button',name='이번 주 마무리 · 정산 시작',exact=True).click()
   page.get_by_label('상환 금액',exact=True).fill('100000')
-  page.get_by_role('button',name='입력 금액 상환 · 행동 소모 없음',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  page.get_by_role('button',name='입력 금액 상환',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   assert read()['principalRepaidThisWeek']==100000
   page.get_by_role('button',name='이자 납부 후 다음 주 시작 · 100,000 원',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   assert read()['cash']==309000 and read()['weekActions']==0 and read()['principalRepaidThisWeek']==0
   # Voluntary prepayment reduces this week's mandatory amount.
   load(original);page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name='채무',exact=True).click()
   page.get_by_label('상환 금액',exact=True).fill('20000')
-  page.get_by_role('button',name='입력 금액 상환 · 행동 1회',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
+  page.get_by_role('button',name='입력 금액 상환',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   assert read()['principalRepaidThisWeek']==20000 and read()['weekActions']==1
   page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name='활동',exact=True).click()
   finish();complete(30000);assert read()['cash']==350000
   # Exact funds leave zero cash but remain playable; one won short ends on confirmation.
   exact=json.loads(json.dumps(original));exact['game']['cash']=150000;load(exact);finish();complete(50000)
   assert read()['cash']==0 and read()['status']=='playing'
-  page.get_by_role('button',name='아르바이트',exact=True).click();page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
+  page.get_by_role('button',name='아르바이트',exact=True).click();page.get_by_role('button',name='일하기',exact=True).first.click()
   expect(page.locator('.action-layer')).to_have_count(0);assert read()['cash']==9000
   poor=json.loads(json.dumps(original));poor['game']['cash']=149900;load(poor);finish()
   expect(page.get_by_role('heading',name='이 이야기는 여기까지.',exact=True)).to_be_visible();assert read()['status']=='bankrupt'

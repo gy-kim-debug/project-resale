@@ -21,24 +21,24 @@ with sync_playwright() as p:
   page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name='보관함',exact=True).click()
   page.locator('.item-row').first.click()
-  page.get_by_role('button',name='가치 확인 · 행동 소모 없음 · 1,000 원',exact=True).click()
+  page.get_by_role('button',name='가치 확인 · 1,000 원',exact=True).click()
   expect(page.locator('.action-layer')).to_have_count(0)
   saved=page.evaluate(READ)
   assert saved['cash']==499000 and saved['minute']==9120 and saved['inventory'][0]['checked']
   assert saved['seed']==g['seed'] and saved['board']==g['board'] and saved['event']==g['event']
-  page.get_by_role('button',name='수리하기 · 행동 소모 없음',exact=True).click()
+  page.get_by_role('button',name='수리하기',exact=True).click()
   expect(page.locator('.action-layer')).to_have_count(0)
   saved=page.evaluate(READ)
   assert saved['cash']==487000 and saved['minute']==9120 and saved['inventory'][0]['repaired']
   assert saved['board']==g['board'] and saved['event']==g['event'] and saved['interestWeek']==0
   expect(page.locator('.status-day')).to_have_text('1주차')
   expect(page.locator('.status-clock')).to_have_text('남은 행동 1/20')
-  expect(page.get_by_role('button',name='수리하기 · 행동 소모 없음',exact=True)).to_have_count(0)
+  expect(page.get_by_role('button',name='수리하기',exact=True)).to_have_count(0)
   page.screenshot(path=f'work/free-item-care-{width}.png',full_page=True)
   page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   saved=page.evaluate(READ);assert saved['minute']==9120 and saved['cash']==487000 and saved['inventory'][0]['repaired']
   page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
-  page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
+  page.get_by_role('button',name='일하기',exact=True).first.click()
   expect(page.locator('.action-layer')).to_have_count(0)
   page.get_by_role('button',name='이번주 정산하기',exact=True).click()
   page.get_by_role('button',name='이번 주 마무리 · 정산 시작',exact=True).click()

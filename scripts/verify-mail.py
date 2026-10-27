@@ -41,7 +41,7 @@ with sync_playwright() as p:
   page.screenshot(path=f'work/mail-read-{width}.png',full_page=True)
   page.get_by_role('button',name='닫기',exact=True).click()
   page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
-  page.get_by_role('button',name='일하기 · 행동 1회',exact=True).first.click()
+  page.get_by_role('button',name='일하기',exact=True).first.click()
   expect(page.locator('.action-layer')).to_have_count(0)
   next_save=page.evaluate(READ)
   unread=sum(log['id'] not in next_save['readNotificationIds'] for log in next_save['game']['logs'][:20])

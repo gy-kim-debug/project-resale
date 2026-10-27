@@ -330,7 +330,7 @@ function event(g: Game) {
       id: id(g),
       type: 'repair',
       title: '수리 전문가의 연락',
-      text: `작은 거래들을 지켜봤다며 정비 교육을 제안합니다. ${won(5000)} · 행동 1회.`,
+      text: `작은 거래들을 지켜봤다며 정비 교육을 제안합니다. ${won(5000)}.`,
       expires: g.minute + 2880,
     };
     g.lastEvent = g.minute;
@@ -346,7 +346,7 @@ function event(g: Game) {
       id: id(g),
       type: 'deal',
       title: '이사 정리 일손 제안',
-      text: `급히 일손을 구하는 이웃입니다. 보상 ${won(15000)} · 행동 1회.`,
+      text: `급히 일손을 구하는 이웃입니다. 보상 ${won(15000)}.`,
       expires: g.minute + 1440,
     };
     g.lastEvent = g.minute;
@@ -484,7 +484,6 @@ export function execute(original: Game, command: Command): Result {
         g.businesses!.push({ id: business.id, purchasedWeek: paymentWeek(g) });
         message = `${business.name} 구매. 주간 수입 ${won(business.income)}.`;
         log(g, message);
-        advance(g, 1);
         break;
       }
       case 'job': {

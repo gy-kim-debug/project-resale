@@ -30,7 +30,7 @@ with sync_playwright() as p:
   assert page.evaluate(READ)['game']==original
   page.locator('.sheet-layer .item-row').click()
   page.screenshot(path=f'work/instant-sale-{width}.png',full_page=True)
-  page.get_by_role('button',name='판매 확정 · 행동 1회',exact=True).click()
+  page.get_by_role('button',name='판매 확정',exact=True).click()
   expect(page.locator('.action-layer')).to_have_count(0)
   sold=page.evaluate(READ)['game'];assert sold['cash']==560000 and len(sold['inventory'])==0 and sold['minute']==480
   assert sold['stats']['sales']==original['stats']['sales']+1
@@ -44,7 +44,7 @@ with sync_playwright() as p:
   # No actions left: preview is free, completion stays blocked.
   exhausted=json.loads(json.dumps(data));exhausted['game']['weekActions']=20;exhausted['game']['minute']=9600
   load(exhausted);enter();page.locator('.sheet-layer .item-row').click()
-  expect(page.get_by_role('button',name='판매 확정 · 행동 1회',exact=True)).to_be_disabled()
+  expect(page.get_by_role('button',name='판매 확정',exact=True)).to_be_disabled()
   expect(page.get_by_role('button',name='이번주 정산하기',exact=True)).to_be_visible()
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   assert not errors,errors

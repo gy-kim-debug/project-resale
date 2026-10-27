@@ -309,8 +309,11 @@ function ActivityHome({
             판매 중 {g.sales.length}/{listingLimit(g)}
           </h2>
 
-          <Button onClick={() => useGameStore.getState().act({ type: 'wait' })}>
-            구매 문의 기다리기 · 행동 1회
+          <Button
+            actionCost={1}
+            onClick={() => useGameStore.getState().act({ type: 'wait' })}
+          >
+            구매 문의 기다리기
           </Button>
         </section>
       )}
