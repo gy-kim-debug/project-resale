@@ -1,0 +1,216 @@
+{
+  "version": 2,
+  "game": {
+    "version": 2,
+    "moneyUnit": 100,
+    "discoveredItems": ["디지털/기계식 키보드"],
+    "businesses": [],
+    "businessIncomeWeek": 0,
+    "businessIncomeAmount": 0,
+    "timeMode": "weekly-actions",
+    "weekActions": 1,
+    "weeklyRulesVersion": 2,
+    "principalRepaidThisWeek": 0,
+    "settling": false,
+    "seed": 3127254033,
+    "serial": 50,
+    "minute": 480,
+    "status": "playing",
+    "cash": 490000,
+    "principal": 10000000000,
+    "interest": 0,
+    "interestWeek": 0,
+    "marketDay": 1,
+    "marketFactor": 100,
+    "trend": "생활",
+    "inventory": [
+      {
+        "listing": {
+          "tags": ["digital", "vintage", "urgent"],
+          "facts": {
+            "authentic": true,
+            "limited": false,
+            "discontinued": false,
+            "vintage": true,
+            "seller": "ordinary"
+          }
+        },
+        "marketId": "street",
+        "id": "i1",
+        "title": "기계식 키보드",
+        "kind": "디지털",
+        "base": 20900,
+        "value": 13600,
+        "condition": "사용감",
+        "defect": "마모와 작은 흠집이 있습니다.",
+        "checked": false,
+        "repaired": false,
+        "price": 10000,
+        "seller": "햄스터27",
+        "description": "사용하던 키보드를 판매합니다.",
+        "expires": 1440,
+        "offers": [7000, 8500],
+        "negotiation": "none",
+        "negotiatedPrice": null,
+        "traderId": "coin52_da1d7749",
+        "acquiredFor": 10000
+      }
+    ],
+    "board": [
+      {
+        "listing": {
+          "tags": ["furniture", "limited", "negotiable"],
+          "facts": {
+            "authentic": false,
+            "limited": false,
+            "discontinued": false,
+            "vintage": false,
+            "seller": "negotiable"
+          }
+        },
+        "marketId": "street",
+        "id": "i2",
+        "title": "원목 의자",
+        "kind": "가구",
+        "base": 47300,
+        "value": 28400,
+        "condition": "사용감",
+        "defect": "가품. 비정상 요소가 확인됐습니다.",
+        "checked": false,
+        "repaired": false,
+        "price": 325000,
+        "seller": "금빛다람쥐",
+        "description": "보관 중인 의자를 내놓습니다.",
+        "expires": 1440,
+        "offers": [227500, 276300],
+        "negotiation": "none",
+        "negotiatedPrice": null,
+        "traderId": "bridge46_32bf19cd"
+      },
+      {
+        "listing": {
+          "tags": ["digital", "authentic", "urgent"],
+          "facts": {
+            "authentic": true,
+            "limited": false,
+            "discontinued": false,
+            "vintage": false,
+            "seller": "urgent"
+          }
+        },
+        "marketId": "street",
+        "id": "i3",
+        "title": "기계식 키보드",
+        "kind": "디지털",
+        "base": 860000,
+        "value": 129000,
+        "condition": "고장",
+        "defect": "작동 불량·부품 손상이 있습니다.",
+        "checked": false,
+        "repaired": false,
+        "price": 425700,
+        "seller": "부엉이의작업실",
+        "description": "사용하던 키보드를 판매합니다.",
+        "expires": 960,
+        "offers": [298000, 361800],
+        "negotiation": "none",
+        "negotiatedPrice": null,
+        "traderId": "fast48_42a3bdb7"
+      },
+      {
+        "listing": {
+          "tags": ["digital", "authentic", "moving"],
+          "facts": {
+            "authentic": false,
+            "limited": false,
+            "discontinued": false,
+            "vintage": false,
+            "seller": "moving"
+          }
+        },
+        "marketId": "street",
+        "id": "i4",
+        "title": "입문용 카메라",
+        "kind": "디지털",
+        "base": 28500,
+        "value": 28500,
+        "condition": "양호",
+        "defect": "가품. 비정상 요소가 확인됐습니다.",
+        "checked": false,
+        "repaired": false,
+        "price": 196000,
+        "seller": "판다의정원",
+        "description": "취미로 사용하던 카메라입니다.",
+        "expires": 960,
+        "offers": [137200, 166600],
+        "negotiation": "none",
+        "negotiatedPrice": null,
+        "traderId": "cool29_6208e8fa"
+      },
+      {
+        "listing": {
+          "tags": ["household", "discontinued", "moving"],
+          "facts": {
+            "authentic": true,
+            "limited": false,
+            "discontinued": true,
+            "vintage": false,
+            "seller": "moving"
+          }
+        },
+        "marketId": "street",
+        "id": "i5",
+        "title": "탁상 조명",
+        "kind": "생활",
+        "base": 747600,
+        "value": 747600,
+        "condition": "양호",
+        "defect": "희귀한 구성·보존 가치가 확인됐습니다.",
+        "checked": false,
+        "repaired": false,
+        "price": 387000,
+        "seller": "조용한푸딩",
+        "description": "사용하던 조명입니다. 정리하며 판매합니다.",
+        "expires": 960,
+        "offers": [270900, 329000],
+        "negotiation": "none",
+        "negotiatedPrice": null,
+        "traderId": "fast48_68a9e5bb"
+      }
+    ],
+    "sales": [],
+    "inquiries": [],
+    "quotes": null,
+    "stats": {
+      "sales": 0,
+      "purchases": 1,
+      "checks": 0,
+      "repairs": 0,
+      "earned": 0,
+      "repaid": 0,
+      "peakCash": 500000
+    },
+    "logs": [
+      {
+        "id": 50,
+        "minute": 0,
+        "week": 1,
+        "text": "기계식 키보드 구매 완료.",
+        "category": "activity"
+      },
+      {
+        "id": 49,
+        "minute": 0,
+        "week": 1,
+        "text": "현금 500,000 원, 채무 100억 원.",
+        "category": "start"
+      }
+    ],
+    "event": null,
+    "eventStage": 0,
+    "lastEvent": 0
+  },
+  "favoriteIds": [],
+  "selectedMarket": "street",
+  "readNotificationIds": []
+}

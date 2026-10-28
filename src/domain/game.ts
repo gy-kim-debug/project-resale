@@ -1,3 +1,5 @@
+import type { ProductCategory } from '../content/productCategories';
+import type { ItemCaseId } from '../content/itemCases';
 import type { SpecialListingId } from '../content/specialListings';
 import type { BusinessId } from '../content/businesses';
 import { roundMoney } from './money';
@@ -64,6 +66,8 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
+  category?: ProductCategory;
+  caseId?: ItemCaseId;
   traderId?: string;
   special?: SpecialListingId;
   auction?: Auction;

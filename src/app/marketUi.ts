@@ -1,7 +1,8 @@
+import type { ProductCategory } from '../content/productCategories';
 import { create } from 'zustand';
 import type { Kind } from '../domain/game';
 export interface MarketFilters {
-  category: Kind | '전체';
+  category: Kind | ProductCategory | '전체';
   onlyFavorites: boolean;
   query: string;
   sort: 'default' | 'low' | 'high';

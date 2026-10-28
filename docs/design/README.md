@@ -13,6 +13,10 @@
 
 ## 현재 구현 원칙
 
+- [240품목·36분류 확장](items/CATALOG_EXPANSION.md)
+- [24개 매물 케이스](items/CASES.md)
+- [시장별 전체 품목·가격표](markets/PRODUCT_CATALOG.md)
+
 - [사용자 확정 UI 구성](ui/LAYOUT.md)
 - [UI 전면 개편과 이동 개선](ui/REDESIGN.md)
 - [개발자 위임 결정 — 플레이 가능 v1 전체 정책](implementation/V1_RULES.md)

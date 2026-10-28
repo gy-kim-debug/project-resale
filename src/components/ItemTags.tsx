@@ -1,3 +1,4 @@
+import { itemCase } from '../content/itemCases';
 import { SPECIAL_LISTINGS } from '../content/specialListings';
 import type { Item } from '../domain/game';
 import { KIND_TAGS } from '../content/listingTags';
@@ -10,6 +11,11 @@ export function ItemTags({ item }: { item: Item }) {
       {item.special && (
         <span className="item-tag special-listing">
           특별 · {SPECIAL_LISTINGS[item.special].name}
+        </span>
+      )}
+      {item.caseId && item.caseId !== 'normal' && (
+        <span className="item-tag case-tag">
+          #{itemCase(item.caseId).label}
         </span>
       )}
       {tags.map((tag) => (

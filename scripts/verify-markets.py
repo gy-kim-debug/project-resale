@@ -7,7 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 subprocess.run(['node','scripts/prepare-browser-fixtures.mjs'],check=True)
 BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
-MARKETS=[('street','중고 장터',10000,500000),('computers','전자상가',800000,1200000),('instruments','악기시장',1500000,10000000),('cars','중고차시장',10000000,80000000),('property','부동산 시장',100000000,1000000000),('auction','고가 경매시장',1000000000,10000000000)]
+MARKETS=[('street','중고 장터',10000,500000),('computers','전자상가',800000,12000000),('instruments','악기시장',1500000,50000000),('cars','중고차시장',10000000,300000000),('property','부동산 시장',100000000,5000000000),('auction','고가 경매시장',1000000000,50000000000)]
 READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result)}})}"""
 WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""
 with sync_playwright() as p:
@@ -19,19 +19,19 @@ with sync_playwright() as p:
   data=json.loads(Path('work/rich.json').read_text());page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   def read():return page.evaluate(READ)
   def open_market(name):page.locator('.activity-grid').get_by_role('button',name=name,exact=True).click()
-  expected=['무료나눔','아르바이트','물건 수집']+[m[1] for m in MARKETS]+['즉시 판매','사업']
-  assert page.locator('.activity-grid button').all_text_contents()==expected
+  expected=[m[1] for m in MARKETS]+['무료나눔','아르바이트','물건 수집','즉시 판매','사업']
+  assert page.locator('.activity-grid button').evaluate_all('(buttons)=>buttons.map(b=>b.getAttribute("aria-label"))')==expected
   page.screenshot(path=f'work/activity-direct-markets-{width}.png',full_page=True)
   original=read()['game']
   for mid,name,low,high in MARKETS:
    open_market(name)
    expect(page.get_by_role('heading',name=name,exact=True)).to_be_visible()
    expect(page.locator('.market-selector')).to_have_count(0)
-   expect(page.locator('.sheet-layer .item-row')).to_have_count(8)
+   expect(page.locator('.sheet-layer .item-row')).to_have_count(12)
    assert read()['game']==original
    assert page.locator('.action-layer').count()==0
    rows=[i for i in original['board'] if i.get('marketId','street')==mid and i['price']>0]
-   assert len(rows)==8 and all(low<=i['price']<=high for i in rows)
+   assert len(rows)==12 and all(low<=i['price']<=high for i in rows)
    page.locator('.item-row').first.click()
    expect(page.locator('.asset-market')).to_have_text(name)
    if mid=='auction':
@@ -45,7 +45,7 @@ with sync_playwright() as p:
    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
    page.get_by_role('button',name='닫기',exact=True).click()
   # A previous market preference must never hijack the street entrance.
-  open_market('중고 장터');expect(page.locator('.market-selection strong')).to_have_text('중고 장터');page.get_by_role('button',name='닫기',exact=True).click()
+  open_market('중고 장터');expect(page.locator('#sheet-title')).to_have_text('중고 장터');page.get_by_role('button',name='닫기',exact=True).click()
   open_market('즉시 판매')
   expect(page.locator('.market-selection')).to_have_count(0)
   expect(page.get_by_role('button',name='판매자와 채팅',exact=True)).to_have_count(0)

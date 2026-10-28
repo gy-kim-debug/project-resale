@@ -1,3 +1,5 @@
+import { MARKET_PRODUCTS } from './marketProducts';
+import type { ProductCategory } from './productCategories';
 import type { Kind } from '../domain/game';
 import { TIER_TITLES } from './rules';
 
@@ -48,7 +50,22 @@ type Motif =
   | 'desktop'
   | 'console'
   | 'handheld'
-  | 'projector';
+  | 'projector'
+  | 'tent'
+  | 'bicycle'
+  | 'dumbbell'
+  | 'racket'
+  | 'piano'
+  | 'wind'
+  | 'drum'
+  | 'drone'
+  | 'printer'
+  | 'van'
+  | 'building'
+  | 'land'
+  | 'headset'
+  | 'appliance'
+  | 'mouse';
 const motifs: Motif[][] = [
   ['lamp', 'keyboard', 'chair', 'radio', 'camera', 'vase'],
   ['lamp', 'keyboard', 'stool', 'radio', 'lens', 'figure'],
@@ -95,6 +112,79 @@ namedArt.set('희귀 보석 목걸이', { motif: 'gem', tier: 6 });
 namedArt.set('입문용 카메라', { motif: 'camera', tier: 0 });
 namedArt.set('수집한 생활 잡화', { motif: 'junk', tier: 0 });
 namedArt.set('수집한 낡은 소품', { motif: 'trinket', tier: 0 });
+const categoryMotifs: Record<ProductCategory, Motif> = {
+  lighting: 'lamp',
+  kitchen: 'appliance',
+  furniture: 'cabinet',
+  dailyDigital: 'gear',
+  hobby: 'figure',
+  outdoor: 'tent',
+  sport: 'dumbbell',
+  books: 'book',
+  computers: 'desktop',
+  mobile: 'tablet',
+  imaging: 'camera',
+  audio: 'stereo',
+  gaming: 'console',
+  displays: 'monitor',
+  guitars: 'instrument',
+  keys: 'piano',
+  strings: 'instrument',
+  winds: 'wind',
+  percussion: 'drum',
+  studio: 'mixer',
+  compactCars: 'car',
+  familyCars: 'car',
+  suvs: 'car',
+  imports: 'car',
+  ecoCars: 'car',
+  commercial: 'van',
+  apartments: 'building',
+  houses: 'house',
+  shops: 'building',
+  land: 'land',
+  buildings: 'building',
+  fineArt: 'art',
+  watches: 'watch',
+  jewelry: 'gem',
+  antiques: 'vase',
+  rareCollections: 'trinket',
+};
+const titleMotifs: [RegExp, Motif][] = [
+  [/자전거/, 'bicycle'],
+  [/라켓|퍼터/, 'racket'],
+  [/마우스/, 'mouse'],
+  [/포트|밥솥|버너/, 'pot'],
+  [/카메라|캠코더/, 'camera'],
+  [/렌즈/, 'lens'],
+  [/드론/, 'drone'],
+  [/프린터|스캐너/, 'printer'],
+  [/노트북/, 'laptop'],
+  [/스마트폰|폴더블폰/, 'phone'],
+  [/헤드폰/, 'headphones'],
+  [/VR/, 'headset'],
+  [/프로젝터/, 'projector'],
+  [/턴테이블|레코드/, 'record'],
+  [/의자/, 'chair'],
+  [/테이블/, 'stool'],
+  [/만년필|드로잉 도구/, 'pen'],
+  [/타자기/, 'keyboard'],
+  [/화보집|초판본|문서/, 'book'],
+  [/주택|고택|타운하우스/, 'house'],
+  [/창고|공장/, 'building'],
+  [/시계/, 'watch'],
+];
+for (const product of Object.values(MARKET_PRODUCTS).flat()) {
+  if (namedArt.has(product.title)) continue;
+  let color = 0;
+  for (const char of product.title) color = (color + char.charCodeAt(0)) % 8;
+  namedArt.set(product.title, {
+    motif:
+      titleMotifs.find(([pattern]) => pattern.test(product.title))?.[1] ??
+      categoryMotifs[product.category!],
+    tier: color,
+  });
+}
 export function itemArt(title: string, kind: Kind): Pixel[] {
   const spec = namedArt.get(title) ?? {
     motif:
@@ -157,6 +247,154 @@ function draw(motif: Motif, tier: number): Pixel[] {
   };
   r(5, 29, 22, 1, '#00000035');
   switch (motif) {
+    case 'tent':
+      r(14, 4, 4, 4, trim);
+      r(11, 8, 10, 5, main);
+      r(8, 13, 16, 5, main);
+      r(5, 18, 22, 8, main);
+      r(14, 13, 4, 4, ink);
+      r(12, 17, 8, 9, ink);
+      r(15, 18, 2, 8, glass);
+      r(3, 26, 26, 2, woodDark);
+      break;
+    case 'bicycle':
+      outline(2, 17, 10, 10, ink);
+      r(4, 19, 6, 6, glass);
+      outline(20, 17, 10, 10, ink);
+      r(22, 19, 6, 6, glass);
+      r(8, 16, 3, 4, main);
+      r(10, 13, 3, 4, main);
+      r(13, 17, 9, 3, main);
+      r(14, 19, 3, 5, main);
+      r(18, 12, 3, 6, main);
+      r(22, 10, 2, 10, wood);
+      r(20, 8, 7, 2, ink);
+      r(9, 10, 7, 2, ink);
+      break;
+    case 'dumbbell':
+      r(3, 8, 5, 17, ink);
+      r(8, 11, 4, 11, main);
+      r(12, 15, 8, 4, trim);
+      r(20, 11, 4, 11, main);
+      r(24, 8, 5, 17, ink);
+      r(4, 10, 2, 13, main);
+      r(25, 10, 2, 13, main);
+      break;
+    case 'racket':
+      outline(7, 3, 18, 18, main);
+      r(10, 6, 12, 12, glass);
+      r(12, 6, 1, 12, ink);
+      r(16, 6, 1, 12, ink);
+      r(20, 6, 1, 12, ink);
+      r(10, 10, 12, 1, ink);
+      r(10, 14, 12, 1, ink);
+      r(14, 21, 4, 8, wood);
+      break;
+    case 'piano':
+      outline(3, 5, 26, 20, woodDark);
+      r(5, 8, 22, 5, ink);
+      r(5, 16, 22, 7, paper);
+      for (let x = 7; x < 27; x += 3) r(x, 16, 1, 4, ink);
+      r(5, 25, 3, 4, ink);
+      r(24, 25, 3, 4, ink);
+      break;
+    case 'wind':
+      r(9, 2, 8, 3, woodDark);
+      r(15, 5, 4, 17, main);
+      r(12, 20, 7, 6, main);
+      r(7, 18, 6, 8, trim);
+      r(5, 14, 8, 5, main);
+      r(6, 13, 6, 2, ink);
+      r(18, 9, 3, 2, paper);
+      r(18, 14, 3, 2, paper);
+      r(18, 19, 3, 2, paper);
+      break;
+    case 'drum':
+      outline(8, 13, 17, 15, main);
+      r(10, 15, 13, 11, woodDark);
+      r(7, 11, 19, 4, paper);
+      r(4, 4, 9, 2, trim);
+      r(8, 6, 2, 10, wood);
+      r(23, 3, 7, 2, trim);
+      r(26, 5, 2, 15, wood);
+      r(10, 18, 2, 7, trim);
+      r(20, 18, 2, 7, trim);
+      break;
+    case 'drone':
+      outline(11, 12, 10, 9, main);
+      r(6, 9, 7, 3, ink);
+      r(19, 9, 7, 3, ink);
+      r(6, 21, 7, 3, ink);
+      r(19, 21, 7, 3, ink);
+      r(2, 6, 11, 2, trim);
+      r(20, 6, 10, 2, trim);
+      r(2, 25, 11, 2, trim);
+      r(20, 25, 10, 2, trim);
+      r(7, 7, 2, 5, ink);
+      r(24, 7, 2, 5, ink);
+      r(14, 15, 4, 4, glass);
+      break;
+    case 'printer':
+      r(8, 2, 16, 11, paper);
+      r(11, 5, 10, 1, woodDark);
+      r(11, 8, 8, 1, woodDark);
+      outline(3, 11, 26, 14, main);
+      r(7, 20, 18, 3, ink);
+      r(8, 23, 16, 5, paper);
+      r(23, 14, 3, 2, glass);
+      break;
+    case 'van':
+      outline(2, 7, 28, 18, main);
+      r(5, 10, 14, 8, glass);
+      r(21, 10, 6, 8, glass);
+      r(11, 10, 1, 8, ink);
+      r(5, 23, 6, 5, ink);
+      r(22, 23, 6, 5, ink);
+      r(2, 19, 3, 3, light);
+      break;
+    case 'building':
+      outline(4, 3, 17, 26, woodDark);
+      outline(21, 11, 8, 18, main);
+      for (let y = 7; y < 24; y += 5) {
+        r(7, y, 4, 3, glass);
+        r(14, y, 4, 3, glass);
+      }
+      r(10, 24, 5, 5, ink);
+      r(23, 14, 3, 3, glass);
+      r(23, 20, 3, 3, glass);
+      break;
+    case 'land':
+      r(3, 13, 26, 14, main);
+      r(6, 16, 20, 8, wood);
+      r(8, 18, 16, 4, woodLight);
+      r(5, 9, 2, 8, ink);
+      r(25, 9, 2, 8, ink);
+      r(5, 8, 22, 2, trim);
+      r(20, 4, 4, 9, woodDark);
+      r(18, 2, 8, 5, main);
+      break;
+    case 'headset':
+      r(4, 8, 24, 4, ink);
+      outline(2, 11, 28, 12, main);
+      r(5, 14, 9, 6, glass);
+      r(18, 14, 9, 6, glass);
+      r(14, 17, 4, 7, ink);
+      r(9, 23, 14, 3, ink);
+      break;
+    case 'appliance':
+      outline(7, 3, 19, 25, main);
+      r(10, 6, 13, 12, ink);
+      r(11, 7, 11, 10, glass);
+      r(12, 21, 9, 2, woodDark);
+      r(9, 25, 15, 2, ink);
+      break;
+    case 'mouse':
+      r(15, 1, 2, 6, ink);
+      outline(8, 6, 17, 22, main);
+      r(10, 8, 13, 9, glass);
+      r(15, 7, 2, 11, ink);
+      r(10, 18, 13, 8, main);
+      break;
     case 'phone':
       outline(9, 2, 14, 26, dark);
       r(11, 5, 10, 18, blue);

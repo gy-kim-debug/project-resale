@@ -1,3 +1,4 @@
+import { PRODUCT_CATEGORIES, type ProductCategory } from './productCategories';
 import type { Kind, MarketId } from '../domain/game';
 import { MARKETS } from './markets';
 import { CATALOG, TIER_TITLES, TIERS } from './rules';
@@ -13,6 +14,7 @@ export interface CodexEntry {
   max: number;
   features: string[];
   legacy: boolean;
+  category?: ProductCategory;
 }
 export const codexKey = (item: { title: string; kind: Kind }) =>
   `${item.kind}/${item.title}`;
@@ -52,6 +54,7 @@ function createCodex(): CodexEntry[] {
     max: number,
     market?: MarketId,
     legacy = false,
+    category?: ProductCategory,
   ) {
     const key = codexKey({ title, kind });
     const existing = entries.get(key);
@@ -70,13 +73,25 @@ function createCodex(): CodexEntry[] {
         markets: market ? [market] : [],
         min,
         max,
-        features: features(title, kind),
+        features: [
+          ...features(title, kind),
+          ...(category ? [PRODUCT_CATEGORIES[category].feature] : []),
+        ],
+        category,
         legacy,
       });
   }
   for (const market of MARKETS)
     for (const product of market.products)
-      add(product.title, product.kind, market.min, market.max, market.id);
+      add(
+        product.title,
+        product.kind,
+        product.min ?? market.min,
+        product.max ?? market.max,
+        market.id,
+        false,
+        product.category,
+      );
   for (const [tierIndex, titles] of TIER_TITLES.entries())
     titles.forEach((title, index) => {
       const kind = CATALOG[index].kind;
@@ -94,7 +109,7 @@ function createCodex(): CodexEntry[] {
         low,
         Math.max(low, roundMoney((base * MARKET_PRICING.askMaxPercent) / 100)),
         undefined,
-        tierIndex > 0,
+        true,
       );
     });
   return [...entries.values()];

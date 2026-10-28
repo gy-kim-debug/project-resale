@@ -1,3 +1,4 @@
+import { conditionValuePercent } from './itemProfiles';
 import { chooseTrader } from '../content/traders';
 import { ACTION_TICK, type Item } from './game';
 import { TAG_RULES } from '../content/listingTags';
@@ -32,11 +33,14 @@ export function applySpecialListing(
     throw Error('새 일반 매물에만 특별 매물을 적용할 수 있습니다.');
   const item = structuredClone(original);
   item.special = id;
-  item.description = SPECIAL_LISTINGS[id].description;
+  item.description = `${SPECIAL_LISTINGS[id].description} ${original.description}`;
   item.price = specialAsking(item, id, min);
   if (id === 'collector' && item.listing!.facts.authentic) {
     item.base = moneyRatio(item.base, 200);
-    item.value = moneyRatio(item.value, 200);
+    item.value = moneyRatio(
+      item.base,
+      conditionValuePercent(item.kind, item.condition),
+    );
   }
   if (id === 'clearance') {
     if (!['urgent', 'moving'].includes(original.listing!.facts.seller))

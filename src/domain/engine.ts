@@ -1,3 +1,6 @@
+import { FIND_PRODUCTS } from '../content/marketProducts';
+import { itemCase } from '../content/itemCases';
+import { chooseItemCase, caseQuality } from './itemCases';
 import { chooseTrader } from '../content/traders';
 import { buyerTerms } from './traders';
 import { unlockItem } from './collection';
@@ -45,6 +48,7 @@ import {
 } from './listingTags';
 import {
   MARKETS,
+  MARKET_LISTING_COUNT,
   marketOf,
   marketDefinition,
   isActiveMarketId,
@@ -61,7 +65,7 @@ import {
   settlementAmount,
 } from './debt';
 import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
-import { CATALOG, JOBS, RULES, TIERS, TIER_TITLES } from '../content/rules';
+import { JOBS, RULES, TIERS } from '../content/rules';
 
 function roll(g: Game) {
   g.seed = (Math.imul(1664525, g.seed) + 1013904223) >>> 0;
@@ -129,21 +133,31 @@ function makeItem(
   base: number,
   free = false,
   marketListing = true,
-  marketItem?: { marketId: MarketId; product: MarketProduct; asking: number },
+  marketItem?: {
+    marketId: MarketId;
+    product: MarketProduct;
+    asking: number;
+    entry?: boolean;
+  },
 ): Item {
-  const templateIndex = Math.floor(roll(g) * CATALOG.length);
-  const template = marketItem?.product ?? CATALOG[templateIndex];
-  const tierIndex = TIERS.reduce(
-    (best, t, i) => (base >= t.base ? i : best),
-    0,
-  );
+  const templateIndex = Math.floor(roll(g) * FIND_PRODUCTS.length);
+  const template = marketItem?.product ?? FIND_PRODUCTS[templateIndex];
   const profile = ITEM_PROFILES[template.kind];
   const categoryBase = marketItem
     ? moneyRatio(base, profile.marketValuePercent)
     : moneyRatio(base, CATEGORY_PRICING[template.kind].valuePercent);
   const quality = roll(g);
   const rarity = roll(g);
-  const condition = generatedCondition(template.kind, quality);
+  const caseId = chooseItemCase(
+    `${g.seed}:${g.serial + 1}:${template.title}`,
+    template.kind,
+    marketItem?.marketId,
+  );
+  const variant = itemCase(caseId);
+  const condition = generatedCondition(
+    template.kind,
+    caseQuality(quality, caseId),
+  );
   const listing = marketListing
     ? createListingInfo(
         template.kind,
@@ -160,7 +174,10 @@ function makeItem(
     : rarity < 0.1
       ? (profile.featureValues?.replica ?? TAG_RULES.replicaValuePercent)
       : rarityBoostPercent(template.kind, rarity);
-  const actualBase = Math.max(100, moneyRatio(categoryBase, rarityPercent));
+  const actualBase = Math.max(
+    100,
+    moneyRatio(moneyRatio(categoryBase, rarityPercent), variant.valuePercent),
+  );
   let price = free
     ? 0
     : Math.max(
@@ -175,14 +192,27 @@ function makeItem(
             MARKET_PRICING.priceStep,
         ) * MARKET_PRICING.priceStep,
       );
-  price = listingAskPrice(marketItem?.asking ?? price, listing);
+  price = listingAskPrice(
+    free ? 0 : moneyRatio(marketItem?.asking ?? price, variant.askPercent),
+    listing,
+  );
   if (marketItem)
-    price = Math.max(marketDefinition(marketItem.marketId).min, price);
+    price = Math.min(
+      marketItem.product.max ?? marketDefinition(marketItem.marketId).max,
+      Math.max(
+        marketItem.product.min ?? marketDefinition(marketItem.marketId).min,
+        price,
+      ),
+    );
+  if (marketItem?.entry)
+    price = marketItem.product.min ?? marketDefinition(marketItem.marketId).min;
   const item: Item = {
+    caseId,
+    category: template.category,
     listing,
     ...(marketItem ? { marketId: marketItem.marketId } : {}),
     id: id(g),
-    title: marketItem?.product.title ?? TIER_TITLES[tierIndex][templateIndex],
+    title: template.title,
     kind: template.kind,
     base: actualBase,
     value: moneyRatio(
@@ -205,7 +235,7 @@ function makeItem(
     seller: ['이웃', '정리중', '오래된상자', '급처해요'][
       Math.floor(roll(g) * 4)
     ],
-    description: template.description,
+    description: `${template.description} ${variant.description}`,
     expires:
       g.minute +
       ACTION_TICK *
@@ -234,20 +264,26 @@ function board(g: Game, selected?: MarketId) {
     : [];
   for (const market of MARKETS.filter((m) => !selected || m.id === selected)) {
     const marketStart = list.length;
-    for (let n = 0; n < 8; n++) {
-      const product =
-        market.products[Math.floor(roll(g) * market.products.length)];
-      // Keep an entry listing at each band's lower edge, then sample its full range.
+    const pool = [...market.products];
+    for (let n = 0; n < MARKET_LISTING_COUNT && pool.length; n++) {
+      const choices =
+        n === 0
+          ? pool.filter((p) => (p.min ?? market.min) === market.min)
+          : pool;
+      const product = choices[Math.floor(roll(g) * choices.length)];
+      pool.splice(pool.indexOf(product), 1);
+      const low = product.min ?? market.min;
+      const high = product.max ?? market.max;
       const asking =
         n === 0
-          ? market.min
-          : market.min +
-            Math.floor(roll(g) * ((market.max - market.min) / 1000 + 1)) * 1000;
+          ? low
+          : low + Math.floor(roll(g) * ((high - low) / 1000 + 1)) * 1000;
       list.push(
         makeItem(g, moneyRatio(asking, 100, 55), false, true, {
           marketId: market.id,
           product,
           asking,
+          entry: n === 0,
         }),
       );
     }
@@ -256,19 +292,21 @@ function board(g: Game, selected?: MarketId) {
         Object.keys(SPECIAL_LISTINGS) as SpecialListingId[]
       ).filter((id) => SPECIAL_LISTINGS[id].markets.includes(market.id));
       const special = kinds[Math.floor(roll(g) * kinds.length)];
+      const minFor = (item: Item) =>
+        market.products.find((p) => p.title === item.title)?.min ?? market.min;
       const candidates = list
         .slice(marketStart)
         .filter(
           (item) =>
             special === 'collector' ||
-            specialAsking(item, special, market.min) < item.price,
+            specialAsking(item, special, minFor(item)) < item.price,
         );
       if (candidates.length) {
         const chosen = candidates[Math.floor(roll(g) * candidates.length)];
         list[list.findIndex((i) => i.id === chosen.id)] = applySpecialListing(
           chosen,
           special,
-          market.min,
+          minFor(chosen),
         );
       }
     }
@@ -546,10 +584,6 @@ export function execute(original: Game, command: Command): Result {
           false,
         );
         delete found.listing;
-        found.title =
-          found.value < 1000
-            ? `수집한 ${found.kind === '수집품' ? '낡은 소품' : '생활 잡화'}`
-            : found.title;
         found.acquiredFor = 0;
         g.inventory.push(found);
         unlockItem(g, found);

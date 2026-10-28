@@ -267,6 +267,8 @@ test('retired tier items do not create impossible locked goals and appear only w
     kind: retired.kind,
     listing: undefined,
     special: undefined,
+    category: undefined,
+    caseId: undefined,
   });
   assert.equal(codexEntries(g).length, active.length + 1);
   assert.ok(codexEntries(g).some((e) => e.key === retired.key));

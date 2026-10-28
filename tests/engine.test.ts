@@ -1,3 +1,4 @@
+import { itemCase } from '../src/content/itemCases';
 import { ITEM_PROFILES } from '../src/content/itemProfiles';
 import {
   generatedCondition,
@@ -44,7 +45,11 @@ import {
 import { TAG_RULES, KIND_TAGS } from '../src/content/listingTags';
 import type { ListingTag, SellerTrait } from '../src/domain/game';
 import { auctionBidOptions } from '../src/domain/auction';
-import { MARKETS, marketOf } from '../src/content/markets';
+import {
+  MARKET_LISTING_COUNT,
+  MARKETS,
+  marketOf,
+} from '../src/content/markets';
 import { RULES } from '../src/content/rules';
 import { isGame } from '../src/storage/validation';
 import { parseSave } from '../src/storage/saveRepository';
@@ -108,6 +113,7 @@ function pending() {
   for (let n = 0; n < 30 && !g.inquiries.length; n++)
     g = run(g, { type: 'wait' });
   assert.ok(g.inquiries.length);
+  for (const q of g.inquiries) delete q.traderId;
   return g;
 }
 
@@ -1144,13 +1150,16 @@ test('each market generates its own bounded prices and products while the entry 
   for (let seed = 1; seed <= 100; seed++) {
     const g = newGame(seed);
     assert.ok(isGame(g));
-    assert.equal(g.board.filter((i) => i.price > 0).length, MARKETS.length * 8);
+    assert.equal(
+      g.board.filter((i) => i.price > 0).length,
+      MARKETS.length * MARKET_LISTING_COUNT,
+    );
     assert.equal(new Set(g.board.map((i) => i.id)).size, g.board.length);
     for (const market of MARKETS) {
       const paid = g.board.filter(
         (i) => marketOf(i) === market.id && i.price > 0,
       );
-      assert.equal(paid.length, 8);
+      assert.equal(paid.length, MARKET_LISTING_COUNT);
       for (const item of paid) {
         assert.ok(item.price >= market.min && item.price <= market.max);
         assert.equal(item.price % 100, 0);
@@ -1648,7 +1657,7 @@ test('day-end refresh includes all active markets and preserves purchased assets
     assert.equal(
       after.board.filter((i) => marketOf(i) === market.id && i.price > 0)
         .length,
-      8,
+      MARKET_LISTING_COUNT,
     );
   assert.equal(after.inventory[0].id, item.id);
   const backup = JSON.parse(
@@ -1688,6 +1697,8 @@ test('retired market saves drop only NPC aircraft listings and preserve owned as
   aircraft.price = 2000000000;
   aircraft.acquiredFor = 2000000000;
   delete aircraft.listing;
+  delete aircraft.category;
+  delete aircraft.caseId;
   old.inventory = [aircraft];
   const unsold = structuredClone(aircraft);
   unsold.id = 'legacy-plane-listing';
@@ -2458,7 +2469,7 @@ test('special listings appear occasionally, at most once per ordinary market, wi
       const listings = g.board.filter(
         (i) => i.marketId === market.id && i.price > 0,
       );
-      assert.equal(listings.length, 8);
+      assert.equal(listings.length, MARKET_LISTING_COUNT);
       const special = listings.filter((i) => i.special);
       assert.ok(special.length <= (market.id === 'auction' ? 0 : 1));
       count += special.length;
@@ -2929,24 +2940,27 @@ test('new stock applies category value rules while retaining price bands, hidden
         item.value,
         moneyRatio(item.base, conditionValuePercent(item.kind, item.condition)),
       );
-      const reference = moneyRatio(
-        moneyRatio(item.price, 100, 55),
-        profile.marketValuePercent,
-      );
-      const candidates = [100, 150, 400].map((p) =>
+      const product = market.products.find((p) => p.title === item.title)!;
+      assert.ok(item.price >= product.min! && item.price <= product.max!);
+      const rarityPercent = listingValuePercent(item.listing!, item.kind);
+      const baseAt = (price: number, boost: number) =>
         Math.max(
           100,
           moneyRatio(
-            reference,
-            Math.floor(
-              (listingValuePercent(item.listing!, item.kind) *
-                Math.min(p, profile.maxRarityPercent)) /
-                100,
+            moneyRatio(
+              moneyRatio(
+                moneyRatio(price, 100, 55),
+                profile.marketValuePercent,
+              ),
+              Math.floor((rarityPercent * boost) / 100),
             ),
+            itemCase(item.caseId).valuePercent,
           ),
-        ),
+        );
+      assert.ok(
+        item.base >= baseAt(product.min!, 100) &&
+          item.base <= baseAt(product.max!, profile.maxRarityPercent),
       );
-      assert.ok(candidates.includes(item.base), `${item.kind}: ${item.base}`);
       assert.equal(item.value % 100, 0);
       count++;
     }

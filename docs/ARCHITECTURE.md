@@ -114,3 +114,7 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 페이지 이동은 app/navigation.ts가 세션 내 History API와 React 경로를 연결한다. App의 페이지별 스크롤 맵과 app/marketUi.ts의 임시 필터 저장소로 상세 왕복 시 목록 상태를 복원한다. 하단 메뉴는 비활성 배경 콘텐츠 밖에 두어 상세 페이지에서도 사용할 수 있게 한다. 미응답 문의/필수 정산/행동 처리 중의 차단은 게임 상태를 계속 기준으로 한다. 이 UI 상태는 게임 저장/경제 난수에 포함하지 않는다.
 
 닉네임 단어 데이터는 content/nicknames.ts, 독립 시드 생성기는 domain/nicknames.ts가 관리한다. 신규 거래 상대의 ID는 기존 프로필 ID+이름 시드로 구성하고 기존 고정 ID도 지원한다. 실제 표시 이름은 저장된 seller/name을 우선하며 성향·경제 RNG는 변경하지 않는다.
+
+품목 정의는 content/marketProducts.ts가 240개 상품의 세부 분류·최저/최고 게시 가격을 관리하고, content/productCategories.ts가 36개 분류를 기존 경제 Kind에 연결한다. content/markets.ts는 이 데이터로 시장 범위를 계산한다. 12개 무중복 품목을 선택하며 첫 진입 매물의 최저 가격을 보장한다. 도감도 같은 품목별 범위를 사용한다.
+
+케이스 설정은 content/itemCases.ts, 독립 추첨/품질 변환은 domain/itemCases.ts에 둔다. 새 Item의 선택적 category/caseId로 저장하고 기존 metadata 없는 데이터도 지원한다. 케이스는 새 물건 생성 시 base/value/상태/게시가에 적용하며 감정·수리·로드 때 재추첨하지 않는다. 특별 소장품은 조정된 base에서 상태 가치를 계산해 중간 반올림 오차를 피한다. 가격표 문서는 scripts/export-market-catalog.mjs로 같은 데이터에서 생성한다.

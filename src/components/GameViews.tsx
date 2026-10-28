@@ -1,3 +1,4 @@
+import { categoryLabel } from '../content/productCategories';
 import {
   useMarketUi,
   DEFAULT_MARKET_FILTERS,
@@ -238,7 +239,7 @@ export function ItemRow({
       <ItemArt item={item} />
       <span className="item-row-label">
         <strong>{item.title}</strong>
-        <small>{item.kind}</small>
+        <small>{categoryLabel(item.category ?? item.kind)}</small>
         <span className="item-row-price">{detail}</span>
         <ItemTags item={item} />
         {comparison}
@@ -541,7 +542,15 @@ export function MarketView({
   const update = (patch: Partial<MarketFilters>) =>
     useMarketUi.getState().update(filterKey, patch);
   const market = marketDefinition(free ? 'street' : marketId);
-  const categories = [...new Set(market.products.map((p) => p.kind))];
+  const categories = [
+    ...new Set([
+      ...market.products.map((p) => p.category ?? p.kind),
+      ...(category !== '전체' ? [category] : []),
+      ...g.board
+        .filter((i) => marketOf(i) === market.id && !i.category)
+        .map((i) => i.kind),
+    ]),
+  ];
   const act = useGameStore((s) => s.act);
   const favorites = useGameStore((s) => s.favoriteIds);
   const listings = g.board
@@ -549,7 +558,9 @@ export function MarketView({
       (i) =>
         marketOf(i) === market.id &&
         (free ? i.price === 0 : i.price > 0) &&
-        (category === '전체' || i.kind === category) &&
+        (category === '전체' ||
+          i.category === category ||
+          i.kind === category) &&
         (!onlyFavorites || favorites.includes(i.id)) &&
         i.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
     )
@@ -610,7 +621,7 @@ export function MarketView({
                 aria-pressed={category === c}
                 onClick={() => update({ category: c })}
               >
-                {c}
+                {c === '전체' ? c : categoryLabel(c)}
               </button>
             ))}
           </div>

@@ -1,3 +1,8 @@
+import {
+  isProductCategory,
+  PRODUCT_CATEGORIES,
+} from '../content/productCategories';
+import { isItemCaseId, caseApplies } from '../content/itemCases';
 import { isTraderId } from '../content/traders';
 import { ITEM_CODEX, isCodexKey } from '../content/collection';
 import {
@@ -69,6 +74,16 @@ function item(v: unknown): v is Item {
   return (
     record(v) &&
     (v.traderId === undefined || isTraderId(v.traderId)) &&
+    (v.category === undefined ||
+      (isProductCategory(v.category) &&
+        PRODUCT_CATEGORIES[v.category].kind === v.kind)) &&
+    (v.caseId === undefined ||
+      (isItemCaseId(v.caseId) &&
+        caseApplies(
+          v.caseId,
+          v.kind as Item['kind'],
+          v.marketId as Item['marketId'],
+        ))) &&
     (v.special === undefined ||
       (isSpecialListingId(v.special) &&
         SPECIAL_LISTINGS[v.special].markets.includes(

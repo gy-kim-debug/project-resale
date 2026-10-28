@@ -1,3 +1,4 @@
+import { categoryLabel } from '../content/productCategories';
 import { useState } from 'react';
 import type { Game, Kind } from '../domain/game';
 import { won } from '../domain/game';
@@ -53,7 +54,7 @@ export function ItemCodex({ g }: { g: Game }) {
                 <ItemArt item={entry} />
                 <span>
                   <strong>{entry.title}</strong>
-                  <small>{entry.kind}</small>
+                  <small>{categoryLabel(entry.category ?? entry.kind)}</small>
                 </span>
                 <span aria-hidden="true">
                   {opened === entry.key ? '−' : '+'}
@@ -106,7 +107,7 @@ export function ItemCodex({ g }: { g: Game }) {
             <div className="codex-locked" key={entry.key}>
               <span aria-hidden="true">?</span>
               <strong>미발견 품목</strong>
-              <small>{entry.kind}</small>
+              <small>{categoryLabel(entry.category ?? entry.kind)}</small>
             </div>
           ),
         )}
