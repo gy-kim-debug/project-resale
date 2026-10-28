@@ -128,3 +128,5 @@
 - [기존 거래 방식으로 사고파는 특별 매물](items/SPECIAL_LISTINGS.md)
 - [구매 후 주마다 수입을 받는 사업](business/BUSINESSES.md)
 - [자동 성장 기본안과 매입 감각](character/ABILITIES.md)
+
+- [현재 우편 목록과 삭제한 이웃 제안](ui/MAILBOX.md)

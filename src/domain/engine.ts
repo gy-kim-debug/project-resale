@@ -344,16 +344,6 @@ function event(g: Game) {
     money(g, 10_000);
     log(g, `수리 전문가가 소개한 단골의 감사금 ${won(10000)}을 받았습니다.`);
     g.lastEvent = g.minute;
-  } else if (roll(g) < 0.15) {
-    g.event = {
-      id: id(g),
-      type: 'deal',
-      title: '이사 정리 일손 제안',
-      text: `급히 일손을 구하는 이웃입니다. 보상 ${won(15000)}.`,
-      expires: g.minute + 1440,
-    };
-    g.lastEvent = g.minute;
-    log(g, '이웃에게 시간 제한이 있는 제안이 왔습니다.');
   }
 }
 /** Each major action spends the weekly budget; settlement never starts implicitly. */
@@ -871,18 +861,14 @@ export function execute(original: Game, command: Command): Result {
           log(g, message);
           break;
         }
-        if (e.type === 'repair') {
-          affordable(g, 5000);
-          money(g, -5000);
-          g.stats.repairs += 4;
-          g.eventStage = 2;
-          g.lastEvent = g.minute;
-          message =
-            '정비 교육을 마쳤습니다. 수리 경험 +4. 전문가가 다음 연락을 약속했습니다.';
-        } else {
-          money(g, 15000);
-          message = `이사 정리를 도와 ${won(15000)}을 받았습니다.`;
-        }
+        if (e.type !== 'repair') throw Error('종료된 특별 제안입니다.');
+        affordable(g, 5000);
+        money(g, -5000);
+        g.stats.repairs += 4;
+        g.eventStage = 2;
+        g.lastEvent = g.minute;
+        message =
+          '정비 교육을 마쳤습니다. 수리 경험 +4. 전문가가 다음 연락을 약속했습니다.';
         g.event = null;
         log(g, message);
         advance(g, 1);

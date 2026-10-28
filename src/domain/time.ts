@@ -11,6 +11,11 @@ export function toWeeklyActions(original: Game): Game {
     fatigue?: unknown;
     fatigueRemainder?: unknown;
   };
+  // Retired neighbor offers are cleared without rewards, elapsed time or new mail.
+  if (g.event?.type === 'deal') g.event = null;
+  g.logs = g.logs.filter(
+    (entry) => entry.text !== '이웃에게 시간 제한이 있는 제안이 왔습니다.',
+  );
   // Retired listings disappear, while already owned assets and sales remain intact.
   g.board = g.board.filter((item) => item.marketId !== 'aircraft');
   delete g.satiety;
@@ -101,10 +106,7 @@ export function toWeeklyActions(original: Game): Game {
     g.quotes = oldNow - g.quotes.at >= 120 ? null : { ...g.quotes, at: now };
   if (g.event) {
     g.event.expires = deadline(g.event.expires);
-    g.event.text =
-      g.event.type === 'repair'
-        ? '정비 교육을 제안합니다. 5,000원 · 행동 1회.'
-        : '이사 정리 일손을 구합니다. 보상 15,000원 · 행동 1회.';
+    g.event.text = '정비 교육을 제안합니다. 5,000원 · 행동 1회.';
   }
   return migrate();
 }

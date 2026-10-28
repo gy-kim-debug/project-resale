@@ -557,7 +557,7 @@ test('action costs distinguish major commands from free operations; inquiries st
     g = rich();
     g.event = {
       id: 'hour-event',
-      type: 'deal',
+      type: 'repair',
       title: '제안',
       text: '행동 1회',
       expires: g.minute + 480,
@@ -951,7 +951,7 @@ test('free navigation, bargaining, disposal and declining proposals never spend 
   g = run(g, { type: 'discard', id: g.inventory[0].id });
   g.event = {
     id: 'daily-event',
-    type: 'deal',
+    type: 'repair',
     title: '제안',
     text: '일손',
     expires: g.minute + 1440,
@@ -1202,7 +1202,7 @@ test('appraisal and repair spend money without using the last action, expiring l
   ];
   g.event = {
     id: 'event-probe',
-    type: 'deal',
+    type: 'repair',
     title: '제안',
     text: '일손',
     expires: g.minute + 1,
@@ -2711,4 +2711,67 @@ test('purchase experience improves new negotiation floors without changing hidde
   assert.equal(result.game.stats.purchases, 5);
   assert.ok(result.message.includes('매입 감각 Lv.1'));
   assert.equal(result.game.inventory[0].value, item.value);
+});
+
+test('retired neighbor offers never spawn and legacy pending offers clear without paying or consuming actions', () => {
+  for (let seed = 1; seed <= 30; seed++) {
+    let g = newGame(seed);
+    for (let n = 0; n < 12; n++) g = run(g, { type: 'job', id: 'flyer' });
+    assert.equal(g.event, null);
+    assert.equal(
+      g.logs.some((l) => l.text.includes('이웃에게')),
+      false,
+    );
+  }
+  const old = newGame();
+  old.event = {
+    id: 'legacy-neighbor',
+    type: 'deal',
+    title: '이사 정리 일손 제안',
+    text: '일손 제안',
+    expires: old.minute + 1440,
+  };
+  old.logs.unshift({
+    id: ++old.serial,
+    minute: 0,
+    week: 1,
+    text: '이웃에게 시간 제한이 있는 제안이 왔습니다.',
+  });
+  old.logs.unshift({
+    id: ++old.serial,
+    minute: 0,
+    week: 1,
+    text: '이사 정리를 도와 15,000 원을 받았습니다.',
+  });
+  const arrivalId = old.logs[1].id;
+  const loaded = parseSave({
+    version: 2,
+    game: old,
+    favoriteIds: [],
+    readNotificationIds: [arrivalId],
+  });
+  assert.equal(loaded.game.event, null);
+  assert.equal(loaded.game.cash, old.cash);
+  assert.equal(loaded.game.minute, old.minute);
+  assert.equal(loaded.game.weekActions, old.weekActions);
+  assert.equal(loaded.game.seed, old.seed);
+  assert.deepEqual(loaded.game.inventory, old.inventory);
+  assert.equal(
+    loaded.game.logs.some((l) => l.text.includes('이웃에게')),
+    false,
+  );
+  assert.equal(
+    loaded.game.logs.some((l) => l.text.includes('15,000 원을 받았습니다')),
+    true,
+  );
+  assert.deepEqual(loaded.readNotificationIds, []);
+  assert.deepEqual(parseSave(loaded), loaded);
+  assert.equal(execute(old, { type: 'event', choice: 'yes' }).ok, false);
+  assert.equal(old.event.type, 'deal');
+  const repair = structuredClone(old);
+  repair.event!.type = 'repair';
+  assert.equal(
+    parseSave({ version: 2, game: repair, favoriteIds: [] }).game.event?.type,
+    'repair',
+  );
 });

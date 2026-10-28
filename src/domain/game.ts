@@ -121,6 +121,7 @@ export interface Log {
 }
 export interface Event {
   id: string;
+  /** 'deal' is accepted only to normalize retired neighbor offers in old saves. */
   type: 'deal' | 'repair';
   title: string;
   text: string;
