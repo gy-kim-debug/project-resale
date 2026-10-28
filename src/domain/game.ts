@@ -113,7 +113,9 @@ export interface Inquiry {
   max: number;
   rounds: number;
 }
+export type LogCategory = 'start' | 'market' | 'special' | 'activity';
 export interface Log {
+  category?: LogCategory;
   week?: number;
   id: number;
   minute: number;

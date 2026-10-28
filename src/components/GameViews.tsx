@@ -848,6 +848,31 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
       {g.inquiries.map((q) => {
         const sale = g.sales.find((s) => s.id === q.saleId);
         const item = g.inventory.find((i) => i.id === sale?.itemId);
+        const presets = sale
+          ? [
+              { label: '등록가', amount: sale.price },
+              {
+                label: '절충가',
+                amount: Math.max(
+                  q.price + MONEY_UNIT,
+                  q.price + moneyRatio(sale.price - q.price, 50),
+                ),
+              },
+              {
+                label: '소폭 인상',
+                amount: Math.max(
+                  q.price + MONEY_UNIT,
+                  q.price + moneyRatio(sale.price - q.price, 25),
+                ),
+              },
+            ].filter(
+              (preset, index, all) =>
+                preset.amount > q.price &&
+                preset.amount <= sale.price &&
+                all.findIndex((other) => other.amount === preset.amount) ===
+                  index,
+            )
+          : [];
         return (
           <section className="card" key={q.id}>
             <h2>{q.name}</h2>
@@ -873,6 +898,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
               q.price < sale.price && (
                 <AmountForm
                   key={`${q.id}-${q.rounds}`}
+                  presets={presets}
                   title="가격 제안"
                   label="제안할 판매 가격 (원)"
                   min={q.price + MONEY_UNIT}
@@ -1233,7 +1259,7 @@ function MailboxView({ g, open }: { g: Game; open: (route: Route) => void }) {
           );
         })}
       </ol>
-      {!g.logs.length && <p>받은 알림이 없습니다.</p>}
+      {!mailboxLogs(g).length && <p>받은 알림이 없습니다.</p>}
     </>
   );
 }

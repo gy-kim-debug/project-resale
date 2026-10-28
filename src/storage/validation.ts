@@ -309,7 +309,11 @@ export function isGame(v: unknown): v is Game {
         integer(l.id) &&
         integer(l.minute) &&
         (l.week === undefined || (integer(l.week) && Number(l.week) > 0)) &&
-        text(l.text),
+        text(l.text) &&
+        (l.category === undefined ||
+          ['start', 'market', 'special', 'activity'].includes(
+            String(l.category),
+          )),
     )
   )
     return false;

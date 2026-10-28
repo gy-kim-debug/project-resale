@@ -12,7 +12,15 @@ import {
 } from '../content/specialListings';
 import { applySpecialListing, specialAsking } from './specialListings';
 import { MONEY_UNIT, roundMoney, moneyRatio, isHundredWon } from './money';
-import type { Command, Game, Item, Result, Kind, MarketId } from './game';
+import type {
+  Command,
+  Game,
+  Item,
+  Result,
+  Kind,
+  MarketId,
+  LogCategory,
+} from './game';
 import { dayOf, isMoney, won, ACTION_TICK, actionsLeft, weekOf } from './game';
 import { instantSalePrice } from './instantSale';
 import { openingPurchaseOffers } from './purchaseBargaining';
@@ -76,8 +84,14 @@ export function checkCost(g: Game, item: Item) {
 export function repairCost(item: Item) {
   return Math.max(300, moneyRatio(item.base, 12));
 }
-export function log(g: Game, text: string) {
-  g.logs.unshift({ id: ++g.serial, minute: g.minute, week: weekOf(g), text });
+export function log(g: Game, text: string, category: LogCategory = 'activity') {
+  g.logs.unshift({
+    id: ++g.serial,
+    minute: g.minute,
+    week: weekOf(g),
+    text,
+    category,
+  });
   g.logs = g.logs.slice(0, 80);
 }
 function money(g: Game, amount: number) {
@@ -260,7 +274,7 @@ function daily(g: Game) {
     g.trend = ['생활', '디지털', '가구', '수집품'][
       Math.floor(roll(g) * 4)
     ] as Kind;
-    log(g, `시장 변화: ${g.trend} 수요가 높습니다.`);
+    log(g, `시장 변화: ${g.trend} 수요가 높습니다.`, 'market');
   }
 }
 function endDay(g: Game, before: number) {
@@ -282,7 +296,7 @@ function expire(g: Game) {
   g.board = g.board.filter((i) => i.expires > g.minute);
   if (g.quotes && g.minute - g.quotes.at >= ACTION_TICK * 2) g.quotes = null;
   if (g.event && g.event.expires <= g.minute) {
-    log(g, '특별 제안이 만료됐습니다.');
+    log(g, '특별 제안이 만료됐습니다.', 'special');
     g.event = null;
   }
 }
@@ -337,12 +351,16 @@ function event(g: Game) {
       expires: g.minute + 2880,
     };
     g.lastEvent = g.minute;
-    log(g, '수리 전문가에게 특별 제안이 왔습니다.');
+    log(g, '수리 전문가에게 특별 제안이 왔습니다.', 'special');
   } else if (g.eventStage === 2) {
     if (g.minute - g.lastEvent < 1440) return;
     g.eventStage = 3;
     money(g, 10_000);
-    log(g, `수리 전문가가 소개한 단골의 감사금 ${won(10000)}을 받았습니다.`);
+    log(
+      g,
+      `수리 전문가가 소개한 단골의 감사금 ${won(10000)}을 받았습니다.`,
+      'special',
+    );
     g.lastEvent = g.minute;
   }
 }
@@ -448,7 +466,7 @@ export function newGame(seed = 1): Game {
     lastEvent: 0,
   };
   board(g);
-  log(g, `현금 ${won(RULES.startingCash)}, 채무 100억 원.`);
+  log(g, `현금 ${won(RULES.startingCash)}, 채무 100억 원.`, 'start');
   return g;
 }
 export function execute(original: Game, command: Command): Result {
@@ -858,7 +876,7 @@ export function execute(original: Game, command: Command): Result {
         if (command.choice === 'no') {
           g.event = null;
           message = '특별 제안을 거절했습니다.';
-          log(g, message);
+          log(g, message, 'special');
           break;
         }
         if (e.type !== 'repair') throw Error('종료된 특별 제안입니다.');
@@ -870,7 +888,7 @@ export function execute(original: Game, command: Command): Result {
         message =
           '정비 교육을 마쳤습니다. 수리 경험 +4. 전문가가 다음 연락을 약속했습니다.';
         g.event = null;
-        log(g, message);
+        log(g, message, 'special');
         advance(g, 1);
         break;
       }

@@ -1,8 +1,10 @@
 """Seller counteroffer chat and keeping listings after failed trades."""
 import json
 import os
+import subprocess
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
+subprocess.run(['node','scripts/prepare-browser-fixtures.mjs'],check=True)
 BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
 WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""
 READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result.game)}})}"""
@@ -23,6 +25,12 @@ with sync_playwright() as p:
    assert page.locator('.action-layer').count()==0
   g=load()
   field=page.get_by_label('제안할 판매 가격 (원)',exact=True).first
+  choices=page.locator('.amount-form').first.locator('.price-options button')
+  expect(choices).to_have_count(3)
+  for index,amount in enumerate([1000,600,300]):
+   expect(choices.nth(index)).to_contain_text(f'{amount:,} 원');choices.nth(index).click();expect(field).to_have_value(str(amount));expect(choices.nth(index)).to_have_attribute('aria-pressed','true')
+   assert state()==g and page.locator('.action-layer').count()==0
+  expect(page.locator('.amount-form').first.locator('.action-cost')).to_have_count(0)
   for invalid in ['100','1050','1.5']:
    field.fill(invalid);assert page.get_by_role('button',name='가격 제안',exact=True).first.is_disabled()
   propose(200)
@@ -39,6 +47,10 @@ with sync_playwright() as p:
   g=load();propose(800);expect(page.get_by_role('log').first).to_contain_text('그 가격은 어렵습니다.')
   page.wait_for_function("async()=>(await ("+READ+")()).inquiries[0].price>100")
   assert state()['sales']==g['sales'];assert state()['minute']==g['minute']
+  current=state()['inquiries'][0]['price']
+  for option in choices.all():
+   option.click();assert current<int(field.input_value())<=g['sales'][0]['price']
+  if width==390:page.screenshot(path='work/seller-price-presets-390.png',full_page=True)
   # Walking buyer closes only that chat, preserving the other buyer and whole listing.
   g=load(1);propose(800)
   page.wait_for_function("async id=>!(await ("+READ+")()).inquiries.some(q=>q.id===id)",arg=g['inquiries'][0]['id'])
@@ -57,6 +69,12 @@ with sync_playwright() as p:
   assert state()['sales'][0]['id']==g['sales'][0]['id']
   assert state()['sales'][0]['price']==g['sales'][0]['price']
   assert state()['sales'][0]['expires']==g['sales'][0]['expires']
+  # A single hundred-won gap yields just one unique valid amount, never a lower bid.
+  tiny=json.loads(Path('work/seller-counter.json').read_text());tiny['game']['inquiries']=tiny['game']['inquiries'][:1]
+  tiny['game']['inquiries'][0].update({'price':900,'max':1000,'chat':[{'speaker':'other','text':'900 원에 거래할 수 있을까요?'}]})
+  page.evaluate(WRITE,tiny);page.reload();page.get_by_role('heading',name='문의',exact=True).wait_for()
+  expect(choices).to_have_count(1);choices.first.click();expect(field).to_have_value('1000')
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   assert not errors,errors
   results.append({'width':width,'counter_accept_reload_sale':'PASS','counter_reply':'PASS','walk_keeps_other_buyers':'PASS','listing_retained_new_inquiry':'PASS'})
   ctx.close()

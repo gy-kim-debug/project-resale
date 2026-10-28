@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { useGameStore, flushSaves } from '../src/app/store';
-import { unreadCount } from '../src/app/notifications';
+import {
+  isMailboxLog,
+  mailboxLogs,
+  unreadCount,
+} from '../src/app/notifications';
 import {
   saveRepository,
   parseSave,
@@ -231,6 +235,7 @@ test('all-read covers visible mail only; new mail is unread and expired ids are 
     id: 1000 + i,
     minute: 0,
     text: `mail ${i}`,
+    category: 'special' as const,
   }));
   s.setState({ game });
   s.getState().readAllNotifications();
@@ -238,7 +243,12 @@ test('all-read covers visible mail only; new mail is unread and expired ids are 
   assert.equal(s.getState().readNotificationIds.length, 20);
   assert.equal(unreadCount(game, s.getState().readNotificationIds), 0);
   const next = structuredClone(game);
-  next.logs.unshift({ id: 2000, minute: 0, text: 'new mail' });
+  next.logs.unshift({
+    id: 2000,
+    minute: 0,
+    text: 'new mail',
+    category: 'special',
+  });
   next.logs = next.logs.filter((log) => log.id !== 1001);
   s.setState({ game: next });
   s.getState().save();
@@ -335,4 +345,83 @@ test('auction replies save immediately without loading or action cost; settlemen
   await settled;
   await flushSaves();
   assert.equal(s.getState().game!.inventory[0].id, lot.id);
+});
+
+test('mailbox permits only start, market and special records, including old saves, and filters before the limit', () => {
+  const g = newGame();
+  const originalStart = g.logs[0];
+  const included = [
+    '현금 500,000 원, 채무 100억 원.',
+    '시장 변화: 생활 수요가 높습니다.',
+    '수리 전문가에게 특별 제안이 왔습니다.',
+    '정비 교육을 마쳤습니다. 수리 경험 +4.',
+    '특별 제안을 거절했습니다.',
+    '특별 제안이 만료됐습니다.',
+    '수리 전문가가 소개한 단골의 감사금 10,000 원을 받았습니다.',
+  ];
+  const excluded = [
+    '중고 판매대 구매. 주간 수입 5,000 원.',
+    '물품 구매 완료.',
+    '판매 글 등록: 10,000 원.',
+    '물품에 구매 문의 2건이 왔습니다.',
+    '판매자: 좋아요.',
+    '가치 확인: 물품',
+    '수리 성공.',
+    '원금 50,000 원 상환했습니다.',
+    '사업 수입 5,000 원 수령. 1주차 정산을 시작합니다.',
+    '이자 100,000 원 납부했습니다.',
+    '전단 배포 완료.',
+    '기다리기를 마쳤습니다.',
+    '매입 감각 Lv.1',
+  ];
+  for (const text of included)
+    assert.equal(isMailboxLog({ id: 1, minute: 0, text }), true, text);
+  for (const text of excluded)
+    assert.equal(isMailboxLog({ id: 1, minute: 0, text }), false, text);
+  assert.equal(
+    isMailboxLog({
+      id: 1,
+      minute: 0,
+      text: '문구를 수정한 제안',
+      category: 'special',
+    }),
+    true,
+  );
+  assert.equal(
+    isMailboxLog({ id: 1, minute: 0, text: included[1], category: 'activity' }),
+    false,
+  );
+  g.logs = Array.from({ length: 30 }, (_, i) => ({
+    id: 1000 + i,
+    minute: 0,
+    text: '거래 기록',
+    category: 'activity',
+  }));
+  g.logs.push(originalStart);
+  assert.deepEqual(mailboxLogs(g), [originalStart]);
+  assert.equal(unreadCount(g, []), 1);
+  assert.equal(unreadCount(g, [originalStart.id]), 0);
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  const malformed = structuredClone(g) as unknown as {
+    logs: { category: string }[];
+  };
+  malformed.logs[0].category = 'unknown';
+  assert.throws(() =>
+    parseSave({ version: 2, game: malformed, favoriteIds: [] }),
+  );
+});
+
+test('ordinary actions stay in history without becoming unread mail and hidden records cannot be marked as mail', async () => {
+  await flushSaves();
+  setup();
+  const s = useGameStore;
+  s.getState().readAllNotifications();
+  await s.getState().act({ type: 'job', id: 'flyer' });
+  const game = s.getState().game!;
+  assert.ok(game.logs.some((l) => l.text.includes('전단 배포 완료')));
+  assert.equal(unreadCount(game, s.getState().readNotificationIds), 0);
+  const jobId = game.logs.find((l) => l.text.includes('전단 배포 완료'))!.id;
+  s.getState().readNotification(jobId);
+  assert.equal(s.getState().readNotificationIds.includes(jobId), false);
+  await flushSaves();
 });

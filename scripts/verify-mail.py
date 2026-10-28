@@ -13,7 +13,7 @@ with sync_playwright() as p:
   page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for()
   data=page.evaluate(READ)
-  data['game']['logs']=[{'id':10000+i,'minute':0,'text':f'거래 알림 {i}'} for i in range(3)]
+  data['game']['logs']=[{'id':20000+i,'minute':0,'text':'거래 기록','category':'activity'} for i in range(30)]+[{'id':10000+i,'minute':0,'text':f'허용 알림 {i}','category':['start','market','special'][i]} for i in range(3)]
   data.pop('readNotificationIds',None)
   page.evaluate(WRITE,data);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
   expect(page.locator('.mail-badge')).to_have_text('3')
@@ -43,8 +43,15 @@ with sync_playwright() as p:
   page.locator('.activity-grid').get_by_role('button',name='아르바이트',exact=True).click()
   page.get_by_role('button',name='일하기',exact=True).first.click()
   expect(page.locator('.action-layer')).to_have_count(0)
+  after_job=page.evaluate(READ)
+  assert any('전단 배포 완료' in log['text'] for log in after_job['game']['logs'])
+  expect(page.locator('.mail-badge')).to_have_count(0)
+  # Routine work stays silent; the market update on the third action is allowed mail.
+  for _ in range(2):
+   page.get_by_role('button',name='일하기',exact=True).first.click();expect(page.locator('.action-layer')).to_have_count(0)
   next_save=page.evaluate(READ)
-  unread=sum(log['id'] not in next_save['readNotificationIds'] for log in next_save['game']['logs'][:20])
+  visible=[log for log in next_save['game']['logs'] if log.get('category') in ['start','market','special']][:20]
+  unread=sum(log['id'] not in next_save['readNotificationIds'] for log in visible)
   assert unread>=1
   expect(page.locator('.mail-badge')).to_have_text(str(unread))
   page.get_by_role('button',name='우편함',exact=True).click()
@@ -56,6 +63,13 @@ with sync_playwright() as p:
    page.get_by_role('button',name='백업 파일 내보내기',exact=True).click()
   backup=json.loads(Path(download.value.path()).read_text())
   assert len(backup['readNotificationIds'])==3
+  # Hidden logs alone produce an empty mailbox. Old untyped allowed records still show.
+  empty=json.loads(json.dumps(data));empty['game']['logs']=empty['game']['logs'][:30];empty['readNotificationIds']=[]
+  page.evaluate(WRITE,empty);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();expect(page.locator('.mail-badge')).to_have_count(0)
+  page.get_by_role('button',name='우편함',exact=True).click();expect(page.get_by_text('받은 알림이 없습니다.',exact=True)).to_be_visible();expect(page.get_by_role('button',name='모두 읽음',exact=True)).to_be_disabled()
+  legacy=json.loads(json.dumps(empty));legacy['game']['logs']=[{'id':40000+i,'minute':0,'text':text} for i,text in enumerate(['현금 500,000 원, 채무 100억 원.','시장 변화: 생활 수요가 높습니다.','수리 전문가에게 특별 제안이 왔습니다.','판매 글 등록: 10,000 원.'])]
+  page.evaluate(WRITE,legacy);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();expect(page.locator('.mail-badge')).to_have_text('3')
+  page.get_by_role('button',name='우편함',exact=True).click();expect(page.locator('.mail-entry')).to_have_count(3);expect(page.locator('.mailbox')).not_to_contain_text('판매 글 등록')
   assert not errors,errors
   print(json.dumps({'width':width,'read_unread_reload_backup_new_mail':'passed'}))
   ctx.close()
