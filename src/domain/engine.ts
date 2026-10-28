@@ -1,3 +1,6 @@
+import { chooseTrader } from '../content/traders';
+import { buyerTerms } from './traders';
+import { unlockItem } from './collection';
 import { ITEM_PROFILES } from '../content/itemProfiles';
 import {
   generatedCondition,
@@ -213,6 +216,12 @@ function makeItem(
     negotiation: 'none',
     negotiatedPrice: null,
   };
+  const trader = chooseTrader(
+    `${g.seed}:${item.id}`,
+    listing?.facts.seller ?? 'ordinary',
+  );
+  item.traderId = trader.id;
+  item.seller = trader.name;
   if (marketItem?.marketId === 'auction') {
     item.auction = createAuction(item.price, () => roll(g));
     item.offers = [];
@@ -335,12 +344,15 @@ function inquiries(g: Game) {
               roundMoney(Math.min(max, sale.price) * (0.75 + roll(g) * 0.2)),
             ),
           );
+      const inquiryId = id(g);
+      const trader = chooseTrader(`${g.seed}:${inquiryId}`);
+      const terms = buyerTerms(trader.id, sale.price, max, price);
       g.inquiries.push({
-        id: id(g),
+        id: inquiryId,
+        traderId: trader.id,
         saleId: sale.id,
-        name: n ? '동네 구매자 B' : '동네 구매자 A',
-        price,
-        max,
+        name: trader.name,
+        ...terms,
         rounds: 0,
       });
     }
@@ -437,6 +449,7 @@ export function newGame(seed = 1): Game {
   const g: Game = {
     version: 2,
     moneyUnit: 100,
+    discoveredItems: [],
     businesses: [],
     businessIncomeWeek: 0,
     businessIncomeAmount: 0,
@@ -539,6 +552,7 @@ export function execute(original: Game, command: Command): Result {
             : found.title;
         found.acquiredFor = 0;
         g.inventory.push(found);
+        unlockItem(g, found);
         message = `${found.title} 발견.`;
         log(g, message);
         advance(g, 1);
@@ -638,6 +652,7 @@ export function execute(original: Game, command: Command): Result {
           received.chatSettled = true;
         }
         g.inventory.push(received);
+        unlockItem(g, received);
         g.board = g.board.filter((i) => i.id !== item.id);
         g.stats.purchases++;
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
@@ -684,6 +699,7 @@ export function execute(original: Game, command: Command): Result {
       case 'discard': {
         const i = owned(g, command.id);
         unlisted(g, i.id);
+        unlockItem(g, i);
         g.inventory = g.inventory.filter((x) => x.id !== i.id);
         message = `${i.title}을 버렸습니다.`;
         log(g, message);
@@ -730,6 +746,7 @@ export function execute(original: Game, command: Command): Result {
         if (!sale) throw Error('판매 글이 없습니다.');
         const i = owned(g, sale.itemId);
         money(g, q.price);
+        unlockItem(g, i);
         g.inventory = g.inventory.filter((i) => i.id !== sale.itemId);
         finishSale(g, sale.id);
         g.stats.sales++;
@@ -799,6 +816,7 @@ export function execute(original: Game, command: Command): Result {
         const price = instantSalePrice(i);
         if (price < 1) throw Error('판매 가능한 금액이 없습니다.');
         money(g, price);
+        unlockItem(g, i);
         g.inventory = g.inventory.filter((i) => i.id !== command.id);
         if (g.quotes) delete g.quotes.prices[i.id];
         g.stats.sales++;

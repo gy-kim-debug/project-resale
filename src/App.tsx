@@ -419,7 +419,7 @@ export default function App() {
                 settle={() => setRoutes([{ kind: '주간 정산' }])}
               />
             ) : state.tab === '내 정보' ? (
-              <InfoView g={g} />
+              <InfoView g={g} open={open} />
             ) : state.tab === '채무' ? (
               <DebtView g={g} act={act} />
             ) : state.tab === '보관함' ? (

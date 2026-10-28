@@ -7,6 +7,7 @@ import {
   purchaseApproach,
   purchaseProfile,
 } from './purchaseBargaining';
+import { buyerWalkChance } from './traders';
 import { SALE_BARGAINING } from '../content/bargaining';
 
 function counterText(item: Item, price: number, favorable: boolean) {
@@ -160,7 +161,7 @@ export function saleReply(
   if (
     (!counter && q.rounds >= SALE_BARGAINING.maxRounds) ||
     q.price >= q.max ||
-    random() < SALE_BARGAINING.walkChance
+    random() < buyerWalkChance(q)
   )
     return {
       inquiry: null,

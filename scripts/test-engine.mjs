@@ -4,7 +4,11 @@ import { mkdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 await mkdir('work', { recursive: true });
 await build({
-  entryPoints: ['tests/engine.test.ts', 'tests/actions.test.ts'],
+  entryPoints: [
+    'tests/engine.test.ts',
+    'tests/actions.test.ts',
+    'tests/traders.test.ts',
+  ],
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -18,6 +22,7 @@ const result = spawnSync(
     '--test-isolation=none',
     'work/test-bundles/engine.test.mjs',
     'work/test-bundles/actions.test.mjs',
+    'work/test-bundles/traders.test.mjs',
   ],
   { stdio: 'inherit' },
 );

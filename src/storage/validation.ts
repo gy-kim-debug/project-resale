@@ -1,3 +1,5 @@
+import { isTraderId } from '../content/traders';
+import { ITEM_CODEX, isCodexKey } from '../content/collection';
 import {
   SPECIAL_LISTINGS,
   isSpecialListingId,
@@ -66,6 +68,7 @@ function listing(v: unknown, itemKind: unknown): boolean {
 function item(v: unknown): v is Item {
   return (
     record(v) &&
+    (v.traderId === undefined || isTraderId(v.traderId)) &&
     (v.special === undefined ||
       (isSpecialListingId(v.special) &&
         SPECIAL_LISTINGS[v.special].markets.includes(
@@ -116,7 +119,7 @@ function item(v: unknown): v is Item {
         v.purchaseBargain.floor > 0 &&
         v.purchaseBargain.floor <= Number(v.price) &&
         integer(v.purchaseBargain.patience, 6) &&
-        v.purchaseBargain.patience >= 4 &&
+        v.purchaseBargain.patience >= 2 &&
         v.purchaseBargain.rounds <= v.purchaseBargain.patience &&
         typeof v.purchaseBargain.walked === 'boolean' &&
         (v.purchaseBargain.previousOffer === undefined ||
@@ -252,6 +255,14 @@ export function isGame(v: unknown): v is Game {
     !v.board.every(item)
   )
     return false;
+  if (
+    v.discoveredItems !== undefined &&
+    (!Array.isArray(v.discoveredItems) ||
+      v.discoveredItems.length > ITEM_CODEX.length ||
+      !v.discoveredItems.every(isCodexKey) ||
+      new Set(v.discoveredItems).size !== v.discoveredItems.length)
+  )
+    return false;
   const ids = new Set(v.inventory.map((i) => i.id));
   if (
     ids.size !== v.inventory.length ||
@@ -291,6 +302,7 @@ export function isGame(v: unknown): v is Game {
         text(q.saleId) &&
         sales.has(q.saleId) &&
         text(q.name) &&
+        (q.traderId === undefined || isTraderId(q.traderId)) &&
         chat(q.chat) &&
         integer(q.price, RULES.maxMoney) &&
         integer(q.max, RULES.maxMoney) &&

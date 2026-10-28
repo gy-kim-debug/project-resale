@@ -27,6 +27,8 @@
 ### 캐릭터
 
 - [능력치 도입 계획](character/ABILITIES.md)
+- [거래 상대 프로필과 성향](character/TRADERS.md)
+- [아이템 도감과 해금](collection/ITEM_CODEX.md)
 
 ### 채무·자본금
 

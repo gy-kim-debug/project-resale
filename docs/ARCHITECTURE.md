@@ -106,3 +106,7 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 판매 유동성 수치는 content/saleFlow.ts에, 등록가/현재 시장 가치로 문의 확률을 정하는 순수 함수는 domain/saleFlow.ts에 둔다. 엔진의 첫 문의 예약·재시도 간격이 같은 콘텐츠 설정을 사용한다. 확률은 매칭 조회 시에만 적용하며 무료 읽기/흥정으로 추가 추첨하지 않는다.
 
 카테고리별 성격은 content/itemProfiles.ts가 관리하고 domain/itemProfiles.ts가 상태·희귀 배수·상태 표시를 계산한다. 엔진의 새 매물 생성/감정·수리비와 domain/saleFlow.ts의 수요가 같은 설정을 사용한다. base/value는 생성 시 저장하고 과거 보유품을 복원할 때 재평가하지 않는다. 현재 비용과 수요에는 새 설정을 사용한다.
+
+거래 상대 명부·성향은 content/traders.ts, 구매자 첫 제안/파토 설정은 domain/traders.ts에서 관리한다. Item/Inquiry의 선택적 traderId로 고정 가상 프로필을 참조하며 기존 ID 없는 상대는 이름과 기존 흥정 동작을 유지한다. 나이·성별은 계산에 참여하지 않는다.
+
+아이템 도감 정의는 content/collection.ts가 활성 시장·나눔/수집 품목 콘텐츠로부터 구성한다. domain/collection.ts가 획득 해금을 처리하고 Game.discoveredItems를 저장한다. 기존 저장의 보유품만 마이그레이션하며 미보유 품목의 실제 가치를 노출하지 않는다. UI는 components/TraderProfile.tsx·ItemCodex.tsx에 분리한다.

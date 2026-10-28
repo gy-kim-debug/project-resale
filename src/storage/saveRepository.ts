@@ -1,3 +1,4 @@
+import { unlockedItems } from '../domain/collection';
 import { openDB } from 'idb';
 import type { Game, MarketId } from '../domain/game';
 import { isMarketId, isActiveMarketId } from '../content/markets';
@@ -39,6 +40,8 @@ export function parseSave(value: unknown): SaveData {
       '저장 형식이 올바르지 않습니다. 기존 데이터는 덮어쓰지 않았습니다.',
     );
   const game = toWeeklyActions(value.game);
+  if (game.discoveredItems === undefined)
+    game.discoveredItems = [...unlockedItems(game)];
   if (!isGame(game))
     throw Error(
       '저장 금액 변환에 실패했습니다. 기존 데이터는 덮어쓰지 않았습니다.',

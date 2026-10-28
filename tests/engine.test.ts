@@ -19,7 +19,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   execute,
-  newGame,
+  newGame as profiledNewGame,
   listingLimit,
   marketValue,
   checkCost,
@@ -60,6 +60,7 @@ import {
 } from '../src/domain/debt';
 import { purchaseReply, saleReply } from '../src/domain/bargaining';
 import {
+  canPurchaseOffer,
   openingPurchaseOffers,
   purchaseApproach,
   purchaseProfile,
@@ -68,6 +69,13 @@ import {
 import { BARGAINING_MARKETS } from '../src/content/bargaining';
 import { instantSalePrice } from '../src/domain/instantSale';
 import { acquisitionCost, compareItem } from '../src/domain/inventory';
+// Existing engine regressions use legacy NPC-free fixtures. Trader behavior is
+// covered separately against real newly generated profiles in traders.test.ts.
+function newGame(seed = 1): Game {
+  const g = profiledNewGame(seed);
+  for (const item of g.board) delete item.traderId;
+  return g;
+}
 function run(g: Game, c: Command) {
   const r = execute(g, c);
   assert.ok(r.ok, r.message);
@@ -464,8 +472,7 @@ for (const seed of [1, 42, 210])
         });
       else if (
         candidate &&
-        !candidate.chatSettled &&
-        candidate.negotiation !== 'accepted' &&
+        canPurchaseOffer(candidate) &&
         candidate.offers.length
       )
         step({ type: 'offer', id: candidate.id, price: candidate.offers[0] });

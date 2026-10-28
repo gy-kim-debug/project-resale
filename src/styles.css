@@ -1119,3 +1119,112 @@ html {
 .action-button.primary .action-cost {
   color: inherit;
 }
+
+.trader-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-block: 1px solid #364432;
+  margin: 16px 0;
+}
+.trader-avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #34432e;
+  color: #d0dfa7;
+  font-size: 18px;
+}
+.trader-identity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.trader-identity span {
+  color: #a7b09c;
+  font-size: 12px;
+}
+.trader-style {
+  margin-left: auto;
+  color: #d0dfa7;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.codex-count {
+  color: #a7b09c;
+  font-size: 13px;
+}
+.codex-entry {
+  border-bottom: 1px solid #364432;
+}
+.codex-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: 0;
+}
+.codex-toggle > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.codex-toggle strong,
+.codex-toggle small {
+  display: block;
+}
+.codex-toggle small {
+  margin-top: 6px;
+  color: #a7b09c;
+}
+.codex-detail {
+  padding: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.codex-detail dl {
+  margin: 0;
+}
+.codex-detail dl > div {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.codex-detail dt {
+  color: #a7b09c;
+}
+.codex-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.codex-detail ul {
+  padding-left: 20px;
+}
+.codex-locked {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 84px;
+  border-bottom: 1px solid #364432;
+  color: #89947f;
+}
+.codex-locked > span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px dashed #45523b;
+  font-size: 24px;
+}
+.codex-locked small {
+  margin-left: auto;
+}

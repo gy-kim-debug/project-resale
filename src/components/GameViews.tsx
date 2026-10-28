@@ -1,3 +1,5 @@
+import { TraderProfile } from './TraderProfile';
+import { ItemCodex } from './ItemCodex';
 import { ABILITIES } from '../content/abilities';
 import { BUSINESS_LIMIT_PER_TYPE, BUSINESSES } from '../content/businesses';
 import {
@@ -59,7 +61,8 @@ export type Route = {
     | '기록'
     | '저장 관리'
     | '우편함'
-    | '설정';
+    | '설정'
+    | '아이템 도감';
   id?: string;
   marketId?: MarketId;
 };
@@ -238,10 +241,11 @@ export function ItemRow({
     </button>
   );
 }
-export function InfoView({ g }: { g: Game }) {
+export function InfoView({ g, open }: { g: Game; open: Open }) {
   return (
     <>
       <h1>내 정보</h1>
+      <Button onClick={() => open({ kind: '아이템 도감' })}>아이템 도감</Button>
       <div className="abilities">
         {ABILITIES.map((a) => (
           <section className="card" key={a.stat}>
@@ -603,9 +607,12 @@ export function ListingView({
       <p className="item-price">
         {item.price === 0 ? '무료나눔' : won(item.price)}
       </p>
-      <p>
-        {item.kind} · 판매자 {item.seller}
-      </p>
+      <TraderProfile
+        traderId={item.traderId}
+        entityId={item.id}
+        name={item.seller}
+        role="판매자"
+      />
       <p className="lead">{item.description}</p>
       <Details>
         <p>매물 유효 기간: {durationText(item.expires - g.minute)} 남음</p>
@@ -877,6 +884,12 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
         return (
           <section className="card" key={q.id}>
             <h2>{q.name}</h2>
+            <TraderProfile
+              traderId={q.traderId}
+              entityId={q.id}
+              name={q.name}
+              role="구매자"
+            />
             {item && <ItemArt item={item} />}
             <p>
               {item?.title} · 등록 {won(sale?.price ?? 0)}
@@ -1037,6 +1050,8 @@ export function RouteView({
   const currentValue = item?.checked ? marketValue(g, item) : null;
   const purchaseCost = item ? acquisitionCost(item) : 0;
   switch (route.kind) {
+    case '아이템 도감':
+      return <ItemCodex g={g} />;
     case '장터':
       return <MarketView g={g} open={open} marketId={route.marketId} />;
     case '무료나눔':
@@ -1288,6 +1303,12 @@ function AuctionListingView({
       <h2>{item.title}</h2>
       <ItemTags item={item} />
       <p className="asset-market">고가 경매시장</p>
+      <TraderProfile
+        traderId={item.traderId}
+        entityId={item.id}
+        name={item.seller}
+        role="출품자"
+      />
       <p className="lead">{item.description}</p>
       <dl className="auction-prices">
         <div>

@@ -1,3 +1,4 @@
+import { chooseTrader } from '../content/traders';
 import { ACTION_TICK, type Item } from './game';
 import { TAG_RULES } from '../content/listingTags';
 import {
@@ -46,6 +47,11 @@ export function applySpecialListing(
             ACTION_TICK,
       );
     item.listing!.facts.seller = 'urgent';
+    if (item.traderId) {
+      const trader = chooseTrader(item.id, 'urgent');
+      item.traderId = trader.id;
+      item.seller = trader.name;
+    }
     item.listing!.tags = [...item.listing!.tags.slice(0, 2), 'urgent'];
   }
   item.offers = openingPurchaseOffers(item.price, item.marketId);

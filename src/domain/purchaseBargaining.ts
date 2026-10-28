@@ -1,6 +1,8 @@
+import { TRADER_STYLES } from '../content/traders';
 import { roundMoney, moneyRatio } from './money';
 import type { Item, MarketId } from './game';
 import { BARGAINING_MARKETS } from '../content/bargaining';
+import { traderStyle } from './traders';
 import { sellerProfile } from './listingTags';
 
 export const bargainingMarket = (marketId?: MarketId) =>
@@ -25,7 +27,9 @@ export function openingPurchaseOffers(
 export function purchaseProfile(item: Item, buyingLevel = 0) {
   const seller = sellerProfile(item);
   const market = bargainingMarket(item.marketId);
-  const firm = item.listing?.facts.seller === 'firm';
+  const style = traderStyle(item);
+  const firm = style === 'firm' || item.listing?.facts.seller === 'firm';
+  const character = TRADER_STYLES[style ?? 'ordinary'];
   const clamp = (value: number) => Math.min(1, Math.max(0, value));
   return {
     ...seller,
@@ -33,6 +37,7 @@ export function purchaseProfile(item: Item, buyingLevel = 0) {
       ? 1
       : clamp(
           seller.floorMin +
+            character.floorShift +
             market.floorShift -
             Math.min(10, Math.max(0, buyingLevel)) / 100,
         ),
@@ -40,12 +45,23 @@ export function purchaseProfile(item: Item, buyingLevel = 0) {
       ? 1
       : clamp(
           seller.floorMax +
+            character.floorShift +
             market.floorShift -
             Math.min(10, Math.max(0, buyingLevel)) / 100,
         ),
-    patienceMin: Math.min(6, seller.patienceMin + market.patienceBonus),
-    patienceMax: Math.min(6, seller.patienceMax + market.patienceBonus),
-    holdChance: firm ? 1 : clamp(seller.holdChance + market.holdShift),
+    patienceMin: Math.min(
+      character.patienceCap,
+      seller.patienceMin + market.patienceBonus + character.patienceBonus,
+    ),
+    patienceMax: Math.min(
+      character.patienceCap,
+      seller.patienceMax + market.patienceBonus + character.patienceBonus,
+    ),
+    holdChance: firm
+      ? 1
+      : clamp(seller.holdChance + market.holdShift + character.holdShift),
+    concessionMin: seller.concessionMin * character.concessionScale,
+    concessionMax: seller.concessionMax * character.concessionScale,
   };
 }
 /** Uses visible price movement and round count only; hidden item value never enters. */
@@ -82,6 +98,7 @@ export function purchaseApproach(item: Item, price: number, round: number) {
 }
 export const canPurchaseOffer = (item: Item) =>
   item.marketId !== 'auction' &&
+  traderStyle(item) !== 'firm' &&
   item.price > 0 &&
   !item.chatSettled &&
   item.negotiation !== 'accepted' &&

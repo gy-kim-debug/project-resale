@@ -64,6 +64,7 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
+  traderId?: string;
   special?: SpecialListingId;
   auction?: Auction;
   marketId?: MarketId;
@@ -105,6 +106,7 @@ export interface Sale {
   nextCheck: number;
 }
 export interface Inquiry {
+  traderId?: string;
   chat?: ChatMessage[];
   id: string;
   saleId: string;
@@ -130,6 +132,7 @@ export interface Event {
   expires: number;
 }
 export interface Game {
+  discoveredItems?: string[];
   businesses?: { id: BusinessId; purchasedWeek: number }[];
   businessIncomeWeek?: number;
   businessIncomeAmount?: number;
