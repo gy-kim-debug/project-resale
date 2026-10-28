@@ -5,11 +5,12 @@ import {
   weeklyBusinessIncome,
   pendingBusinessIncome,
 } from '../domain/business';
-import { MONEY_UNIT, roundMoney } from '../domain/money';
+import { MONEY_UNIT, roundMoney, moneyRatio } from '../domain/money';
 import { useId, useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
 import { Icon } from './Icon';
 import { ItemComparison } from './ItemComparison';
+import { acquisitionCost } from '../domain/inventory';
 import { TradeChat } from './TradeChat';
 import { ItemTags, ItemFindings } from './ItemTags';
 import { mailboxLogs, unreadCount } from '../app/notifications';
@@ -116,6 +117,7 @@ export function AmountForm({
   label,
   initial = '',
   actionCost = 0,
+  presets = [],
   min = MONEY_UNIT,
   max,
   submit,
@@ -123,6 +125,7 @@ export function AmountForm({
   title: string;
   label: string;
   initial?: string;
+  presets?: { label: string; amount: number | null }[];
   actionCost?: number;
   min?: number;
   max: number;
@@ -147,6 +150,33 @@ export function AmountForm({
         if (valid) submit(rounded);
       }}
     >
+      {presets.length > 0 && (
+        <fieldset className="price-presets">
+          <legend>가격 선택</legend>
+          <div className="price-options">
+            {presets.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                aria-pressed={valid && rounded === preset.amount}
+                disabled={
+                  preset.amount === null ||
+                  preset.amount < min ||
+                  preset.amount > max
+                }
+                onClick={() =>
+                  preset.amount !== null && setAmount(String(preset.amount))
+                }
+              >
+                {preset.label}
+                <strong>
+                  {preset.amount === null ? '미확인' : won(preset.amount)}
+                </strong>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <label>
         {label}
         <input
@@ -975,6 +1005,8 @@ export function RouteView({
 }): ReactElement {
   const item = g.inventory.find((i) => i.id === route.id);
   const listing = g.board.find((i) => i.id === route.id);
+  const currentValue = item?.checked ? marketValue(g, item) : null;
+  const purchaseCost = item ? acquisitionCost(item) : 0;
   switch (route.kind) {
     case '장터':
       return <MarketView g={g} open={open} marketId={route.marketId} />;
@@ -1029,8 +1061,29 @@ export function RouteView({
             <p className="lead">
               등록 · {g.sales.length}/{listingLimit(g)}개 등록 중
             </p>
-            {item.checked && <p>현재 시장 기준 {won(marketValue(g, item))}</p>}
+            <p>
+              현재 가치 {currentValue === null ? '미확인' : won(currentValue)}
+            </p>
             <AmountForm
+              key={item.id}
+              presets={[
+                { label: '현재 가치', amount: currentValue },
+                {
+                  label: '현재 가치 80%',
+                  amount:
+                    currentValue === null ? null : moneyRatio(currentValue, 80),
+                },
+                {
+                  label: '현재 가치 120%',
+                  amount:
+                    currentValue === null
+                      ? null
+                      : moneyRatio(currentValue, 120),
+                },
+                ...(purchaseCost > 0
+                  ? [{ label: '매입가', amount: purchaseCost }]
+                  : []),
+              ]}
               title="판매 글 등록 확정"
               actionCost={1}
               label="판매 가격 (원)"

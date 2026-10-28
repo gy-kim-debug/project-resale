@@ -1104,3 +1104,42 @@ html {
   color: #dce7a2;
   white-space: nowrap;
 }
+
+.price-presets {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.price-presets legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.price-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.price-options button {
+  min-height: 60px;
+  padding: 10px;
+  border: 1px solid #526645;
+  border-radius: 5px;
+  background: #1c281a;
+  color: #dbe7ca;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.price-options button strong {
+  display: block;
+  margin-top: 4px;
+}
+.price-options button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: #34452a;
+}
+
+.action-button.primary .action-cost {
+  color: inherit;
+}
