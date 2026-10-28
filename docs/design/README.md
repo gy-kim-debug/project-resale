@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [선택지형 거래 대화와 조건 확인 이벤트](trading/bargaining/TRADE_DIALOGUE.md)
+
 - [240품목·36분류 확장](items/CATALOG_EXPANSION.md)
 - [24개 매물 케이스](items/CASES.md)
 - [시장별 전체 품목·가격표](markets/PRODUCT_CATALOG.md)

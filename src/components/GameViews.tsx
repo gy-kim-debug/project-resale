@@ -1,3 +1,4 @@
+import { dialogueChoices, dialogueOpening } from '../domain/tradeDialogue';
 import { categoryLabel } from '../content/productCategories';
 import {
   useMarketUi,
@@ -710,7 +711,7 @@ export function ListingView({
       <Button onClick={() => toggle(item.id)}>
         {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
       </Button>
-      {item.price > 0 && (
+      {item.marketId !== 'auction' && (
         <section className="card negotiation-card">
           {!chatOpen && !item.chat ? (
             <Button onClick={() => setChatOpen(true)}>판매자와 채팅</Button>
@@ -719,18 +720,26 @@ export function ListingView({
               <h3>{item.seller}</h3>
               <TradeChat
                 name={item.seller}
-                messages={
-                  item.chat ?? [
-                    {
-                      speaker: 'other',
-                      text:
-                        item.negotiation === 'accepted'
-                          ? `${won(price)}에 거래해요.`
-                          : `판매 가격은 ${won(item.price)}입니다.`,
-                    },
-                  ]
-                }
+                messages={item.chat ?? dialogueOpening(item)}
               />
+              {dialogueChoices(item).length > 0 && (
+                <div
+                  className="dialogue-options"
+                  role="group"
+                  aria-label="대화 선택지"
+                >
+                  {dialogueChoices(item).map((choice) => (
+                    <Button
+                      key={choice.id}
+                      onClick={() =>
+                        act({ type: 'dialogue', id: item.id, topic: choice.id })
+                      }
+                    >
+                      {choice.text}
+                    </Button>
+                  ))}
+                </div>
+              )}
               <div className="offer-options">
                 {canPurchaseOffer(item) &&
                   item.offers.map((p) => (
@@ -746,7 +755,7 @@ export function ListingView({
               </div>
               {item.chat && !item.chatSettled && (
                 <Button onClick={() => act({ type: 'closeChat', id: item.id })}>
-                  거래하지 않고 흥정 종료
+                  대화 종료
                 </Button>
               )}
               {item.chatSettled && <p className="chat-ended">대화 종료</p>}

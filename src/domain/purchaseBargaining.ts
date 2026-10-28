@@ -29,6 +29,7 @@ export function purchaseProfile(item: Item, buyingLevel = 0) {
   const market = bargainingMarket(item.marketId);
   const style = traderStyle(item);
   const firm = style === 'firm' || item.listing?.facts.seller === 'firm';
+  const rapport = (item.dialogue?.rapport ?? 0) / 100;
   const character = TRADER_STYLES[style ?? 'ordinary'];
   const clamp = (value: number) => Math.min(1, Math.max(0, value));
   return {
@@ -36,7 +37,8 @@ export function purchaseProfile(item: Item, buyingLevel = 0) {
     floorMin: firm
       ? 1
       : clamp(
-          seller.floorMin +
+          seller.floorMin -
+            rapport +
             character.floorShift +
             market.floorShift -
             Math.min(10, Math.max(0, buyingLevel)) / 100,
@@ -44,7 +46,8 @@ export function purchaseProfile(item: Item, buyingLevel = 0) {
     floorMax: firm
       ? 1
       : clamp(
-          seller.floorMax +
+          seller.floorMax -
+            rapport +
             character.floorShift +
             market.floorShift -
             Math.min(10, Math.max(0, buyingLevel)) / 100,

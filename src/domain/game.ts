@@ -1,3 +1,4 @@
+import type { DialogueTopic } from '../content/tradeDialogue';
 import type { ProductCategory } from '../content/productCategories';
 import type { ItemCaseId } from '../content/itemCases';
 import type { SpecialListingId } from '../content/specialListings';
@@ -66,6 +67,7 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
+  dialogue?: { topics: DialogueTopic[]; rapport: number };
   category?: ProductCategory;
   caseId?: ItemCaseId;
   traderId?: string;
@@ -183,6 +185,7 @@ export type Command =
   | { type: 'scavenge' }
   | { type: 'refresh'; marketId?: MarketId }
   | { type: 'wait' }
+  | { type: 'dialogue'; id: string; topic: DialogueTopic }
   | { type: 'offer'; id: string; price: number }
   | { type: 'buy'; id: string }
   | { type: 'bid'; id: string; amount: number }

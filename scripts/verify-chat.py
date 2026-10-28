@@ -45,10 +45,10 @@ with sync_playwright() as p:
   assert read()['minute']==start['minute']+480
   assert read()['inventory'][0]['chatSettled']
   start=load('rich');purchase_chat();page.get_by_role('button',name=' 제안').first.click()
-  page.get_by_role('button',name='거래하지 않고 흥정 종료',exact=True).click();settled()
+  page.get_by_role('button',name='대화 종료',exact=True).click();settled()
   page.wait_for_function("async()=>(await ("+READ+")()).board[0].chatSettled")
   assert read()['minute']==start['minute']
-  expect(page.get_by_text('대화 종료',exact=True)).to_be_visible()
+  expect(page.locator('p.chat-ended').filter(has_text='대화 종료')).to_be_visible()
   start=load('pending',1000)
   page.get_by_role('button',name='거절',exact=True).first.click()
   assert page.locator('.action-layer').count()==0

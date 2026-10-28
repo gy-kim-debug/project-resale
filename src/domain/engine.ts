@@ -1,3 +1,4 @@
+import { dialogueReply } from './tradeDialogue';
 import { FIND_PRODUCTS } from '../content/marketProducts';
 import { itemCase } from '../content/itemCases';
 import { chooseItemCase, caseQuality } from './itemCases';
@@ -634,6 +635,13 @@ export function execute(original: Game, command: Command): Result {
         });
         message = '경매를 포기했습니다.';
         log(g, message);
+        break;
+      }
+      case 'dialogue': {
+        const item = preItem(g, command.id);
+        const reply = dialogueReply(item, command.topic);
+        g.board = g.board.map((i) => (i.id === item.id ? reply : i));
+        message = '답변이 도착했습니다.';
         break;
       }
       case 'offer': {

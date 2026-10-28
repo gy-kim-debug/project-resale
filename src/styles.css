@@ -1631,3 +1631,15 @@ html {
   min-height: 44px;
   flex-shrink: 0;
 }
+
+.dialogue-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+.dialogue-options button {
+  text-align: left;
+  white-space: normal;
+  min-height: 44px;
+}

@@ -444,3 +444,25 @@ test('repeated identical notices get distinct lifetimes and an old toast cannot 
   await flushSaves();
   assert.ok(writes.every((save) => !('noticeId' in save.game)));
 });
+
+test('dialogue choices save immediately without a loading layer, toast or economic action', async () => {
+  setup();
+  const s = useGameStore;
+  const before = structuredClone(s.getState().game!);
+  const item = before.board.find(
+    (i) => i.marketId === 'street' && i.price > 0,
+  )!;
+  assert.ok(
+    await s.getState().act({ type: 'dialogue', id: item.id, topic: 'greet' }),
+  );
+  assert.equal(s.getState().action, null);
+  assert.equal(s.getState().notice, '');
+  assert.equal(s.getState().game!.weekActions, before.weekActions);
+  assert.equal(s.getState().game!.cash, before.cash);
+  assert.equal(s.getState().game!.seed, before.seed);
+  await flushSaves();
+  assert.deepEqual(
+    writes.at(-1)!.game.board.find((i) => i.id === item.id)!.dialogue?.topics,
+    ['greet'],
+  );
+});

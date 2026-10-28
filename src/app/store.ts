@@ -106,6 +106,7 @@ export const useGameStore = create<State>((set, get) => ({
     if (
       [
         'startSettlement',
+        'dialogue',
         'offer',
         'bid',
         'withdrawAuction',
@@ -122,6 +123,7 @@ export const useGameStore = create<State>((set, get) => ({
         game: result.game,
         noticeId: get().noticeId + 1,
         notice:
+          command.type === 'dialogue' ||
           command.type === 'offer' ||
           command.type === 'bid' ||
           command.type === 'visit' ||

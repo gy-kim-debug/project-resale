@@ -525,3 +525,13 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - TypeScript·ESLint·포맷·프로덕션 빌드·140개 테스트 통과. 100개 시드에서 240품목/24케이스 출현·12개 무중복·진입 최저가·품목별 경계·100원 정렬·저장 유효성을 검증했다. 구매/감정/수리/등록/백업 metadata 고정, 잘못된 분류/케이스 거절, 240종 도감/32px 도트 범위, 150회 수집의 항상 발견/저가 분포도 확인했다. 실제 이전 커밋으로 만든 legacy-catalog-v2.json으로 기존 현금·원금·이자·물건·매입가·기록 보존을 확인했다. 기존 수량 검사는 공통 MARKET_LISTING_COUNT로 갱신하고 종류 가치 검사는 새 케이스/품목별 범위를 반영했다.
 - verify-content-expansion.py: 320/375/390/430px에서 6시장×12매물/36분류 필터/케이스 태그·설명/구매 전 실제 가치 미공개/240개 도감/레거시 저장 갱신·재접속을 확인했다. 390px 장터/전자상가/건반악기 도트를 직접 확인했다.
 - verify-profiles-codex.py, verify-navigation.py, verify-screens.py, verify-markets.py로 같은 4개 모바일 크기의 프로필/무료 흥정/구매/도감 해금/네이티브 뒤·앞 이동/스크롤·검색·정렬 복원/일반 거래·경매 분리/수집·감정·판매·즉시 판매·상환·백업·파산·클리어·오프라인 실행을 확인했다. 이동은 PC 900px에서도 통과했다. 런타임 오류·수평 넘침 없음. 처음 390px 구매 진행 표시 검사에서 시간 초과가 1회 있었으나, 해당 크기를 오류 수집과 함께 재현해 이상 없음을 확인하고 동일한 4크기 전체 검증도 재통과했다.
+
+## 선택지형 판매자 대화 (2026-10-29)
+
+- `npm test`: 150개 통과. 18개 기본 인물·일반 시장별 적용 가능한 모든 매물 케이스의 대화 종료/저장 유효성, 조건 확인 분기, 중복 선택 거부, 안정적인 답변, 태그 진위 비노출, 호감 상한/가격고정 유지, 기존 흥정 하한 유지, 무료나눔/기존 저장 호환 검증.
+- store 테스트: 선택 즉시 저장, 로딩/토스트 없음, 행동·현금·경제 난수 시드 유지.
+- `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run build`, `git diff --check`: 통과.
+- `node scripts/prepare-dialogue-fixtures.mjs` 후 `python scripts/verify-dialogue.py`: 프로덕션 빌드에서 320/375/390/430px의 인사·질문·조건 응답·추가 질문·새로고침·흥정·구매, 대화 기록 유지, 구매에만 행동 1회 차감, 가로 넘침/브라우저 오류 없음 확인.
+- `node scripts/prepare-profiles-codex.mjs` 후 `python scripts/verify-profiles-codex.py`: 같은 4개 폭에서 기존 판매자/구매자 프로필, 고정가/유연한 흥정, 도감 위치·해금·필터·복원 회귀 검사 통과.
+- 로그: `work/dialogue-tests.txt`, `dialogue-lint.txt`, `dialogue-format.txt`, `dialogue-build.txt`, `dialogue-mobile.txt`, `dialogue-profile-mobile.txt`. 화면: `work/dialogue-390.png`.
+- 검증 범위: Chromium 모바일 뷰포트. 실제 iOS/Android 기기 조작은 별도 확인이 필요하다. 경매 진행자·판매 중 구매자의 일반 대화 확장은 이번에 구현하지 않았다.

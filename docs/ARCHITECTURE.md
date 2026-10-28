@@ -118,3 +118,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 품목 정의는 content/marketProducts.ts가 240개 상품의 세부 분류·최저/최고 게시 가격을 관리하고, content/productCategories.ts가 36개 분류를 기존 경제 Kind에 연결한다. content/markets.ts는 이 데이터로 시장 범위를 계산한다. 12개 무중복 품목을 선택하며 첫 진입 매물의 최저 가격을 보장한다. 도감도 같은 품목별 범위를 사용한다.
 
 케이스 설정은 content/itemCases.ts, 독립 추첨/품질 변환은 domain/itemCases.ts에 둔다. 새 Item의 선택적 category/caseId로 저장하고 기존 metadata 없는 데이터도 지원한다. 케이스는 새 물건 생성 시 base/value/상태/게시가에 적용하며 감정·수리·로드 때 재추첨하지 않는다. 특별 소장품은 조정된 base에서 상태 가치를 계산해 중간 반올림 오차를 피한다. 가격표 문서는 scripts/export-market-catalog.mjs로 같은 데이터에서 생성한다.
+
+선택지형 판매자 대화는 content/tradeDialogue.ts의 주제/수치와 domain/tradeDialogue.ts의 순수 응답 함수로 분리한다. Item.dialogue의 일회성 주제/호감 및 기존 chat을 저장하고, 엔진 dialogue 명령은 경제 RNG·시간·자금을 소비하지 않는다. store는 로딩 없이 답변을 저장한다. 인물 나이/성별은 문장 표현에만 쓰며 가격·정직함 계산에는 쓰지 않는다. 호감은 최초 구매 흥정 하한에만 제한적으로 적용한다. 상세 규칙은 design/trading/bargaining/TRADE_DIALOGUE.md를 참조한다.

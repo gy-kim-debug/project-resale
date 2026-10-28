@@ -1,3 +1,4 @@
+import { DIALOGUE_RULES, isDialogueTopic } from '../content/tradeDialogue';
 import {
   isProductCategory,
   PRODUCT_CATEGORIES,
@@ -41,7 +42,7 @@ const kind = (v: unknown) => Object.keys(KIND_TAGS).includes(String(v));
 const chat = (v: unknown) =>
   v === undefined ||
   (Array.isArray(v) &&
-    v.length <= 16 &&
+    v.length <= DIALOGUE_RULES.maxMessages &&
     v.every(
       (m) =>
         record(m) &&
@@ -93,6 +94,17 @@ function item(v: unknown): v is Item {
       text(v[k]),
     ) &&
     (v.acquiredFor === undefined || integer(v.acquiredFor, RULES.maxMoney)) &&
+    (v.dialogue === undefined ||
+      (record(v.dialogue) &&
+        Array.isArray(v.dialogue.topics) &&
+        v.dialogue.topics.length <= 11 &&
+        v.dialogue.topics.every(isDialogueTopic) &&
+        new Set(v.dialogue.topics).size === v.dialogue.topics.length &&
+        !(
+          v.dialogue.topics.includes('eventAccept') &&
+          v.dialogue.topics.includes('eventDecline')
+        ) &&
+        integer(v.dialogue.rapport, DIALOGUE_RULES.maxRapport))) &&
     chat(v.chat) &&
     (v.auction === undefined ||
       (v.marketId === 'auction' &&
