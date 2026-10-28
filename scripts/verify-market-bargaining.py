@@ -4,7 +4,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 subprocess.run(['node','scripts/prepare-bargaining-fixtures.mjs'],check=True)
 CASES=json.loads(Path('work/market-bargaining-cases.json').read_text())
-NAMES={'street':'중고 장터','computers':'컴퓨터시장','instruments':'악기시장','cars':'중고차시장','property':'부동산 시장'}
+NAMES={'street':'중고 장터','computers':'전자상가','instruments':'악기시장','cars':'중고차시장','property':'부동산 시장'}
 BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
 READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result)}})}"""
 WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""

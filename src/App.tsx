@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useGameStore, type Tab } from './app/store';
+import { Toast } from './components/Toast';
 import { Icon, type IconName } from './components/Icon';
 import {
   Button,
@@ -426,17 +427,6 @@ export default function App() {
             ) : (
               <BusinessTabView g={g} act={act} />
             )}
-            {state.notice && !shownRoutes.length && !over && (
-              <div
-                className={`result page-result ${state.ok ? '' : 'error'}`}
-                role="status"
-              >
-                <p>{state.notice}</p>
-                <button onClick={state.dismiss} aria-label="결과 안내 닫기">
-                  확인
-                </button>
-              </div>
-            )}
           </main>
           <nav className="bottom-nav" aria-label="주요 메뉴">
             {nav.map((n) => (
@@ -483,17 +473,6 @@ export default function App() {
               open={open}
               act={act}
             />
-            {state.notice && (
-              <div
-                className={`result ${state.ok ? '' : 'error'}`}
-                role="status"
-              >
-                <p>{state.notice}</p>
-                <button onClick={state.dismiss} aria-label="결과 안내 닫기">
-                  확인
-                </button>
-              </div>
-            )}
           </Sheet>
         )}
         {state.saveError && shownRoutes.at(-1)?.kind !== '저장 관리' && (
@@ -543,6 +522,15 @@ export default function App() {
           </div>
         )}
       </div>
+      {state.notice && !state.action && !over && (
+        <Toast
+          key={state.noticeId}
+          id={state.noticeId}
+          message={state.notice}
+          ok={state.ok}
+          dismiss={state.dismiss}
+        />
+      )}
       {state.action && (
         <ActionProgress key={state.action.id} action={state.action} />
       )}

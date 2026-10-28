@@ -41,7 +41,14 @@ type Motif =
   | 'car'
   | 'house'
   | 'plane'
-  | 'gem';
+  | 'gem'
+  | 'phone'
+  | 'tablet'
+  | 'monitor'
+  | 'desktop'
+  | 'console'
+  | 'handheld'
+  | 'projector';
 const motifs: Motif[][] = [
   ['lamp', 'keyboard', 'chair', 'radio', 'camera', 'vase'],
   ['lamp', 'keyboard', 'stool', 'radio', 'lens', 'figure'],
@@ -60,6 +67,25 @@ TIER_TITLES.forEach((titles, tier) =>
 );
 for (const title of ['게이밍 노트북', '크리에이터 노트북'])
   namedArt.set(title, { motif: 'laptop', tier: 2 });
+for (const title of [
+  '조립 데스크톱',
+  '미니 PC',
+  '사무용 워크스테이션',
+  '소형 서버',
+])
+  namedArt.set(title, { motif: 'desktop', tier: 2 });
+for (const title of ['플래그십 스마트폰', '폴더블 스마트폰'])
+  namedArt.set(title, { motif: 'phone', tier: 2 });
+namedArt.set('태블릿 PC', { motif: 'tablet', tier: 2 });
+for (const title of ['고해상도 모니터', '대형 OLED TV'])
+  namedArt.set(title, { motif: 'monitor', tier: 2 });
+for (const title of ['미러리스 카메라', '액션 카메라'])
+  namedArt.set(title, { motif: 'camera', tier: 2 });
+namedArt.set('콘솔 게임기', { motif: 'console', tier: 2 });
+namedArt.set('휴대용 게임기', { motif: 'handheld', tier: 2 });
+namedArt.set('노이즈캔슬링 헤드폰', { motif: 'headphones', tier: 2 });
+namedArt.set('프리미엄 오디오', { motif: 'stereo', tier: 2 });
+namedArt.set('빔프로젝터', { motif: 'projector', tier: 2 });
 namedArt.set('근현대 회화', { motif: 'art', tier: 6 });
 namedArt.set('희귀 도자기', { motif: 'vase', tier: 6 });
 namedArt.set('고급 기계식 시계', { motif: 'watch', tier: 6 });
@@ -131,6 +157,76 @@ function draw(motif: Motif, tier: number): Pixel[] {
   };
   r(5, 29, 22, 1, '#00000035');
   switch (motif) {
+    case 'phone':
+      outline(9, 2, 14, 26, dark);
+      r(11, 5, 10, 18, blue);
+      r(12, 6, 8, 7, glass);
+      r(12, 15, 3, 3, main);
+      r(17, 15, 3, 3, paper);
+      r(14, 3, 4, 1, ink);
+      r(15, 25, 2, 1, paper);
+      break;
+    case 'tablet':
+      outline(5, 3, 22, 25, dark);
+      r(7, 5, 18, 20, blue);
+      r(8, 6, 16, 9, glass);
+      r(9, 18, 5, 5, main);
+      r(17, 18, 5, 5, paper);
+      r(15, 26, 2, 1, paper);
+      break;
+    case 'monitor':
+      outline(2, 5, 28, 19, dark);
+      r(4, 7, 24, 14, blue);
+      r(5, 8, 14, 8, glass);
+      r(17, 14, 10, 6, main);
+      r(14, 24, 4, 3, ink);
+      r(9, 27, 14, 2, dark);
+      break;
+    case 'desktop':
+      outline(2, 8, 19, 15, dark);
+      r(4, 10, 15, 10, blue);
+      r(5, 11, 9, 5, glass);
+      r(10, 23, 3, 3, ink);
+      r(6, 26, 11, 2, dark);
+      outline(22, 4, 8, 24, dark);
+      r(24, 7, 4, 2, paper);
+      r(24, 12, 4, 1, blue);
+      r(24, 17, 4, 6, ink);
+      r(25, 18, 2, 2, main);
+      break;
+    case 'console':
+      outline(4, 3, 11, 25, paper);
+      r(6, 5, 2, 20, blue);
+      r(11, 6, 2, 18, dark);
+      outline(16, 17, 14, 9, dark);
+      r(18, 16, 10, 3, dark);
+      r(18, 20, 5, 1, paper);
+      r(20, 18, 1, 5, paper);
+      r(26, 19, 2, 2, red);
+      r(24, 22, 2, 2, blue);
+      break;
+    case 'handheld':
+      outline(2, 10, 28, 15, dark);
+      r(8, 12, 16, 11, blue);
+      r(9, 13, 14, 6, glass);
+      r(3, 12, 4, 11, main);
+      r(25, 12, 4, 11, red);
+      r(4, 16, 2, 1, ink);
+      r(5, 15, 1, 3, ink);
+      r(26, 15, 2, 2, paper);
+      r(26, 20, 2, 2, ink);
+      break;
+    case 'projector':
+      outline(3, 12, 26, 14, paper);
+      r(5, 10, 22, 3, dark);
+      r(5, 15, 10, 7, main);
+      for (let x = 6; x < 15; x += 3) r(x, 16, 1, 5, dark);
+      outline(18, 14, 9, 9, ink);
+      r(20, 16, 5, 5, blue);
+      r(21, 17, 2, 2, glass);
+      r(5, 26, 3, 2, ink);
+      r(25, 26, 3, 2, ink);
+      break;
     case 'lamp':
       r(14, 4, 4, 2, ink);
       r(11, 6, 10, 2, ink);

@@ -25,6 +25,7 @@ interface State {
   saving: boolean;
   storageBlocked: boolean;
   notice: string;
+  noticeId: number;
   ok: boolean;
   favoriteIds: string[];
   selectedMarket: MarketId;
@@ -40,7 +41,7 @@ interface State {
   act: Act;
   setTab(tab: Tab): void;
   toggleFavorite(id: string): void;
-  dismiss(): void;
+  dismiss(expectedId?: number): void;
   save(): void;
   importSave(raw: string): boolean;
   startOver(): void;
@@ -57,6 +58,7 @@ export const useGameStore = create<State>((set, get) => ({
   saving: false,
   storageBlocked: false,
   notice: '',
+  noticeId: 0,
   ok: true,
   favoriteIds: [],
   selectedMarket: 'street',
@@ -96,7 +98,7 @@ export const useGameStore = create<State>((set, get) => ({
     if (!g || !current.ready || current.action) return false;
     const result = execute(g, command);
     if (!result.ok) {
-      set({ notice: result.message, ok: false });
+      set({ notice: result.message, noticeId: get().noticeId + 1, ok: false });
       return false;
     }
     clearTimeout(highlightTimer);
@@ -118,6 +120,7 @@ export const useGameStore = create<State>((set, get) => ({
     ) {
       set({
         game: result.game,
+        noticeId: get().noticeId + 1,
         notice:
           command.type === 'offer' ||
           command.type === 'bid' ||
@@ -154,6 +157,7 @@ export const useGameStore = create<State>((set, get) => ({
         set({
           action: null,
           notice: result.message,
+          noticeId: get().noticeId + 1,
           changes: changesBetween(g, result.game),
         });
         highlightTimer = setTimeout(
@@ -221,7 +225,10 @@ export const useGameStore = create<State>((set, get) => ({
     });
     get().save();
   },
-  dismiss: () => set({ notice: '' }),
+  dismiss(expectedId) {
+    if (expectedId === undefined || get().noticeId === expectedId)
+      set({ notice: '' });
+  },
   save() {
     const { game, favoriteIds, storageBlocked } = get();
     if (!game || storageBlocked) return;
@@ -261,6 +268,7 @@ export const useGameStore = create<State>((set, get) => ({
         readNotificationIds: data.readNotificationIds ?? [],
         tab: '활동',
         notice: '백업을 불러왔습니다.',
+        noticeId: get().noticeId + 1,
         ok: true,
         storageBlocked: false,
         saveError: '',
@@ -270,6 +278,7 @@ export const useGameStore = create<State>((set, get) => ({
     } catch (e) {
       set({
         notice: e instanceof Error ? e.message : '백업을 읽을 수 없습니다.',
+        noticeId: get().noticeId + 1,
         ok: false,
       });
       return false;
@@ -286,6 +295,7 @@ export const useGameStore = create<State>((set, get) => ({
       readNotificationIds: [],
       tab: '활동',
       notice: '새 게임을 시작했습니다. 이전 진행은 계승되지 않습니다.',
+      noticeId: get().noticeId + 1,
       ok: true,
       storageBlocked: false,
       saveError: '',

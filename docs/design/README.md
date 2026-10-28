@@ -64,7 +64,7 @@
 ### 여러 시장
 
 - [시장별 가격대·품목·공통 규칙](markets/OVERVIEW.md)
-- [장터](markets/STREET.md) · [컴퓨터시장](markets/COMPUTERS.md) · [악기시장](markets/INSTRUMENTS.md)
+- [장터](markets/STREET.md) · [전자상가](markets/ELECTRONICS.md) · [악기시장](markets/INSTRUMENTS.md)
 - [중고차시장](markets/CARS.md) · [부동산 시장](markets/PROPERTY.md)
 
 - [고가 경매시장 — 입찰·낙찰·결제](markets/AUCTION.md)

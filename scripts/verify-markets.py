@@ -7,7 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 subprocess.run(['node','scripts/prepare-browser-fixtures.mjs'],check=True)
 BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
-MARKETS=[('street','중고 장터',10000,500000),('computers','컴퓨터시장',800000,1200000),('instruments','악기시장',1500000,10000000),('cars','중고차시장',10000000,80000000),('property','부동산 시장',100000000,1000000000),('auction','고가 경매시장',1000000000,10000000000)]
+MARKETS=[('street','중고 장터',10000,500000),('computers','전자상가',800000,1200000),('instruments','악기시장',1500000,10000000),('cars','중고차시장',10000000,80000000),('property','부동산 시장',100000000,1000000000),('auction','고가 경매시장',1000000000,10000000000)]
 READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result)}})}"""
 WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""
 with sync_playwright() as p:
@@ -51,14 +51,14 @@ with sync_playwright() as p:
   expect(page.get_by_role('button',name='판매자와 채팅',exact=True)).to_have_count(0)
   expect(page.get_by_text('실제 가치의 60%로 판매합니다.',exact=True)).to_be_visible()
   page.get_by_role('button',name='닫기',exact=True).click()
-  open_market('컴퓨터시장');before=read()['game']
+  open_market('전자상가');before=read()['game']
   page.get_by_role('button',name='새 매물 탐색',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   after=read()['game'];assert after['minute']==before['minute']+480
   assert [i for i in after['board'] if i.get('marketId')!='computers']==[i for i in before['board'] if i.get('marketId')!='computers']
-  page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('컴퓨터시장')
-  expect(page.get_by_role('heading',name='컴퓨터시장',exact=True)).to_be_visible()
+  page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('전자상가')
+  expect(page.get_by_role('heading',name='전자상가',exact=True)).to_be_visible()
   rich=json.loads(json.dumps(data));rich['game']['cash']=2000000;rich['game']['stats']['peakCash']=2000000
-  page.evaluate(WRITE,rich);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('컴퓨터시장');page.locator('.item-row').first.click()
+  page.evaluate(WRITE,rich);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('전자상가');page.locator('.item-row').first.click()
   page.get_by_role('button',name='판매자와 채팅',exact=True).click();page.get_by_role('button',name=' 제안').first.click()
   expect(page.locator('.chat-message')).to_have_count(3)
   assert read()['game']['minute']==rich['game']['minute']
@@ -67,7 +67,7 @@ with sync_playwright() as p:
    # An unlucky opening offer can end a real negotiation. Verify that lock, then
    # use an untouched snapshot to test the independent direct-purchase path.
    assert next(i for i in read()['game']['board'] if i.get('marketId')=='computers')['purchaseBargain']['walked']
-   page.evaluate(WRITE,rich);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('컴퓨터시장');page.locator('.item-row').first.click()
+   page.evaluate(WRITE,rich);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();open_market('전자상가');page.locator('.item-row').first.click()
   page.get_by_role('button',name='구매 내용 확인').click();page.get_by_role('button',name='지불·수령 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   paid=read()['game'];assert paid['inventory'][0]['marketId']=='computers' and paid['minute']==rich['game']['minute']+480
   page.get_by_role('button',name='받은 물품 확인',exact=True).click();page.get_by_role('button',name='가치 확인',exact=False).click();expect(page.locator('.action-layer')).to_have_count(0)

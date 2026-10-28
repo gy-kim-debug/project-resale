@@ -425,3 +425,22 @@ test('ordinary actions stay in history without becoming unread mail and hidden r
   assert.equal(s.getState().readNotificationIds.includes(jobId), false);
   await flushSaves();
 });
+
+test('repeated identical notices get distinct lifetimes and an old toast cannot dismiss a newer notice', async () => {
+  await flushSaves();
+  setup();
+  const s = useGameStore;
+  await s.getState().act({ type: 'buy', id: 'missing' });
+  const first = s.getState().noticeId,
+    message = s.getState().notice;
+  await s.getState().act({ type: 'buy', id: 'missing' });
+  const second = s.getState().noticeId;
+  assert.ok(second > first);
+  assert.equal(s.getState().notice, message);
+  s.getState().dismiss(first);
+  assert.equal(s.getState().notice, message);
+  s.getState().dismiss(second);
+  assert.equal(s.getState().notice, '');
+  await flushSaves();
+  assert.ok(writes.every((save) => !('noticeId' in save.game)));
+});

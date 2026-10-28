@@ -508,30 +508,11 @@ input[type='checkbox'] {
 .market-sheet {
   background: #20291d;
 }
-.result {
-  position: sticky;
-  bottom: 0;
-  margin-top: 25px;
-  background: #d0dfa7;
-  color: #203018;
-  padding: 14px;
-  border-radius: 5px;
-  box-shadow: 0 -5px 20px #0004;
-}
-.result button,
-.toast button {
-  display: block;
-  margin-left: auto;
-  background: none;
-  font-size: 12px;
-  font-weight: bold;
-  text-decoration: underline;
-  padding: 5px;
-}
-.result p {
-  font-size: 12px;
-}
 .toast {
+  pointer-events: none;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
@@ -678,11 +659,6 @@ progress {
 html {
   scroll-padding-top: calc(var(--header-height) + 12px);
   scroll-padding-bottom: 120px;
-}
-.page-result {
-  position: static;
-  margin: 22px 0;
-  box-shadow: none;
 }
 .sheet-content {
   scroll-padding-top: 12px;

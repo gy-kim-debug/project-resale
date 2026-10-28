@@ -58,7 +58,7 @@ const MARKET_DEFINITIONS: MarketDefinition[] = [
   },
   {
     id: 'computers',
-    name: '컴퓨터시장',
+    name: '전자상가',
     min: 800000,
     max: 1200000,
     products: products('디지털', [
@@ -68,7 +68,22 @@ const MARKET_DEFINITIONS: MarketDefinition[] = [
       '사무용 워크스테이션',
       '크리에이터 노트북',
       '소형 서버',
-    ]),
+      '플래그십 스마트폰',
+      '폴더블 스마트폰',
+      '태블릿 PC',
+      '고해상도 모니터',
+      '미러리스 카메라',
+      '액션 카메라',
+      '콘솔 게임기',
+      '휴대용 게임기',
+      '노이즈캔슬링 헤드폰',
+      '프리미엄 오디오',
+      '빔프로젝터',
+      '대형 OLED TV',
+    ]).map((product) => ({
+      ...product,
+      description: '사용하던 전자기기를 정리합니다.',
+    })),
   },
   {
     id: 'instruments',

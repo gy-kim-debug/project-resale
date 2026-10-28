@@ -971,6 +971,7 @@ export function StorageView() {
             if (file.size > 2_000_000) {
               useGameStore.setState({
                 notice: '2MB 이하 JSON 파일만 가져올 수 있습니다.',
+                noticeId: useGameStore.getState().noticeId + 1,
                 ok: false,
               });
               return;
@@ -982,6 +983,7 @@ export function StorageView() {
             } catch {
               useGameStore.setState({
                 notice: '백업 파일을 읽지 못했습니다.',
+                noticeId: useGameStore.getState().noticeId + 1,
                 ok: false,
               });
             }
