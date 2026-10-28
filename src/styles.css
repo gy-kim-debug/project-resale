@@ -1643,3 +1643,247 @@ html {
   white-space: normal;
   min-height: 44px;
 }
+
+/* Seller chat uses one transcript and a stationary choice area. */
+.sheet-content:has(.seller-conversation) {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.seller-conversation {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.conversation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.conversation-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--accent);
+  background: #244c40;
+  font-size: 12px;
+}
+.conversation-header strong {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.conversation-header button {
+  background: transparent;
+  color: var(--muted);
+  min-height: 44px;
+  font-size: 12px;
+  padding: 0 4px;
+}
+.conversation-product {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #181e28;
+  flex-shrink: 0;
+}
+.conversation-product .item-art {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.conversation-product > span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.conversation-product strong {
+  font-size: 11px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.conversation-product b {
+  font-size: 13px;
+  color: var(--accent);
+}
+.seller-conversation .trade-chat {
+  flex: 1;
+  min-height: 60px;
+  max-height: none;
+  padding: 14px 16px;
+  scroll-padding: 14px;
+}
+.conversation-composer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: #141a23;
+}
+.conversation-tabs {
+  display: flex;
+  padding: 4px 12px 0;
+  gap: 8px;
+}
+.conversation-tabs button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-height: 44px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+}
+.conversation-tabs button[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.conversation-tabs span {
+  font-size: 10px;
+  background: #293344;
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+.conversation-tabs i {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.conversation-choices {
+  max-height: min(168px, 24dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px;
+}
+.seller-conversation .dialogue-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.seller-conversation .dialogue-options button {
+  margin: 0;
+  padding: 10px;
+  background: #222b39;
+  border: 1px solid #334055;
+  border-radius: 10px;
+  color: #e1e8f3;
+  font-size: 12px;
+  text-align: center;
+}
+.seller-conversation .dialogue-response button {
+  border-color: #8ce5c044;
+  color: var(--accent);
+}
+.seller-conversation .offer-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.seller-conversation .offer-options button {
+  margin: 0;
+  padding: 10px 8px;
+  min-height: 54px;
+  background: #203c34;
+  border: 1px solid #8ce5c033;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--accent);
+}
+.seller-conversation .offer-options small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.conversation-end {
+  display: block;
+  margin: 0 auto;
+  padding: 6px 16px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+.conversation-empty,
+.conversation-composer > .chat-ended {
+  padding: 12px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.sheet-content:has(.seller-conversation) > .purchase-dock {
+  position: static;
+  margin: 0;
+  flex-shrink: 0;
+  padding: 10px 16px;
+}
+.sheet-content:has(.seller-conversation) > .warning {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 4px 16px;
+}
+@media (max-height: 720px) {
+  .conversation-header {
+    padding-block: 0;
+  }
+  .conversation-product {
+    padding-block: 4px;
+  }
+  .conversation-end {
+    min-height: 36px;
+  }
+}
+.conversation-header .conversation-end {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 11px;
+}
+.sheet-content:has(.purchase-dock .card) .conversation-composer {
+  display: none;
+}
+@media (max-height: 720px) {
+  .conversation-product .item-art {
+    display: none;
+  }
+  .conversation-product > span {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .conversation-product strong {
+    flex: 1;
+  }
+  .conversation-product b {
+    flex-shrink: 0;
+  }
+}
+
+.sheet-content:has(.seller-conversation),
+.conversation-choices {
+  overflow-anchor: none;
+}
+.conversation-product .item-art svg {
+  width: 32px;
+  height: 32px;
+}
+.sheet-layer:has(.seller-conversation) {
+  top: 0;
+  z-index: 80;
+  padding-top: env(safe-area-inset-top, 0px);
+}

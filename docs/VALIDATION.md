@@ -535,3 +535,12 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - `node scripts/prepare-profiles-codex.mjs` 후 `python scripts/verify-profiles-codex.py`: 같은 4개 폭에서 기존 판매자/구매자 프로필, 고정가/유연한 흥정, 도감 위치·해금·필터·복원 회귀 검사 통과.
 - 로그: `work/dialogue-tests.txt`, `dialogue-lint.txt`, `dialogue-format.txt`, `dialogue-build.txt`, `dialogue-mobile.txt`, `dialogue-profile-mobile.txt`. 화면: `work/dialogue-390.png`.
 - 검증 범위: Chromium 모바일 뷰포트. 실제 iOS/Android 기기 조작은 별도 확인이 필요하다. 경매 진행자·판매 중 구매자의 일반 대화 확장은 이번에 구현하지 않았다.
+
+## 채팅 UI 개선 (2026-10-29)
+
+- 게임 규칙과 분기 로직을 유지하고 SellerConversation 컴포넌트로 전용 대화 레이아웃을 분리했다. 질문/가격 메뉴, 상품 보기/대화 복귀, 조건 응답, 구매 확인 중 선택 영역 숨김을 적용했다.
+- 타입 검사·프로덕션 빌드·ESLint·포맷 검사 통과. 기존 150개 테스트 통과.
+- `scripts/verify-chat-layout.py`: 320×568 / 375×667 / 390×844 / 430×932 / 900×900에서 대화/선택지/구매 확인이 영역 안에 들어가는지, 자동 스크롤·상품 복귀·대화 종료를 검증했다. 작은 화면에서 조건 응답이 구매 버튼 아래로 밀리던 문제를 발견해 전용 화면의 높이와 스크롤 초기화를 수정한 후 전체 크기를 재검증했다.
+- `scripts/verify-dialogue.py`: 모바일 4개 폭의 질문·조건 응답·기록 복원·가격 제안·구매 및 행동 비용 검증 통과.
+- `scripts/verify-profiles-codex.py`: 판매자/구매자 프로필·고정가/유연한 흥정·도감 회귀 검사 4개 폭 통과.
+- 로그 `work/chat-ui-{tests,lint,format,build,mobile,layout,profiles}.txt`. 화면 `work/chat-layout-320.png`, `work/chat-layout-390.png`를 시각 확인했다. 실제 모바일 기기는 검증 범위에 포함하지 않았다.

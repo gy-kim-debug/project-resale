@@ -1,4 +1,4 @@
-import { dialogueChoices, dialogueOpening } from '../domain/tradeDialogue';
+import { SellerConversation } from './SellerConversation';
 import { categoryLabel } from '../content/productCategories';
 import {
   useMarketUi,
@@ -35,7 +35,6 @@ import {
   repairCost,
 } from '../domain/engine';
 import { marketDefinition, marketOf } from '../content/markets';
-import { canPurchaseOffer } from '../domain/purchaseBargaining';
 import { SALE_BARGAINING } from '../content/bargaining';
 import { auctionBidOptions } from '../domain/auction';
 import { instantSalePrice } from '../domain/instantSale';
@@ -687,84 +686,48 @@ export function ListingView({
   const favorites = useGameStore((s) => s.favoriteIds);
   const toggle = useGameStore((s) => s.toggleFavorite);
   const [confirm, setConfirm] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(!!item.chat);
   const price = item.negotiatedPrice ?? item.price;
   return (
     <>
-      <ItemArt item={item} large />
-      <h2>{item.title}</h2>
-      <ItemTags item={item} />
-      <p className="asset-market">{marketDefinition(marketOf(item)).name}</p>
-      <p className="item-price">
-        {item.price === 0 ? '무료나눔' : won(item.price)}
-      </p>
-      <TraderProfile
-        traderId={item.traderId}
-        entityId={item.id}
-        name={item.seller}
-        role="판매자"
-      />
-      <p className="lead">{item.description}</p>
-      <Details>
-        <p>매물 유효 기간: {durationText(item.expires - g.minute)} 남음</p>
-      </Details>
-      <Button onClick={() => toggle(item.id)}>
-        {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
-      </Button>
-      {item.marketId !== 'auction' && (
-        <section className="card negotiation-card">
-          {!chatOpen && !item.chat ? (
-            <Button onClick={() => setChatOpen(true)}>판매자와 채팅</Button>
-          ) : (
-            <>
-              <h3>{item.seller}</h3>
-              <TradeChat
-                name={item.seller}
-                messages={item.chat ?? dialogueOpening(item)}
-              />
-              {dialogueChoices(item).length > 0 && (
-                <div
-                  className="dialogue-options"
-                  role="group"
-                  aria-label="대화 선택지"
-                >
-                  {dialogueChoices(item).map((choice) => (
-                    <Button
-                      key={choice.id}
-                      onClick={() =>
-                        act({ type: 'dialogue', id: item.id, topic: choice.id })
-                      }
-                    >
-                      {choice.text}
-                    </Button>
-                  ))}
-                </div>
-              )}
-              <div className="offer-options">
-                {canPurchaseOffer(item) &&
-                  item.offers.map((p) => (
-                    <Button
-                      key={p}
-                      onClick={() =>
-                        act({ type: 'offer', id: item.id, price: p })
-                      }
-                    >
-                      {won(p)} 제안
-                    </Button>
-                  ))}
-              </div>
-              {item.chat && !item.chatSettled && (
-                <Button onClick={() => act({ type: 'closeChat', id: item.id })}>
-                  대화 종료
-                </Button>
-              )}
-              {item.chatSettled && <p className="chat-ended">대화 종료</p>}
-            </>
+      {chatOpen && item.marketId !== 'auction' ? (
+        <SellerConversation
+          item={item}
+          act={act}
+          onProduct={() => setChatOpen(false)}
+        />
+      ) : (
+        <>
+          <ItemArt item={item} large />
+          <h2>{item.title}</h2>
+          <ItemTags item={item} />
+          <p className="asset-market">
+            {marketDefinition(marketOf(item)).name}
+          </p>
+          <p className="item-price">
+            {item.price === 0 ? '무료나눔' : won(item.price)}
+          </p>
+          <TraderProfile
+            traderId={item.traderId}
+            entityId={item.id}
+            name={item.seller}
+            role="판매자"
+          />
+          <p className="lead">{item.description}</p>
+          <Details>
+            <p>매물 유효 기간: {durationText(item.expires - g.minute)} 남음</p>
+          </Details>
+          <Button onClick={() => toggle(item.id)}>
+            {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
+          </Button>
+          {item.marketId !== 'auction' && (
+            <section className="card negotiation-card">
+              <Button onClick={() => setChatOpen(true)}>
+                {item.chat ? '대화 이어보기' : '판매자와 채팅'}
+              </Button>
+            </section>
           )}
-        </section>
-      )}
-      {item.purchaseBargain?.walked && (
-        <p className="chat-ended">판매자가 거래를 종료했습니다.</p>
+        </>
       )}
       <div className="purchase-dock">
         {!confirm ? (

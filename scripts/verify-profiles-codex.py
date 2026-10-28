@@ -17,7 +17,7 @@ with sync_playwright() as p:
   rows=[i for i in DATA['initial']['game']['board'] if i.get('marketId','street')=='street' and i['price']>0]
   for key in ['firm','flex']:
    item=DATA[key];index=next(n for n,i in enumerate(rows) if i['id']==item['id']);page.locator('.sheet-layer .item-row').nth(index).click();profile=page.get_by_role('region',name='판매자 프로필');expect(profile).to_contain_text(item['seller']);expect(profile).to_contain_text('@'+item['traderId']);expect(profile).to_contain_text('세');expect(profile).to_contain_text('가격 고정' if key=='firm' else '유연한 흥정')
-   expect(page.locator('.item-findings')).to_have_count(0);page.get_by_role('button',name='판매자와 채팅',exact=True).click();offers=page.locator('.sheet-layer button').filter(has_text='원 제안')
+   expect(page.locator('.item-findings')).to_have_count(0);page.get_by_role('button',name='판매자와 채팅',exact=True).click();page.get_by_role('button',name='가격 제안',exact=False).first.click();offers=page.locator('.offer-options button')
    if key=='firm':expect(offers).to_have_count(0);page.get_by_role('button',name='← 뒤로',exact=True).click()
    else:
     expect(offers).to_have_count(2);offers.last.click();expect(page.locator('.status-top')).to_contain_text('남은 행동 20/20')

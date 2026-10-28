@@ -26,12 +26,12 @@ with sync_playwright() as p:
   def purchase_chat():
    page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click()
    page.locator('.item-row').first.click()
-   page.get_by_role('button',name='판매자와 채팅',exact=True).click()
+   page.get_by_role('button',name='판매자와 채팅',exact=True).click();page.locator('.conversation-tabs').get_by_role('button',name='가격 제안',exact=False).click()
   start=load('rich');purchase_chat()
   expect(page.get_by_role('log')).to_be_visible()
   expect(page.get_by_role('button',name='구매 전',exact=False)).to_have_count(0)
   expect(page.get_by_text('상태:',exact=False)).to_have_count(0)
-  page.get_by_role('button',name=' 제안').first.click()
+  page.locator('.offer-options button').first.click()
   assert page.locator('.action-layer').count()==0
   expect(page.locator('.chat-message')).to_have_count(3)
   page.wait_for_function("async()=>!!(await ("+READ+")()).board[0].chat")
@@ -44,7 +44,7 @@ with sync_playwright() as p:
   page.get_by_role('button',name='지불·수령 확정',exact=True).click();expect(page.locator('.action-layer')).to_be_visible();settled()
   assert read()['minute']==start['minute']+480
   assert read()['inventory'][0]['chatSettled']
-  start=load('rich');purchase_chat();page.get_by_role('button',name=' 제안').first.click()
+  start=load('rich');purchase_chat();page.locator('.offer-options button').first.click()
   page.get_by_role('button',name='대화 종료',exact=True).click();settled()
   page.wait_for_function("async()=>(await ("+READ+")()).board[0].chatSettled")
   assert read()['minute']==start['minute']
