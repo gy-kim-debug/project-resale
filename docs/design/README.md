@@ -130,3 +130,5 @@
 - [자동 성장 기본안과 매입 감각](character/ABILITIES.md)
 
 - [현재 우편 목록과 삭제한 이웃 제안](ui/MAILBOX.md)
+
+- [경제 밸런스 1차 점검과 조정 후보](economy/BALANCE_AUDIT.md)

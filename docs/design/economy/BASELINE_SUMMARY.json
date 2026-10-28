@@ -1,0 +1,558 @@
+{
+  "sourceCommit": "63856b24f95ff59a515d00a9d1234b748f4aa353",
+  "seedsPerStrategy": 100,
+  "populationSeeds": 500,
+  "rules": {
+    "debt": 10000000000,
+    "startingCash": 500000,
+    "weeklyPrincipalBase": 50000,
+    "weeklyBaseRateUnits": 1,
+    "weeklyRateStepUnits": 2,
+    "capacity": 12,
+    "maxMoney": 1000000000000000,
+    "actionsPerWeek": 20
+  },
+  "debtCurve": [
+    {
+      "week": 1,
+      "principalBefore": 10000000000,
+      "rate": "0.001%",
+      "requiredPrincipal": 50000,
+      "interest": 100000,
+      "total": 150000
+    },
+    {
+      "week": 2,
+      "principalBefore": 9999950000,
+      "rate": "0.003%",
+      "requiredPrincipal": 100000,
+      "interest": 300000,
+      "total": 400000
+    },
+    {
+      "week": 3,
+      "principalBefore": 9999850000,
+      "rate": "0.005%",
+      "requiredPrincipal": 200000,
+      "interest": 500000,
+      "total": 700000
+    },
+    {
+      "week": 4,
+      "principalBefore": 9999650000,
+      "rate": "0.007%",
+      "requiredPrincipal": 400000,
+      "interest": 699900,
+      "total": 1099900
+    },
+    {
+      "week": 5,
+      "principalBefore": 9999250000,
+      "rate": "0.009%",
+      "requiredPrincipal": 800000,
+      "interest": 899900,
+      "total": 1699900
+    },
+    {
+      "week": 6,
+      "principalBefore": 9998450000,
+      "rate": "0.011%",
+      "requiredPrincipal": 1600000,
+      "interest": 1099700,
+      "total": 2699700
+    },
+    {
+      "week": 7,
+      "principalBefore": 9996850000,
+      "rate": "0.013%",
+      "requiredPrincipal": 3200000,
+      "interest": 1299200,
+      "total": 4499200
+    },
+    {
+      "week": 8,
+      "principalBefore": 9993650000,
+      "rate": "0.015%",
+      "requiredPrincipal": 6400000,
+      "interest": 1498100,
+      "total": 7898100
+    },
+    {
+      "week": 9,
+      "principalBefore": 9987250000,
+      "rate": "0.017%",
+      "requiredPrincipal": 12800000,
+      "interest": 1695700,
+      "total": 14495700
+    },
+    {
+      "week": 10,
+      "principalBefore": 9974450000,
+      "rate": "0.019%",
+      "requiredPrincipal": 25600000,
+      "interest": 1890300,
+      "total": 27490300
+    },
+    {
+      "week": 11,
+      "principalBefore": 9948850000,
+      "rate": "0.021%",
+      "requiredPrincipal": 51200000,
+      "interest": 2078500,
+      "total": 53278500
+    },
+    {
+      "week": 12,
+      "principalBefore": 9897650000,
+      "rate": "0.023%",
+      "requiredPrincipal": 102400000,
+      "interest": 2252900,
+      "total": 104652900
+    },
+    {
+      "week": 13,
+      "principalBefore": 9795250000,
+      "rate": "0.025%",
+      "requiredPrincipal": 204800000,
+      "interest": 2397600,
+      "total": 207197600
+    },
+    {
+      "week": 14,
+      "principalBefore": 9590450000,
+      "rate": "0.027%",
+      "requiredPrincipal": 409600000,
+      "interest": 2478800,
+      "total": 412078800
+    },
+    {
+      "week": 15,
+      "principalBefore": 9180850000,
+      "rate": "0.029%",
+      "requiredPrincipal": 819200000,
+      "interest": 2424900,
+      "total": 821624900
+    },
+    {
+      "week": 16,
+      "principalBefore": 8361650000,
+      "rate": "0.031%",
+      "requiredPrincipal": 1638400000,
+      "interest": 2084200,
+      "total": 1640484200
+    },
+    {
+      "week": 17,
+      "principalBefore": 6723250000,
+      "rate": "0.033%",
+      "requiredPrincipal": 3276800000,
+      "interest": 1137300,
+      "total": 3277937300
+    },
+    {
+      "week": 18,
+      "principalBefore": 3446450000,
+      "rate": "0.035%",
+      "requiredPrincipal": 3446450000,
+      "interest": 0,
+      "total": 3446450000
+    }
+  ],
+  "businesses": [
+    {
+      "id": "stand",
+      "name": "중고 판매대",
+      "cost": 100000,
+      "income": 5000,
+      "weeklyPercent": 5,
+      "breakEvenWeeks": 20,
+      "maximumReceiptsByForcedClear": 90000,
+      "netCashByForcedClear": -10000
+    },
+    {
+      "id": "vending",
+      "name": "자동판매기",
+      "cost": 500000,
+      "income": 20000,
+      "weeklyPercent": 4,
+      "breakEvenWeeks": 25,
+      "maximumReceiptsByForcedClear": 360000,
+      "netCashByForcedClear": -140000
+    },
+    {
+      "id": "online",
+      "name": "온라인 판매점",
+      "cost": 3000000,
+      "income": 90000,
+      "weeklyPercent": 3,
+      "breakEvenWeeks": 34,
+      "maximumReceiptsByForcedClear": 1620000,
+      "netCashByForcedClear": -1380000
+    },
+    {
+      "id": "unmanned",
+      "name": "무인 매장",
+      "cost": 30000000,
+      "income": 600000,
+      "weeklyPercent": 2,
+      "breakEvenWeeks": 50,
+      "maximumReceiptsByForcedClear": 10800000,
+      "netCashByForcedClear": -19200000
+    },
+    {
+      "id": "rental",
+      "name": "소형 임대 점포",
+      "cost": 300000000,
+      "income": 3000000,
+      "weeklyPercent": 1,
+      "breakEvenWeeks": 100,
+      "maximumReceiptsByForcedClear": 54000000,
+      "netCashByForcedClear": -246000000
+    }
+  ],
+  "allBusinessCost": 1668000000,
+  "allBusinessIncome": 18575000,
+  "realizedTradesByMarket": [
+    {
+      "market": "street",
+      "trades": 4714,
+      "medianPurchase": 186300,
+      "medianProfit": 51200,
+      "lossShare": 0.3101
+    },
+    {
+      "market": "computers",
+      "trades": 1182,
+      "medianPurchase": 876000,
+      "medianProfit": 497500,
+      "lossShare": 0.3096
+    },
+    {
+      "market": "instruments",
+      "trades": 2532,
+      "medianPurchase": 2518700,
+      "medianProfit": 1663300,
+      "lossShare": 0.2958
+    },
+    {
+      "market": "cars",
+      "trades": 2734,
+      "medianPurchase": 22175100,
+      "medianProfit": 14232300,
+      "lossShare": 0.2721
+    },
+    {
+      "market": "property",
+      "trades": 4111,
+      "medianPurchase": 206059500,
+      "medianProfit": 98909100,
+      "lossShare": 0.3077
+    },
+    {
+      "market": "auction",
+      "trades": 1885,
+      "medianPurchase": 1400000000,
+      "medianProfit": 478893900,
+      "lossShare": 0.322
+    }
+  ],
+  "population": [
+    {
+      "market": "street",
+      "name": "중고 장터",
+      "min": 10000,
+      "max": 500000,
+      "samples": 4000,
+      "medianMarketToAsking": 1.5684,
+      "instantProfitableShare": 0.4405
+    },
+    {
+      "market": "computers",
+      "name": "컴퓨터시장",
+      "min": 800000,
+      "max": 1200000,
+      "samples": 4000,
+      "medianMarketToAsking": 1.5682,
+      "instantProfitableShare": 0.456
+    },
+    {
+      "market": "instruments",
+      "name": "악기시장",
+      "min": 1500000,
+      "max": 10000000,
+      "samples": 4000,
+      "medianMarketToAsking": 1.5682,
+      "instantProfitableShare": 0.451
+    },
+    {
+      "market": "cars",
+      "name": "중고차시장",
+      "min": 10000000,
+      "max": 80000000,
+      "samples": 4000,
+      "medianMarketToAsking": 1.5152,
+      "instantProfitableShare": 0.435
+    },
+    {
+      "market": "property",
+      "name": "부동산 시장",
+      "min": 100000000,
+      "max": 1000000000,
+      "samples": 4000,
+      "medianMarketToAsking": 1.3636,
+      "instantProfitableShare": 0.4338
+    },
+    {
+      "market": "auction",
+      "name": "고가 경매시장",
+      "min": 1000000000,
+      "max": 10000000000,
+      "samples": 4000,
+      "medianMarketToAsking": 1.3636,
+      "instantProfitableShare": 0.43
+    }
+  ],
+  "strategies": [
+    {
+      "id": "work",
+      "name": "창고 분류만",
+      "jobOnly": true,
+      "runs": 100,
+      "cleared": 0,
+      "bankrupt": 100,
+      "medianBankruptWeek": 6,
+      "medianClearWeek": null,
+      "lastWeekP10": 6,
+      "lastWeekMedian": 6,
+      "lastWeekP90": 6,
+      "medianRealizedTradeProfit": null,
+      "lossShare": null,
+      "marketEntry": [
+        {
+          "market": "street",
+          "runs": 0,
+          "medianWeek": null
+        },
+        {
+          "market": "computers",
+          "runs": 0,
+          "medianWeek": null
+        },
+        {
+          "market": "instruments",
+          "runs": 0,
+          "medianWeek": null
+        },
+        {
+          "market": "cars",
+          "runs": 0,
+          "medianWeek": null
+        },
+        {
+          "market": "property",
+          "runs": 0,
+          "medianWeek": null
+        },
+        {
+          "market": "auction",
+          "runs": 0,
+          "medianWeek": null
+        }
+      ]
+    },
+    {
+      "id": "serial",
+      "name": "보수적 순차 판매",
+      "fraction": 0.6,
+      "parallel": false,
+      "runs": 100,
+      "cleared": 41,
+      "bankrupt": 59,
+      "medianBankruptWeek": 5,
+      "medianClearWeek": 14,
+      "lastWeekP10": 2,
+      "lastWeekMedian": 12,
+      "lastWeekP90": 16,
+      "medianRealizedTradeProfit": 1756800,
+      "lossShare": 0.2902,
+      "marketEntry": [
+        {
+          "market": "street",
+          "runs": 100,
+          "medianWeek": 1
+        },
+        {
+          "market": "computers",
+          "runs": 83,
+          "medianWeek": 2
+        },
+        {
+          "market": "instruments",
+          "runs": 71,
+          "medianWeek": 2
+        },
+        {
+          "market": "cars",
+          "runs": 63,
+          "medianWeek": 5
+        },
+        {
+          "market": "property",
+          "runs": 60,
+          "medianWeek": 7
+        },
+        {
+          "market": "auction",
+          "runs": 50,
+          "medianWeek": 11
+        }
+      ]
+    },
+    {
+      "id": "parallel",
+      "name": "성장형 병렬 판매",
+      "fraction": 0.9,
+      "parallel": true,
+      "counter": true,
+      "runs": 100,
+      "cleared": 58,
+      "bankrupt": 42,
+      "medianBankruptWeek": 5,
+      "medianClearWeek": 12,
+      "lastWeekP10": 2,
+      "lastWeekMedian": 11,
+      "lastWeekP90": 16,
+      "medianRealizedTradeProfit": 2633000,
+      "lossShare": 0.3012,
+      "marketEntry": [
+        {
+          "market": "street",
+          "runs": 100,
+          "medianWeek": 1
+        },
+        {
+          "market": "computers",
+          "runs": 88,
+          "medianWeek": 1
+        },
+        {
+          "market": "instruments",
+          "runs": 82,
+          "medianWeek": 2
+        },
+        {
+          "market": "cars",
+          "runs": 78,
+          "medianWeek": 4
+        },
+        {
+          "market": "property",
+          "runs": 77,
+          "medianWeek": 6
+        },
+        {
+          "market": "auction",
+          "runs": 76,
+          "medianWeek": 8
+        }
+      ]
+    },
+    {
+      "id": "instant",
+      "name": "흥정 후 즉시 판매",
+      "fraction": 0.8,
+      "instant": true,
+      "runs": 100,
+      "cleared": 0,
+      "bankrupt": 100,
+      "medianBankruptWeek": 2,
+      "medianClearWeek": null,
+      "lastWeekP10": 1,
+      "lastWeekMedian": 2,
+      "lastWeekP90": 6,
+      "medianRealizedTradeProfit": 32100,
+      "lossShare": 0.3484,
+      "marketEntry": [
+        {
+          "market": "street",
+          "runs": 100,
+          "medianWeek": 1
+        },
+        {
+          "market": "computers",
+          "runs": 50,
+          "medianWeek": 1
+        },
+        {
+          "market": "instruments",
+          "runs": 24,
+          "medianWeek": 2
+        },
+        {
+          "market": "cars",
+          "runs": 11,
+          "medianWeek": 4
+        },
+        {
+          "market": "property",
+          "runs": 6,
+          "medianWeek": 6
+        },
+        {
+          "market": "auction",
+          "runs": 1,
+          "medianWeek": 12
+        }
+      ]
+    },
+    {
+      "id": "business",
+      "name": "보수적 판매 + 소액 사업",
+      "fraction": 0.6,
+      "parallel": false,
+      "business": true,
+      "runs": 100,
+      "cleared": 30,
+      "bankrupt": 70,
+      "medianBankruptWeek": 5,
+      "medianClearWeek": 14,
+      "lastWeekP10": 2,
+      "lastWeekMedian": 9,
+      "lastWeekP90": 16,
+      "medianRealizedTradeProfit": 758100,
+      "lossShare": 0.2831,
+      "marketEntry": [
+        {
+          "market": "street",
+          "runs": 100,
+          "medianWeek": 1
+        },
+        {
+          "market": "computers",
+          "runs": 65,
+          "medianWeek": 3
+        },
+        {
+          "market": "instruments",
+          "runs": 59,
+          "medianWeek": 3
+        },
+        {
+          "market": "cars",
+          "runs": 50,
+          "medianWeek": 5
+        },
+        {
+          "market": "property",
+          "runs": 48,
+          "medianWeek": 7
+        },
+        {
+          "market": "auction",
+          "runs": 36,
+          "medianWeek": 11
+        }
+      ]
+    }
+  ]
+}

@@ -64,3 +64,7 @@ Python Playwright와 Chromium이 필요합니다. `SCREEN_BASE_URL`, `CHROMIUM_P
 모든 화폐는 100원 단위로 반올림하며 입력 미리보기와 실제 지급/차감 금액을 일치시킵니다.
 
 특별 매물 표시, 매입·거래·감정·수리 자동 성장, 구매 후 주간 고정 수입을 받는 사업을 제공합니다. 사업 수입은 주간 정산 시작 시 한 번 지급합니다.
+
+## 경제 밸런스 분석
+
+`npm run audit:economy`는 현재 게임 엔진으로 100개 시드 × 5개 자동 전략을 분석합니다. 결과와 원자료는 `work/economy-audit-results/`에 생성하며 게임 수치/플레이어 저장은 변경하지 않습니다. `AUDIT_SEEDS`와 `AUDIT_OUTPUT`으로 실행 규모와 출력 위치를 지정합니다. [1차 점검 결과와 조정 후보](docs/design/economy/BALANCE_AUDIT.md)를 참고하세요.
