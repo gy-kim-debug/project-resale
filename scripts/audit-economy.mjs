@@ -1,8 +1,29 @@
 import { build } from 'esbuild';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readdir, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import process from 'node:process';
 
+const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
+  encoding: 'utf8',
+}).trim();
+const fingerprint = createHash('sha256');
+for (const entry of (
+  await readdir('src', { recursive: true, withFileTypes: true })
+)
+  .filter((e) => e.isFile())
+  .sort((a, b) =>
+    join(a.parentPath, a.name).localeCompare(join(b.parentPath, b.name)),
+  )) {
+  const path = join(entry.parentPath, entry.name);
+  fingerprint
+    .update(path)
+    .update('\0')
+    .update(await readFile(path))
+    .update('\0');
+}
+const sourceSnapshotHash = fingerprint.digest('hex');
 // Analysis only. Runs the production engine; never writes a player's save or changes rules.
 await mkdir('work', { recursive: true });
 await build({
@@ -13,6 +34,7 @@ await build({
     'src/domain/purchaseBargaining.ts',
     'src/domain/auction.ts',
     'src/domain/instantSale.ts',
+    'src/domain/money.ts',
     'src/content/markets.ts',
     'src/content/businesses.ts',
     'src/content/rules.ts',
@@ -32,6 +54,7 @@ const {
   settlementAmount,
   weeklyRateText,
 } = await import('../work/economy-audit/domain/debt.js');
+const { moneyRatio } = await import('../work/economy-audit/domain/money.js');
 const { actionsLeft } = await import('../work/economy-audit/domain/game.js');
 const { canPurchaseOffer } =
   await import('../work/economy-audit/domain/purchaseBargaining.js');
@@ -101,7 +124,7 @@ for (let seed = 1; seed <= 500; seed++) {
     });
   }
 }
-const strategies = [
+let strategies = [
   { id: 'work', name: '창고 분류만', jobOnly: true },
   { id: 'serial', name: '보수적 순차 판매', fraction: 0.6, parallel: false },
   {
@@ -120,6 +143,36 @@ const strategies = [
     business: true,
   },
 ];
+const requested = process.env.AUDIT_STRATEGIES?.split(',');
+if (requested?.includes('parallel-jobs'))
+  strategies.push({
+    id: 'parallel-jobs',
+    name: '병렬 판매 + 대기 중 아르바이트',
+    fraction: 0.9,
+    parallel: true,
+    counter: true,
+    workWhileWaiting: true,
+  });
+for (const id of ['parallel-80', 'parallel-80-jobs']) {
+  if (requested?.includes(id))
+    strategies.push({
+      id,
+      name:
+        id === 'parallel-80'
+          ? '80% 등록 병렬 판매'
+          : '80% 등록 병렬 판매 + 대기 중 아르바이트',
+      fraction: 0.9,
+      parallel: true,
+      counter: true,
+      askPercent: 80,
+      workWhileWaiting: id.endsWith('-jobs'),
+    });
+}
+if (requested) {
+  if (requested.some((id) => !strategies.some((policy) => policy.id === id)))
+    throw Error('Unknown audit strategy');
+  strategies = strategies.filter((policy) => requested.includes(policy.id));
+}
 const runs = [],
   weeks = [],
   trades = [];
@@ -173,7 +226,10 @@ function choose(g, policy) {
     return {
       type: 'post',
       id: loose.id,
-      price: Math.max(100, marketValue(g, loose)),
+      price: Math.max(
+        100,
+        moneyRatio(marketValue(g, loose), policy.askPercent ?? 100),
+      ),
     };
   }
   if (
@@ -182,7 +238,9 @@ function choose(g, policy) {
       g.sales.length >= listingLimit(g) ||
       actionsLeft(g) < 3)
   )
-    return { type: 'wait' };
+    return policy.workWhileWaiting
+      ? { type: 'job', id: 'warehouse' }
+      : { type: 'wait' };
   if (actionsLeft(g) < (policy.instant ? 2 : 4))
     return { type: 'job', id: 'warehouse' };
   const budget = g.cash * policy.fraction;
@@ -233,6 +291,7 @@ for (const policy of strategies) {
           purchases: 0,
           sales: 0,
           actions: 0,
+          expiredListings: 0,
           purchaseSpend: 0,
           saleReceipts: 0,
           jobIncome: 0,
@@ -268,9 +327,27 @@ for (const policy of strategies) {
           market: item.marketId ?? 'street',
           purchase: paid,
           fees: 0,
+          listedAt: null,
+          matchedInquiryWait: null,
+          saleWait: null,
         });
         milestones[item.marketId ?? 'street'] ??= paymentWeek(before);
       }
+      if (command.type === 'post')
+        costs.get(command.id).listedAt = g.sales.find(
+          (s) => s.itemId === command.id,
+        ).created;
+      if (!before.inquiries.length && g.inquiries.length) {
+        const matched = g.sales.find((s) => s.id === g.inquiries[0].saleId);
+        const record = costs.get(matched.itemId);
+        record.matchedInquiryWait = (g.minute - matched.created) / 480;
+      }
+      row.expiredListings += before.sales.filter(
+        (s) =>
+          !g.sales.some((next) => next.id === s.id) &&
+          g.inventory.some((item) => item.id === s.itemId) &&
+          command.type !== 'cancel',
+      ).length;
       if (['check', 'repair'].includes(command.type)) {
         const fee = before.cash - g.cash;
         row.careFees += fee;
@@ -288,6 +365,8 @@ for (const policy of strategies) {
             : command.id;
         const receipt = g.cash - before.cash,
           record = costs.get(id);
+        if (record.listedAt !== null)
+          record.saleWait = (g.minute - record.listedAt) / 480;
         row.sales++;
         row.saleReceipts += receipt;
         explained += receipt;
@@ -372,9 +451,8 @@ for (const policy of strategies) {
   process.stdout.write(`${policy.id}: ${seeds} runs completed\n`);
 }
 const summary = {
-  sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], {
-    encoding: 'utf8',
-  }).trim(),
+  sourceCommit,
+  sourceSnapshotHash,
   seedsPerStrategy: seeds,
   populationSeeds: 500,
   rules: { ...RULES, actionsPerWeek: 20 },
@@ -431,6 +509,15 @@ const summary = {
     return {
       ...p,
       runs: r.length,
+      medianMatchedInquiryWait: quantile(
+        t
+          .filter((x) => x.matchedInquiryWait !== null)
+          .map((x) => x.matchedInquiryWait),
+        0.5,
+      ),
+      expiredListings: weeks
+        .filter((w) => w.strategy === p.id)
+        .reduce((n, w) => n + w.expiredListings, 0),
       cleared: r.filter((x) => x.status === 'cleared').length,
       bankrupt: r.filter((x) => x.status === 'bankrupt').length,
       medianBankruptWeek: quantile(

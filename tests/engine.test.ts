@@ -1,3 +1,5 @@
+import { SALE_FLOW } from '../src/content/saleFlow';
+import { saleInquiryChance } from '../src/domain/saleFlow';
 import { BUSINESS_LIMIT_PER_TYPE, BUSINESSES } from '../src/content/businesses';
 import {
   pendingBusinessIncome,
@@ -477,7 +479,6 @@ for (const seed of [1, 42, 210])
       }),
     );
     assert.ok(g.status === 'cleared' || g.status === 'bankrupt');
-    assert.ok(commands > 40);
     if (g.status === 'bankrupt') {
       assert.ok(interestPending(g));
       assert.ok(g.cash < settlementAmount(g));
@@ -535,8 +536,14 @@ test('action costs distinguish major commands from free operations; inquiries st
     'posting itself does not generate an early inquiry',
   );
   assert.equal(g.sales[0].created, g.minute);
-  assert.equal(g.sales[0].expires - g.minute, 48 * 60);
-  assert.equal(g.sales[0].nextCheck - g.minute, ACTION_TICK);
+  assert.equal(
+    g.sales[0].expires - g.minute,
+    ACTION_TICK * SALE_FLOW.listingLifetimeActions,
+  );
+  assert.equal(
+    g.sales[0].nextCheck - g.minute,
+    ACTION_TICK * SALE_FLOW.firstInquiryDelayActions,
+  );
   cases.push({
     game: g,
     command: { type: 'cancel', id: g.inventory[0].id },
@@ -2774,4 +2781,59 @@ test('retired neighbor offers never spawn and legacy pending offers clear withou
     parseSave({ version: 2, game: repair, favoriteIds: [] }).game.event?.type,
     'repair',
   );
+});
+
+test('sale inquiry demand rewards discounted listings and falls at each public market-price band', () => {
+  for (const [price, expected] of [
+    [8500, 0.85],
+    [8600, 0.6],
+    [11000, 0.6],
+    [11100, 0.35],
+    [13500, 0.35],
+    [13600, 0.15],
+    [16000, 0.15],
+    [16100, 0.05],
+  ] as const) {
+    assert.equal(saleInquiryChance(price, 10000), expected);
+  }
+  assert.equal(saleInquiryChance(100, 0), 0.05);
+  assert.ok(saleInquiryChance(8000, 10000) > saleInquiryChance(10000, 10000));
+  assert.ok(saleInquiryChance(10000, 10000) > saleInquiryChance(12000, 10000));
+});
+
+test('new posts wait two later actions, retries are spaced, and jobs advance the same sale window', () => {
+  let g = owned();
+  g = run(g, { type: 'post', id: g.inventory[0].id, price: 1000 });
+  assert.equal(g.inquiries.length, 0);
+  assert.equal(g.sales[0].nextCheck, g.sales[0].created + 2 * ACTION_TICK);
+  assert.equal(
+    g.sales[0].expires,
+    g.sales[0].created + SALE_FLOW.listingLifetimeActions * ACTION_TICK,
+  );
+  const deadline = g.sales[0].nextCheck;
+  g = run(g, { type: 'job', id: 'warehouse' });
+  assert.equal(g.inquiries.length, 0);
+  assert.equal(g.sales[0].nextCheck, deadline);
+  assert.equal(g.minute, deadline - ACTION_TICK);
+  const probe = owned();
+  probe.seed = 1000;
+  probe.inventory[0].value = 1000;
+  probe.sales = [
+    {
+      id: 'slow-probe',
+      itemId: probe.inventory[0].id,
+      price: 100000,
+      created: 0,
+      expires: 6 * ACTION_TICK,
+      nextCheck: ACTION_TICK,
+    },
+  ];
+  const failed = run(probe, { type: 'wait' });
+  assert.equal(failed.inquiries.length, 0);
+  assert.equal(failed.sales[0].nextCheck, failed.minute + 2 * ACTION_TICK);
+  const gap = run(failed, { type: 'job', id: 'warehouse' });
+  assert.equal(gap.inquiries.length, 0);
+  assert.equal(gap.sales[0].nextCheck, failed.sales[0].nextCheck);
+  assert.equal(gap.seed, failed.seed);
+  assert.equal(gap.cash, failed.cash + 38000);
 });

@@ -1,3 +1,5 @@
+import { SALE_FLOW } from '../content/saleFlow';
+import { saleInquiryChance } from './saleFlow';
 import { ABILITIES } from '../content/abilities';
 import { abilityLevel } from './abilities';
 import {
@@ -304,12 +306,11 @@ function inquiries(g: Game) {
   if (g.inquiries.length || g.status !== 'playing') return;
   for (const sale of g.sales) {
     if (sale.nextCheck > g.minute) continue;
-    sale.nextCheck = g.minute + ACTION_TICK;
+    sale.nextCheck = g.minute + ACTION_TICK * SALE_FLOW.retryDelayActions;
     const item = g.inventory.find((i) => i.id === sale.itemId);
     if (!item) continue;
     const value = marketValue(g, item);
-    const ratio = sale.price / value;
-    if (roll(g) > (ratio <= 1.1 ? 0.85 : ratio <= 1.6 ? 0.5 : 0.2)) continue;
+    if (roll(g) > saleInquiryChance(sale.price, value)) continue;
     for (let n = 0; n < 2; n++) {
       const max = Math.max(
         MONEY_UNIT,
@@ -693,8 +694,10 @@ export function execute(original: Game, command: Command): Result {
           itemId: command.id,
           price,
           created: g.minute + ACTION_TICK,
-          expires: g.minute + ACTION_TICK + 2880,
-          nextCheck: g.minute + ACTION_TICK * 2,
+          expires:
+            g.minute + ACTION_TICK * (1 + SALE_FLOW.listingLifetimeActions),
+          nextCheck:
+            g.minute + ACTION_TICK * (1 + SALE_FLOW.firstInquiryDelayActions),
         };
         g.sales.push(sale);
         message = `판매 글 등록: ${won(price)}.`;

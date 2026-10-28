@@ -132,3 +132,5 @@
 - [현재 우편 목록과 삭제한 이웃 제안](ui/MAILBOX.md)
 
 - [경제 밸런스 1차 점검과 조정 후보](economy/BALANCE_AUDIT.md)
+
+- [직접 플레이 피드백에 따른 판매 유동성 조정](economy/LIQUIDITY_TUNING.md)

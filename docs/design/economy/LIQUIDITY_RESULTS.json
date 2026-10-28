@@ -1,0 +1,464 @@
+{
+  "before": {
+    "sourceCommit": "bb9556936836e77212c62d6b125c7acccc3f3a0a",
+    "sourceSnapshotHash": null,
+    "seedsPerStrategy": 30,
+    "listingLifetimeActions": 6,
+    "strategies": [
+      {
+        "id": "parallel",
+        "name": "성장형 병렬 판매",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "runs": 30,
+        "expiredListings": 27,
+        "cleared": 15,
+        "bankrupt": 15,
+        "medianBankruptWeek": 15,
+        "medianClearWeek": 12,
+        "lastWeekP10": 2,
+        "lastWeekMedian": 12,
+        "lastWeekP90": 17,
+        "medianRealizedTradeProfit": 3518400,
+        "lossShare": 0.3027,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 27,
+            "medianWeek": 1
+          },
+          {
+            "market": "instruments",
+            "runs": 26,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 25,
+            "medianWeek": 4
+          },
+          {
+            "market": "property",
+            "runs": 24,
+            "medianWeek": 5
+          },
+          {
+            "market": "auction",
+            "runs": 23,
+            "medianWeek": 8
+          }
+        ],
+        "medianMatchedInquiryWait": 1
+      },
+      {
+        "id": "parallel-jobs",
+        "name": "병렬 판매 + 대기 중 아르바이트",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "workWhileWaiting": true,
+        "runs": 30,
+        "expiredListings": 28,
+        "cleared": 19,
+        "bankrupt": 11,
+        "medianBankruptWeek": 7,
+        "medianClearWeek": 11,
+        "lastWeekP10": 3,
+        "lastWeekMedian": 10,
+        "lastWeekP90": 15,
+        "medianRealizedTradeProfit": 2578300,
+        "lossShare": 0.2867,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 26,
+            "medianWeek": 1
+          },
+          {
+            "market": "instruments",
+            "runs": 26,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 24,
+            "medianWeek": 4
+          },
+          {
+            "market": "property",
+            "runs": 23,
+            "medianWeek": 5
+          },
+          {
+            "market": "auction",
+            "runs": 23,
+            "medianWeek": 8
+          }
+        ],
+        "medianMatchedInquiryWait": 1
+      }
+    ]
+  },
+  "initialTrial": {
+    "sourceCommit": "bb9556936836e77212c62d6b125c7acccc3f3a0a",
+    "sourceSnapshotHash": "aaba64f3f2792e87436454be13f996f342a9249a1299c53731fad9fde7a876fa",
+    "seedsPerStrategy": 30,
+    "listingLifetimeActions": 6,
+    "strategies": [
+      {
+        "id": "parallel",
+        "name": "성장형 병렬 판매",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "runs": 30,
+        "expiredListings": 521,
+        "cleared": 8,
+        "bankrupt": 22,
+        "medianBankruptWeek": 4,
+        "medianClearWeek": 14,
+        "lastWeekP10": 2,
+        "lastWeekMedian": 11,
+        "lastWeekP90": 16,
+        "medianRealizedTradeProfit": 917700,
+        "lossShare": 0.2864,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 24,
+            "medianWeek": 2
+          },
+          {
+            "market": "instruments",
+            "runs": 24,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 19,
+            "medianWeek": 5
+          },
+          {
+            "market": "property",
+            "runs": 16,
+            "medianWeek": 7
+          },
+          {
+            "market": "auction",
+            "runs": 12,
+            "medianWeek": 10
+          }
+        ],
+        "medianMatchedInquiryWait": 2
+      },
+      {
+        "id": "parallel-jobs",
+        "name": "병렬 판매 + 대기 중 아르바이트",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "workWhileWaiting": true,
+        "runs": 30,
+        "expiredListings": 398,
+        "cleared": 4,
+        "bankrupt": 26,
+        "medianBankruptWeek": 6,
+        "medianClearWeek": 13,
+        "lastWeekP10": 2,
+        "lastWeekMedian": 7,
+        "lastWeekP90": 14,
+        "medianRealizedTradeProfit": 721400,
+        "lossShare": 0.3024,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 27,
+            "medianWeek": 2
+          },
+          {
+            "market": "instruments",
+            "runs": 22,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 15,
+            "medianWeek": 5
+          },
+          {
+            "market": "property",
+            "runs": 12,
+            "medianWeek": 7
+          },
+          {
+            "market": "auction",
+            "runs": 9,
+            "medianWeek": 10
+          }
+        ],
+        "medianMatchedInquiryWait": 2
+      }
+    ]
+  },
+  "final": {
+    "sourceCommit": "bb9556936836e77212c62d6b125c7acccc3f3a0a",
+    "sourceSnapshotHash": "e85c7d00f3d852633916c4fa69ff9c5cfe35f31672fd7df539e023515da905f8",
+    "seedsPerStrategy": 30,
+    "listingLifetimeActions": 8,
+    "strategies": [
+      {
+        "id": "parallel",
+        "name": "성장형 병렬 판매",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "runs": 30,
+        "expiredListings": 164,
+        "cleared": 7,
+        "bankrupt": 23,
+        "medianBankruptWeek": 3,
+        "medianClearWeek": 11,
+        "lastWeekP10": 1,
+        "lastWeekMedian": 4,
+        "lastWeekP90": 14,
+        "medianRealizedTradeProfit": 467600,
+        "lossShare": 0.2994,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 26,
+            "medianWeek": 2
+          },
+          {
+            "market": "instruments",
+            "runs": 17,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 11,
+            "medianWeek": 4
+          },
+          {
+            "market": "property",
+            "runs": 10,
+            "medianWeek": 6
+          },
+          {
+            "market": "auction",
+            "runs": 10,
+            "medianWeek": 9
+          }
+        ],
+        "medianMatchedInquiryWait": 3
+      },
+      {
+        "id": "parallel-jobs",
+        "name": "병렬 판매 + 대기 중 아르바이트",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "workWhileWaiting": true,
+        "runs": 30,
+        "expiredListings": 213,
+        "cleared": 6,
+        "bankrupt": 24,
+        "medianBankruptWeek": 5,
+        "medianClearWeek": 13,
+        "lastWeekP10": 2,
+        "lastWeekMedian": 8,
+        "lastWeekP90": 16,
+        "medianRealizedTradeProfit": 676400,
+        "lossShare": 0.3126,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 26,
+            "medianWeek": 2
+          },
+          {
+            "market": "instruments",
+            "runs": 23,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 17,
+            "medianWeek": 4
+          },
+          {
+            "market": "property",
+            "runs": 14,
+            "medianWeek": 7
+          },
+          {
+            "market": "auction",
+            "runs": 12,
+            "medianWeek": 11
+          }
+        ],
+        "medianMatchedInquiryWait": 3
+      },
+      {
+        "id": "parallel-80",
+        "name": "80% 등록 병렬 판매",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "askPercent": 80,
+        "workWhileWaiting": false,
+        "runs": 30,
+        "expiredListings": 26,
+        "cleared": 1,
+        "bankrupt": 29,
+        "medianBankruptWeek": 4,
+        "medianClearWeek": 17,
+        "lastWeekP10": 1,
+        "lastWeekMedian": 4,
+        "lastWeekP90": 14,
+        "medianRealizedTradeProfit": 272100,
+        "lossShare": 0.3135,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 23,
+            "medianWeek": 2
+          },
+          {
+            "market": "instruments",
+            "runs": 16,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 10,
+            "medianWeek": 3
+          },
+          {
+            "market": "property",
+            "runs": 6,
+            "medianWeek": 6
+          },
+          {
+            "market": "auction",
+            "runs": 4,
+            "medianWeek": 10
+          }
+        ],
+        "medianMatchedInquiryWait": 2
+      },
+      {
+        "id": "parallel-80-jobs",
+        "name": "80% 등록 병렬 판매 + 대기 중 아르바이트",
+        "fraction": 0.9,
+        "parallel": true,
+        "counter": true,
+        "askPercent": 80,
+        "workWhileWaiting": true,
+        "runs": 30,
+        "expiredListings": 39,
+        "cleared": 1,
+        "bankrupt": 29,
+        "medianBankruptWeek": 5,
+        "medianClearWeek": 17,
+        "lastWeekP10": 2,
+        "lastWeekMedian": 5,
+        "lastWeekP90": 16,
+        "medianRealizedTradeProfit": 390600,
+        "lossShare": 0.3033,
+        "marketEntry": [
+          {
+            "market": "street",
+            "runs": 30,
+            "medianWeek": 1
+          },
+          {
+            "market": "computers",
+            "runs": 23,
+            "medianWeek": 2
+          },
+          {
+            "market": "instruments",
+            "runs": 20,
+            "medianWeek": 2
+          },
+          {
+            "market": "cars",
+            "runs": 12,
+            "medianWeek": 4
+          },
+          {
+            "market": "property",
+            "runs": 11,
+            "medianWeek": 8
+          },
+          {
+            "market": "auction",
+            "runs": 8,
+            "medianWeek": 11
+          }
+        ],
+        "medianMatchedInquiryWait": 2
+      }
+    ],
+    "matching": {
+      "firstInquiryDelayActions": 2,
+      "retryDelayActions": 2,
+      "priceBands": [
+        {
+          "maxRatio": 0.85,
+          "chance": 0.85
+        },
+        {
+          "maxRatio": 1.1,
+          "chance": 0.6
+        },
+        {
+          "maxRatio": 1.35,
+          "chance": 0.35
+        },
+        {
+          "maxRatio": 1.6,
+          "chance": 0.15
+        }
+      ],
+      "overpricedChance": 0.05
+    }
+  }
+}
