@@ -20,8 +20,22 @@ export type IconName =
   | 'chair'
   | 'camera'
   | 'mail'
-  | 'settings';
+  | 'settings'
+  | 'search'
+  | 'music'
+  | 'car'
+  | 'building'
+  | 'gavel'
+  | 'gift';
 const paths: Record<IconName, string> = {
+  search: 'M21 21l-5-5M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14Z',
+  music:
+    'M9 17V5l11-2v12M9 8l11-2M9 17a3 3 0 1 1-3-3c1.7 0 3 1.3 3 3Zm11-2a3 3 0 1 1-3-3c1.7 0 3 1.3 3 3Z',
+  car: 'M3 16V10l3-6h12l3 6v6H3Zm0-6h18M5 16v4m14-4v4M6 13h2m8 0h2',
+  building:
+    'M4 21V3h11v18M15 9h5v12M2 21h20M7 7h1m3 0h1M7 11h1m3 0h1M7 15h1m3 0h1M8 21v-3h3v3',
+  gavel: 'm14 3 7 7-3 3-7-7 3-3ZM5 12l7 7-3 3-7-7 3-3Zm3 3 7-7M12 22h10',
+  gift: 'M3 8h18v4H3V8Zm2 4v9h14v-9M12 8v13M12 8H8a3 3 0 1 1 3-3l1 3Zm0 0h4a3 3 0 1 0-3-3l-1 3Z',
   mail: 'M3 5h18v14H3V5Zm0 1 9 7 9-7',
   settings:
     'M10 2h4l1 3 3 1 3 3-2 3 2 3-3 3-3 1-1 3h-4l-1-3-3-1-3-3 2-3-2-3 3-3 3-1 1-3Zm2 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z',

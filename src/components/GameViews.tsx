@@ -1,3 +1,8 @@
+import {
+  useMarketUi,
+  DEFAULT_MARKET_FILTERS,
+  type MarketFilters,
+} from '../app/marketUi';
 import { TraderProfile } from './TraderProfile';
 import { ItemCodex } from './ItemCodex';
 import { ABILITIES } from '../content/abilities';
@@ -18,7 +23,7 @@ import { TradeChat } from './TradeChat';
 import { ItemTags, ItemFindings } from './ItemTags';
 import { mailboxLogs, unreadCount } from '../app/notifications';
 import { useGameStore, type Act } from '../app/store';
-import type { Game, Item, Kind, MarketId } from '../domain/game';
+import type { Game, Item, MarketId } from '../domain/game';
 import { won, weekOf, actionsLeft, durationText } from '../domain/game';
 import {
   level,
@@ -86,11 +91,13 @@ export function Button({
   disabled = false,
   danger = false,
   actionCost = 0,
+  primary = false,
 }: {
   children: ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   danger?: boolean;
+  primary?: boolean;
   actionCost?: number;
 }) {
   const costId = useId();
@@ -98,7 +105,7 @@ export function Button({
     <>
       <button
         aria-describedby={actionCost > 0 ? costId : undefined}
-        className={`action-button${danger ? ' danger' : ''}`}
+        className={`action-button${danger ? ' danger' : ''}${primary ? ' primary' : ''}`}
         onClick={onClick}
         disabled={disabled}
       >
@@ -231,9 +238,8 @@ export function ItemRow({
       <ItemArt item={item} />
       <span className="item-row-label">
         <strong>{item.title}</strong>
-        <small>
-          {item.kind} · {detail}
-        </small>
+        <small>{item.kind}</small>
+        <span className="item-row-price">{detail}</span>
         <ItemTags item={item} />
         {comparison}
       </span>
@@ -330,69 +336,87 @@ export function DebtView({
         <small>남은 총 채무</small>
         <strong>{won(g.principal + g.interest)}</strong>
       </div>
-      <dl>
+      <div className="settlement-summary">
         <div>
-          <dt>
-            {g.businessIncomeWeek === paymentWeek(g)
-              ? '이번 주 수령한 사업 수입'
-              : '정산 시 사업 수입'}
-          </dt>
-          <dd>
-            {won(
-              g.businessIncomeWeek === paymentWeek(g)
-                ? (g.businessIncomeAmount ?? 0)
-                : pendingBusinessIncome(g),
-            )}
-          </dd>
+          <small>남은 의무 원금</small>
+          <strong>{won(required)}</strong>
         </div>
         <div>
-          <dt>원금</dt>
-          <dd>{won(g.principal)}</dd>
+          <small>이번 주 이자</small>
+          <strong>{won(amount)}</strong>
         </div>
         <div>
-          <dt>이번 주 의무 원금</dt>
-          <dd>
-            {won(
-              Math.min(
-                weeklyPrincipalTarget(paymentWeek(g)),
-                g.principal + (g.principalRepaidThisWeek ?? 0),
-              ),
-            )}
-          </dd>
+          <small>정산 필요 금액</small>
+          <strong>{won(settlementAmount(g))}</strong>
         </div>
-        <div>
-          <dt>이번 주 원금 상환</dt>
-          <dd>{won(g.principalRepaidThisWeek ?? 0)}</dd>
-        </div>
-        <div>
-          <dt>남은 의무 원금</dt>
-          <dd>{won(required)}</dd>
-        </div>
-        <div>
-          <dt>이번 정산 필요 금액</dt>
-          <dd>{won(settlementAmount(g))}</dd>
-        </div>
-        <div>
-          <dt>
-            {paymentWeek(g)}주차 이자 · {weeklyRateText(paymentWeek(g))}
-          </dt>
-          <dd>{won(amount)}</dd>
-        </div>
-        <div>
-          <dt>납부 기한</dt>
-          <dd>{due ? '납부 필요' : '이번 주 정산 시'}</dd>
-        </div>
-        <div>
-          <dt>누적 상환</dt>
-          <dd>{won(g.stats.repaid)}</dd>
-        </div>
-        <div>
-          <dt>보유 현금</dt>
-          <dd>{won(g.cash)}</dd>
-        </div>
-      </dl>
+      </div>
+      <details className="debt-breakdown">
+        <summary>채무 상세 내역</summary>
+        <dl>
+          <div>
+            <dt>
+              {g.businessIncomeWeek === paymentWeek(g)
+                ? '이번 주 수령한 사업 수입'
+                : '정산 시 사업 수입'}
+            </dt>
+            <dd>
+              {won(
+                g.businessIncomeWeek === paymentWeek(g)
+                  ? (g.businessIncomeAmount ?? 0)
+                  : pendingBusinessIncome(g),
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>원금</dt>
+            <dd>{won(g.principal)}</dd>
+          </div>
+          <div>
+            <dt>이번 주 의무 원금</dt>
+            <dd>
+              {won(
+                Math.min(
+                  weeklyPrincipalTarget(paymentWeek(g)),
+                  g.principal + (g.principalRepaidThisWeek ?? 0),
+                ),
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>이번 주 원금 상환</dt>
+            <dd>{won(g.principalRepaidThisWeek ?? 0)}</dd>
+          </div>
+          <div>
+            <dt>남은 의무 원금</dt>
+            <dd>{won(required)}</dd>
+          </div>
+          <div>
+            <dt>이번 정산 필요 금액</dt>
+            <dd>{won(settlementAmount(g))}</dd>
+          </div>
+          <div>
+            <dt>
+              {paymentWeek(g)}주차 이자 · {weeklyRateText(paymentWeek(g))}
+            </dt>
+            <dd>{won(amount)}</dd>
+          </div>
+          <div>
+            <dt>납부 기한</dt>
+            <dd>{due ? '납부 필요' : '이번 주 정산 시'}</dd>
+          </div>
+          <div>
+            <dt>누적 상환</dt>
+            <dd>{won(g.stats.repaid)}</dd>
+          </div>
+          <div>
+            <dt>보유 현금</dt>
+            <dd>{won(g.cash)}</dd>
+          </div>
+        </dl>
+      </details>
       {due && required > 0 && (
         <Button
+          primary
           disabled={g.cash < required}
           onClick={() => act({ type: 'repay', amount: required })}
         >
@@ -401,6 +425,7 @@ export function DebtView({
       )}
       {(due || g.interest > 0) && (
         <Button
+          primary
           disabled={
             (due && required > 0) || g.cash < (due ? amount : g.interest)
           }
@@ -505,60 +530,110 @@ export function MarketView({
   free?: boolean;
   marketId?: MarketId;
 }) {
-  const [category, setCategory] = useState<Kind | '전체'>('전체');
+  const filterKey = free ? 'giveaway' : marketId;
+  const { category, onlyFavorites, query, sort } = useMarketUi(
+    (state) => state.filters[filterKey] ?? DEFAULT_MARKET_FILTERS,
+  );
+  const update = (patch: Partial<MarketFilters>) =>
+    useMarketUi.getState().update(filterKey, patch);
   const market = marketDefinition(free ? 'street' : marketId);
   const categories = [...new Set(market.products.map((p) => p.kind))];
   const act = useGameStore((s) => s.act);
   const favorites = useGameStore((s) => s.favoriteIds);
-  const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const listings = g.board.filter(
-    (i) =>
-      marketOf(i) === market.id &&
-      (free ? i.price === 0 : i.price > 0) &&
-      (category === '전체' || i.kind === category) &&
-      (!onlyFavorites || favorites.includes(i.id)),
-  );
+  const listings = g.board
+    .filter(
+      (i) =>
+        marketOf(i) === market.id &&
+        (free ? i.price === 0 : i.price > 0) &&
+        (category === '전체' || i.kind === category) &&
+        (!onlyFavorites || favorites.includes(i.id)) &&
+        i.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === 'low'
+        ? a.price - b.price
+        : sort === 'high'
+          ? b.price - a.price
+          : 0,
+    );
   return (
     <>
-      <p className="market-trend">
-        시장 동향: {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}
-        {g.marketFactor - 100}%
-      </p>
+      <div className="market-search-row">
+        <label className="search-field">
+          <Icon name="search" size={19} />
+          <input
+            aria-label="매물 검색"
+            placeholder="어떤 물건을 찾으세요?"
+            value={query}
+            onChange={(event) => update({ query: event.target.value })}
+          />
+          {query && (
+            <button
+              aria-label="검색 지우기"
+              onClick={() => update({ query: '' })}
+            >
+              ×
+            </button>
+          )}
+        </label>
+        <select
+          aria-label="매물 정렬"
+          value={sort}
+          onChange={(event) =>
+            update({ sort: event.target.value as MarketFilters['sort'] })
+          }
+        >
+          <option value="default">기본순</option>
+          <option value="low">가격 ↑</option>
+          <option value="high">가격 ↓</option>
+        </select>
+      </div>
+      <div className="market-context">
+        <p className="market-trend">
+          {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}
+          {g.marketFactor - 100}%
+        </p>
+        <span className="market-band">
+          {free ? '무료나눔' : `${won(market.min)} ~ ${won(market.max)}`}
+        </span>
+      </div>
       {!free && (
         <>
-          <p className="market-selection">
-            <strong>{market.name}</strong>
-            <span>
-              {won(market.min)} ~ {won(market.max)}
-            </span>
-          </p>
           <div className="filters" aria-label="카테고리">
             {(['전체', ...categories] as const).map((c) => (
               <button
                 key={c}
                 aria-pressed={category === c}
-                onClick={() => setCategory(c)}
+                onClick={() => update({ category: c })}
               >
                 {c}
               </button>
             ))}
           </div>
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={onlyFavorites}
-              onChange={(e) => setOnlyFavorites(e.target.checked)}
-            />
-            관심 매물만 보기
-          </label>
         </>
       )}
-      <Button
-        actionCost={1}
-        onClick={() => act({ type: 'refresh', marketId: market.id })}
-      >
-        새 매물 탐색
-      </Button>
+      <div className="market-list-actions">
+        <div className="market-list-meta">
+          {!free && (
+            <label className="check-label">
+              <input
+                type="checkbox"
+                aria-label="관심 매물만 보기"
+                checked={onlyFavorites}
+                onChange={(e) => update({ onlyFavorites: e.target.checked })}
+              />
+              관심만
+            </label>
+          )}
+          <span>{listings.length}개</span>
+        </div>
+        <Button
+          actionCost={1}
+          onClick={() => act({ type: 'refresh', marketId: market.id })}
+        >
+          새 매물 탐색
+        </Button>
+      </div>
       {listings.length ? (
         listings.map((i) => (
           <ItemRow
@@ -621,7 +696,7 @@ export function ListingView({
         {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
       </Button>
       {item.price > 0 && (
-        <section className="card">
+        <section className="card negotiation-card">
           {!chatOpen && !item.chat ? (
             <Button onClick={() => setChatOpen(true)}>판매자와 채팅</Button>
           ) : (
@@ -641,17 +716,19 @@ export function ListingView({
                   ]
                 }
               />
-              {canPurchaseOffer(item) &&
-                item.offers.map((p) => (
-                  <Button
-                    key={p}
-                    onClick={() =>
-                      act({ type: 'offer', id: item.id, price: p })
-                    }
-                  >
-                    {won(p)} 제안
-                  </Button>
-                ))}
+              <div className="offer-options">
+                {canPurchaseOffer(item) &&
+                  item.offers.map((p) => (
+                    <Button
+                      key={p}
+                      onClick={() =>
+                        act({ type: 'offer', id: item.id, price: p })
+                      }
+                    >
+                      {won(p)} 제안
+                    </Button>
+                  ))}
+              </div>
               {item.chat && !item.chatSettled && (
                 <Button onClick={() => act({ type: 'closeChat', id: item.id })}>
                   거래하지 않고 흥정 종료
@@ -665,36 +742,40 @@ export function ListingView({
       {item.purchaseBargain?.walked && (
         <p className="chat-ended">판매자가 거래를 종료했습니다.</p>
       )}
-      {!confirm ? (
-        <Button
-          disabled={
-            !!item.purchaseBargain?.walked ||
-            g.cash < price ||
-            g.inventory.length >= RULES.capacity
-          }
-          onClick={() => setConfirm(true)}
-        >
-          {item.price === 0 ? '나눔 수령 확인' : '구매 내용 확인'} ·{' '}
-          {won(price)}
-        </Button>
-      ) : (
-        <section className="card">
-          <h3>지불·수령 확인</h3>
-          <p>{won(price)}</p>
+      <div className="purchase-dock">
+        {!confirm ? (
           <Button
+            primary
             disabled={
               !!item.purchaseBargain?.walked ||
               g.cash < price ||
               g.inventory.length >= RULES.capacity
             }
-            actionCost={1}
-            onClick={() => act({ type: 'buy', id: item.id })}
+            onClick={() => setConfirm(true)}
           >
-            {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'}
+            {item.price === 0 ? '나눔 수령 확인' : '구매 내용 확인'} ·{' '}
+            {won(price)}
           </Button>
-          <Button onClick={() => setConfirm(false)}>구매하지 않기</Button>
-        </section>
-      )}
+        ) : (
+          <section className="card">
+            <h3>지불·수령 확인</h3>
+            <p>{won(price)}</p>
+            <Button
+              disabled={
+                !!item.purchaseBargain?.walked ||
+                g.cash < price ||
+                g.inventory.length >= RULES.capacity
+              }
+              primary
+              actionCost={1}
+              onClick={() => act({ type: 'buy', id: item.id })}
+            >
+              {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'}
+            </Button>
+            <Button onClick={() => setConfirm(false)}>구매하지 않기</Button>
+          </section>
+        )}
+      </div>
       {g.cash < price && <p className="warning">현금이 부족합니다.</p>}
       {g.inventory.length >= RULES.capacity && (
         <p className="warning">보관함이 가득 찼습니다.</p>
@@ -773,7 +854,10 @@ export function OwnedView({
           </Button>
         </section>
       ) : (
-        <Button onClick={() => open({ kind: '판매 등록', id: item.id })}>
+        <Button
+          primary
+          onClick={() => open({ kind: '판매 등록', id: item.id })}
+        >
           {item.marketId === 'auction'
             ? '위탁 판매 등록'
             : `${marketDefinition(marketOf(item)).name}에 판매 등록`}
@@ -921,6 +1005,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
                 />
               )}
             <Button
+              primary
               actionCost={1}
               onClick={() => act({ type: 'accept', id: q.id })}
             >

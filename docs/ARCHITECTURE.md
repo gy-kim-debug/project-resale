@@ -110,3 +110,7 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 거래 상대 명부·성향은 content/traders.ts, 구매자 첫 제안/파토 설정은 domain/traders.ts에서 관리한다. Item/Inquiry의 선택적 traderId로 고정 가상 프로필을 참조하며 기존 ID 없는 상대는 이름과 기존 흥정 동작을 유지한다. 나이·성별은 계산에 참여하지 않는다.
 
 아이템 도감 정의는 content/collection.ts가 활성 시장·나눔/수집 품목 콘텐츠로부터 구성한다. domain/collection.ts가 획득 해금을 처리하고 Game.discoveredItems를 저장한다. 기존 저장의 보유품만 마이그레이션하며 미보유 품목의 실제 가치를 노출하지 않는다. UI는 components/TraderProfile.tsx·ItemCodex.tsx에 분리한다.
+
+페이지 이동은 app/navigation.ts가 세션 내 History API와 React 경로를 연결한다. App의 페이지별 스크롤 맵과 app/marketUi.ts의 임시 필터 저장소로 상세 왕복 시 목록 상태를 복원한다. 하단 메뉴는 비활성 배경 콘텐츠 밖에 두어 상세 페이지에서도 사용할 수 있게 한다. 미응답 문의/필수 정산/행동 처리 중의 차단은 게임 상태를 계속 기준으로 한다. 이 UI 상태는 게임 저장/경제 난수에 포함하지 않는다.
+
+닉네임 단어 데이터는 content/nicknames.ts, 독립 시드 생성기는 domain/nicknames.ts가 관리한다. 신규 거래 상대의 ID는 기존 프로필 ID+이름 시드로 구성하고 기존 고정 ID도 지원한다. 실제 표시 이름은 저장된 seller/name을 우선하며 성향·경제 RNG는 변경하지 않는다.

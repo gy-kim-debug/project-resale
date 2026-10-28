@@ -1,8 +1,11 @@
+import { generateNickname } from '../src/domain/nicknames';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TRADERS,
   chooseTrader,
+  traderById,
+  isTraderId,
   displayTrader,
   TRADER_STYLES,
 } from '../src/content/traders';
@@ -34,7 +37,7 @@ test('trader identities are deterministic, valid and consistent with seller fact
     assert.deepEqual(g, newGame(seed));
     assert.ok(isGame(g));
     for (const item of g.board) {
-      const t = TRADERS.find((t) => t.id === item.traderId)!;
+      const t = traderById(item.traderId)!;
       assert.ok(t);
       assert.equal(item.seller, t.name);
       seen.add(t.style);
@@ -96,7 +99,7 @@ test('clearance assignment keeps urgent seller identity coherent and leaves old 
     (i) => i.marketId === 'computers' && !i.special,
   )!;
   const special = applySpecialListing(item, 'clearance', 800000);
-  assert.equal(TRADERS.find((t) => t.id === special.traderId)!.style, 'quick');
+  assert.equal(traderById(special.traderId)!.style, 'quick');
   assert.equal(special.listing!.facts.seller, 'urgent');
   delete item.traderId;
   const old = applySpecialListing(item, 'clearance', 800000);
@@ -151,7 +154,7 @@ test('new buyer inquiries persist profile IDs; all market seller IDs survive sav
     g = run(g, { type: 'wait' });
   assert.equal(g.inquiries.length, 2);
   for (const q of g.inquiries)
-    assert.equal(q.name, TRADERS.find((t) => t.id === q.traderId)!.name);
+    assert.equal(q.name, traderById(q.traderId)!.name);
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
   const bad = structuredClone(g);
   bad.inquiries[0].traderId = 'unknown';
@@ -273,4 +276,65 @@ test('retired tier items do not create impossible locked goals and appear only w
     favoriteIds: [],
   });
   assert.ok(saved.game.discoveredItems!.includes(retired.key));
+});
+
+test('generated nicknames have broad variety, remain deterministic and reconstruct from valid saved IDs', () => {
+  const names = new Set<string>();
+  const ids = new Set<string>();
+  for (let n = 0; n < 3000; n++) {
+    const key = `nickname-test:${n}`;
+    const trader = chooseTrader(key);
+    assert.deepEqual(trader, chooseTrader(key));
+    assert.deepEqual(traderById(trader.id), trader);
+    assert.equal(isTraderId(trader.id), true);
+    assert.match(trader.name, /^[가-힣0-9]+$/);
+    assert.ok(trader.name.length >= 2 && trader.name.length <= 12);
+    names.add(trader.name);
+    ids.add(trader.id);
+  }
+  assert.ok(names.size > 2000, `nickname variety: ${names.size}/3000`);
+  assert.equal(ids.size, 3000);
+  assert.equal(generateNickname(0), generateNickname(0));
+});
+test('generated nickname IDs reject malformed seeds and preserve every existing trader identity', () => {
+  for (const trader of TRADERS) {
+    assert.deepEqual(traderById(trader.id), trader);
+    assert.equal(
+      displayTrader(trader.id, 'old', trader.name).name,
+      trader.name,
+    );
+  }
+  for (const id of [
+    'unknown_12345678',
+    'pine24_123',
+    'pine24_123456789',
+    'pine24_zzzzzzzz',
+    'pine24_FFFFFFFF',
+    'pine24_12345678_extra',
+  ]) {
+    assert.equal(isTraderId(id), false, id);
+    const g = newGame();
+    g.board[0].traderId = id;
+    assert.throws(() => parseSave({ version: 2, game: g, favoriteIds: [] }));
+  }
+});
+test('saved generated names stay consistent in profile, chat and backup, and display uses the persisted nickname', () => {
+  let g = newGame(11);
+  g.cash = 10000000;
+  const item = g.board.find((i) => canPurchaseOffer(i))!;
+  const expected = traderById(item.traderId)!;
+  assert.equal(item.seller, expected.name);
+  g = run(g, { type: 'offer', id: item.id, price: item.offers[0] });
+  g = run(g, { type: 'buy', id: item.id });
+  const restored = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.equal(restored.inventory[0].seller, expected.name);
+  assert.equal(
+    displayTrader(item.traderId, item.id, expected.name).name,
+    expected.name,
+  );
+  assert.equal(
+    displayTrader(item.traderId, item.id, '저장된별명').name,
+    '저장된별명',
+  );
+  assert.deepEqual(restored.inventory[0].chat, g.inventory[0].chat);
 });

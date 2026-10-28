@@ -14,6 +14,7 @@
 ## 현재 구현 원칙
 
 - [사용자 확정 UI 구성](ui/LAYOUT.md)
+- [UI 전면 개편과 이동 개선](ui/REDESIGN.md)
 - [개발자 위임 결정 — 플레이 가능 v1 전체 정책](implementation/V1_RULES.md)
 - [후속 설계·조정 과제](OPEN_QUESTIONS.md)
 

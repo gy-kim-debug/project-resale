@@ -1,3 +1,4 @@
+import { generateNickname } from '../domain/nicknames';
 import { SALE_BARGAINING } from './bargaining';
 import type { SellerTrait } from '../domain/game';
 
@@ -134,7 +135,25 @@ export const TRADERS: Trader[] = [
     style: 'patient',
   },
 ];
-export const traderById = (id?: string) => TRADERS.find((t) => t.id === id);
+function generatedTrader(template: Trader, seed: number): Trader {
+  return {
+    ...template,
+    id: `${template.id}_${seed.toString(16).padStart(8, '0')}`,
+    name: generateNickname(seed),
+  };
+}
+/** Old named identities remain loadable; new IDs carry a stable nickname seed. */
+export function traderById(id?: string): Trader | undefined {
+  if (!id) return undefined;
+  const legacy = TRADERS.find((t) => t.id === id);
+  if (legacy) return legacy;
+  const parts = /^([a-z][a-z0-9]{0,29})_([0-9a-f]{8})$/.exec(id);
+  if (!parts) return undefined;
+  const template = TRADERS.find((t) => t.id === parts[1]);
+  return template
+    ? generatedTrader(template, Number.parseInt(parts[2], 16))
+    : undefined;
+}
 export const isTraderId = (id: unknown): id is string =>
   typeof id === 'string' && !!traderById(id);
 function hash(key: string) {
@@ -154,15 +173,19 @@ export function chooseTrader(key: string, seller?: SellerTrait): Trader {
             ? ['ordinary', 'lowball', 'patient']
             : (Object.keys(TRADER_STYLES) as TraderStyle[]);
   const pool = TRADERS.filter((t) => styles.includes(t.style));
-  return pool[hash(key) % pool.length];
+  return generatedTrader(
+    pool[hash(key) % pool.length],
+    hash(`nickname:${key}`),
+  );
 }
 export function displayTrader(
   id: string | undefined,
   key: string,
   name: string,
 ): Trader {
+  const known = traderById(id);
   return (
-    traderById(id) ?? {
+    (known ? { ...known, name } : undefined) ?? {
       ...chooseTrader(key, 'ordinary'),
       id: `user${hash(key).toString(36)}`,
       name,

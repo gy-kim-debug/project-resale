@@ -31,7 +31,7 @@ with sync_playwright() as pw:
             if page.locator('.sheet-layer').count():
                 sheet=page.locator('.sheet-layer').bounding_box(); head=page.locator('.status-header').bounding_box()
                 assert abs(sheet['y']-(head['y']+head['height']))<2
-                assert abs(sheet['y']+sheet['height']-height)<2
+                assert abs(sheet['y']+sheet['height']-nav.bounding_box()['y'])<2
         def saved(): return page.evaluate(READ_SAVE)
         def fixture(name):
             data=json.loads(Path(f'work/{name}.json').read_text())
@@ -39,7 +39,7 @@ with sync_playwright() as pw:
         expect(page.get_by_role('button',name='플레이 안내',exact=True)).to_have_count(0)
         assert page.get_by_text('무료 급식은 언제나',exact=False).count()==0
         assert nav.get_by_role('button').all_text_contents()==['내 정보','채무','활동','보관함','사업']
-        assert page.locator('.activity-grid button').all_text_contents()==['무료나눔','아르바이트','물건 수집','중고 장터','전자상가','악기시장','중고차시장','부동산 시장','고가 경매시장','즉시 판매','사업']
+        assert page.locator('.activity-grid button').evaluate_all('(buttons)=>buttons.map(b=>b.getAttribute("aria-label"))')==['중고 장터','전자상가','악기시장','중고차시장','부동산 시장','고가 경매시장','무료나눔','아르바이트','물건 수집','즉시 판매','사업']
         expect(page.locator('.header-debt')).to_contain_text('10,000,000,000 원')
         assert page.locator('meter').evaluate_all('(ms)=>ms.map(m=>m.getAttribute("aria-label"))')==[]
         layout();page.screenshot(path=f'work/playable-home-{width}.png',full_page=True)
@@ -49,7 +49,7 @@ with sync_playwright() as pw:
         expect(page.locator('.status-top')).to_contain_text('509,000 원')
         expect(page.locator('.status-top')).to_contain_text('남은 행동 19/20')
         click('닫기');activity('물건 수집');click('물건 수집하기');click('닫기');tab('보관함')
-        page.locator('.item-row').first.click();expect(page.get_by_text('가치 미확인',exact=True)).to_be_visible()
+        page.locator('.item-row').first.click();expect(page.locator('.sheet-layer').get_by_text('가치 미확인',exact=True)).to_be_visible()
         page.get_by_role('button',name='가치 확인 ·',exact=False).click()
         expect(page.locator('.sheet-layer .item-comparison [data-field=value]')).not_to_contain_text('미확인')
         click('닫기');page.locator('.item-row').first.click()
@@ -92,7 +92,7 @@ with sync_playwright() as pw:
         download=download_info.value;payload=json.loads(Path(download.path()).read_text());assert payload['version']==2
         page.once('dialog',lambda d:d.accept())
         page.locator('input[type=file]').set_input_files({'name':'bad.json','mimeType':'application/json','buffer':b'{"version":2,"game":{}}'})
-        expect(page.get_by_role('status')).to_contain_text('저장 형식이 올바르지 않습니다.')
+        expect(page.locator('.toast.error')).to_contain_text('저장 형식이 올바르지 않습니다.')
         assert saved()['game']['principal']==9_999_999_900
         click('← 뒤로');click('닫기')
         # Recovery at zero, final death, final clear through actual UI commands.

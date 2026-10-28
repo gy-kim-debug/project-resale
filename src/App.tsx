@@ -1,3 +1,4 @@
+import { usePageNavigation } from './app/navigation';
 import {
   useEffect,
   useLayoutEffect,
@@ -165,17 +166,18 @@ function Header({
           <span className="header-label">현금</span> <b>{won(g.cash)}</b>
         </span>
       </div>
-      <div className="header-interest">
-        <span>이번 주 남은 의무 원금</span>
-        <strong>{won(mandatoryPrincipal(g))}</strong>
-      </div>
-      <div className="header-interest">
-        <span>{paymentWeek(g)}주차 이자</span>
-        <strong>{won(interestAmount(g))}</strong>
-      </div>
-      <div className="header-interest-date">
-        <span>주 {weeklyRateText(paymentWeek(g))}</span>
-        <span>{interestPending(g) ? '납부 필요' : '이번 주 정산 시 납부'}</span>
+      <div className="header-obligations">
+        <div className="header-interest">
+          <span>이번 주 남은 의무 원금</span>
+          <strong>{won(mandatoryPrincipal(g))}</strong>
+        </div>
+        <div className="header-interest">
+          <span>
+            {paymentWeek(g)}주차 이자{' '}
+            <small>{weeklyRateText(paymentWeek(g))}</small>
+          </span>
+          <strong>{won(interestAmount(g))}</strong>
+        </div>
       </div>
       <div key={`debt-${actionId}`} className={`header-debt${changed('debt')}`}>
         <span>남은 채무</span>
@@ -190,6 +192,8 @@ function Sheet({
   locked,
   onBack,
   onClose,
+  onHome,
+  scrollPositions,
   footer,
 }: {
   routes: Route[];
@@ -197,10 +201,13 @@ function Sheet({
   locked: boolean;
   onBack: () => void;
   onClose: () => void;
+  onHome: () => void;
+  scrollPositions: Map<string, number>;
   footer?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
+
   const root = routes[0];
   const current = routes[routes.length - 1];
   useEffect(() => {
@@ -211,43 +218,23 @@ function Sheet({
       before?.focus();
     };
   }, []);
-  useEffect(() => {
-    title.current?.focus();
-    ref.current?.scrollTo(0, 0);
-  }, [current.kind, current.id, current.marketId, routes.length]);
+  const routeKey = `${current.kind}:${current.id ?? ''}:${current.marketId ?? ''}:${routes.length}`;
+  useLayoutEffect(() => {
+    const node = ref.current;
+    title.current?.focus({ preventScroll: true });
+    node?.scrollTo(0, scrollPositions.get(routeKey) ?? 0);
+  }, [routeKey, scrollPositions]);
   function keydown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && !locked) {
       e.preventDefault();
-      if (!locked) {
-        if (routes.length > 1) onBack();
-        else onClose();
-      }
-    }
-    if (e.key === 'Tab') {
-      const nodes = ref.current?.parentElement?.querySelectorAll<HTMLElement>(
-        'button:not(:disabled),input:not(:disabled),a[href],[tabindex="0"]',
-      );
-      if (!nodes?.length) return;
-      const first = nodes[0],
-        last = nodes[nodes.length - 1];
-      if (
-        e.shiftKey &&
-        (document.activeElement === first ||
-          document.activeElement === title.current)
-      ) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      if (routes.length > 1) onBack();
+      else onClose();
     }
   }
   return (
     <div
       className={`sheet-layer ${root.kind === '장터' || root.kind === '무료나눔' ? 'market-sheet' : ''}`}
-      role="dialog"
-      aria-modal="true"
+      role="region"
       aria-labelledby="sheet-title"
       onKeyDown={keydown}
     >
@@ -266,8 +253,22 @@ function Sheet({
             ? marketDefinition(current.marketId ?? 'street').name
             : current.kind}
         </h1>
+        <button
+          className="route-home"
+          aria-label="활동으로 이동"
+          disabled={locked}
+          onClick={onHome}
+        >
+          <Icon name="home" size={20} />
+        </button>
       </div>
-      <div className="sheet-content" ref={ref}>
+      <div
+        className="sheet-content"
+        ref={ref}
+        onScroll={(event) =>
+          scrollPositions.set(routeKey, event.currentTarget.scrollTop)
+        }
+      >
         {children}
       </div>
       {footer}
@@ -287,20 +288,63 @@ function ActivityHome({
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">이번 주 활동</p>
           <h1>활동</h1>
         </div>
         <span className="tier-label">{TIERS[tier(g)].name}</span>
       </div>
-      {groups.map((group) => (
-        <section className="activity-group" key={group.title}>
+      {[groups[1], groups[0], groups[2]].map((group) => (
+        <section
+          className={`activity-group activity-${group.title === '시장' ? 'markets' : group.title === '돈 벌기' ? 'earn' : 'assets'}`}
+          key={group.title}
+        >
           <h2>{group.title}</h2>
           <div className="activity-grid">
-            {group.activities.map((activity) => (
-              <button key={activity.label} onClick={() => open(activity.route)}>
-                {activity.label}
-              </button>
-            ))}
+            {group.activities.map((activity) => {
+              const market =
+                activity.route.kind === '장터'
+                  ? marketDefinition(activity.route.marketId ?? 'street')
+                  : null;
+              const icon: IconName = market
+                ? (
+                    {
+                      street: 'market',
+                      computers: 'keyboard',
+                      instruments: 'music',
+                      cars: 'car',
+                      property: 'building',
+                      auction: 'gavel',
+                      aircraft: 'market',
+                    } as const
+                  )[market.id]
+                : activity.label === '아르바이트'
+                  ? 'wallet'
+                  : activity.label === '무료나눔'
+                    ? 'gift'
+                    : activity.label === '물건 수집'
+                      ? 'search'
+                      : activity.label === '사업'
+                        ? 'building'
+                        : 'bag';
+              return (
+                <button
+                  className={market?.id === 'street' ? 'market-featured' : ''}
+                  aria-label={activity.label}
+                  key={activity.label}
+                  onClick={() => open(activity.route)}
+                >
+                  <span className="activity-icon">
+                    <Icon name={icon} size={24} />
+                  </span>
+                  <span className="activity-label">
+                    <strong>{activity.label}</strong>
+                    {market && <small>{won(market.min)}부터</small>}
+                  </span>
+                  <span className="activity-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
       ))}
@@ -332,7 +376,8 @@ function ActivityHome({
 export default function App() {
   const state = useGameStore();
   const g = state.game;
-  const [routes, setRoutes] = useState<Route[]>([]);
+  const { routes, navigate, back } = usePageNavigation(state.tab, state.setTab);
+  const [scrollPositions] = useState(() => new Map<string, number>());
   useEffect(() => {
     void useGameStore.getState().hydrate();
   }, []);
@@ -351,7 +396,7 @@ export default function App() {
   const open = (r: Route) => {
     if (state.action || pending || over) return;
     if (r.kind === '장터') state.selectMarket(r.marketId ?? 'street');
-    setRoutes((prev) => [...prev, r]);
+    navigate([...routes, r]);
   };
   async function act(c: Parameters<typeof state.act>[0]) {
     const ok = await state.act(c);
@@ -362,11 +407,11 @@ export default function App() {
       ) &&
       !useGameStore.getState().game?.inquiries.length
     )
-      setRoutes([]);
+      navigate([], state.tab, true);
     return ok;
   }
   function close() {
-    setRoutes([]);
+    back();
     state.dismiss();
   }
   if (!g || !state.ready)
@@ -388,7 +433,7 @@ export default function App() {
         actionId={state.actionId}
         onOpen={(kind) => {
           if (state.action || pending || over) return;
-          setRoutes([{ kind }]);
+          navigate([{ kind }]);
           state.dismiss();
         }}
       />
@@ -399,7 +444,7 @@ export default function App() {
         !pending &&
         shownRoutes.length === 0 && (
           <aside className="weekly-settlement-bar">
-            <Button onClick={() => setRoutes([{ kind: '주간 정산' }])}>
+            <Button onClick={() => navigate([{ kind: '주간 정산' }])}>
               이번주 정산하기
             </Button>
           </aside>
@@ -416,7 +461,7 @@ export default function App() {
               <ActivityHome
                 g={g}
                 open={open}
-                settle={() => setRoutes([{ kind: '주간 정산' }])}
+                settle={() => navigate([{ kind: '주간 정산' }])}
               />
             ) : state.tab === '내 정보' ? (
               <InfoView g={g} open={open} />
@@ -428,35 +473,43 @@ export default function App() {
               <BusinessTabView g={g} act={act} />
             )}
           </main>
-          <nav className="bottom-nav" aria-label="주요 메뉴">
-            {nav.map((n) => (
-              <button
-                key={n.tab}
-                className={n.tab === '활동' ? 'home-tab' : ''}
-                aria-current={n.tab === state.tab ? 'page' : undefined}
-                onClick={() => state.setTab(n.tab)}
-                disabled={pending}
-              >
-                <span className="nav-icon">
-                  <Icon name={n.icon} size={n.tab === '활동' ? 25 : 21} />
-                </span>
-                <span>{n.tab}</span>
-              </button>
-            ))}
-          </nav>
         </div>
+        <nav className="bottom-nav" aria-label="주요 메뉴">
+          {nav.map((n) => (
+            <button
+              key={n.tab}
+              className={n.tab === '활동' ? 'home-tab' : ''}
+              aria-current={n.tab === state.tab ? 'page' : undefined}
+              onClick={() => {
+                navigate([], n.tab);
+                state.dismiss();
+              }}
+              disabled={pending || !!state.action || over}
+            >
+              <span className="nav-icon">
+                <Icon name={n.icon} size={n.tab === '활동' ? 25 : 21} />
+              </span>
+              <span>{n.tab}</span>
+            </button>
+          ))}
+        </nav>
         {shownRoutes.length > 0 && !over && (
           <Sheet
             routes={shownRoutes}
             locked={pending}
-            onBack={() => setRoutes((prev) => prev.slice(0, -1))}
+            onBack={back}
             onClose={close}
+            onHome={() => {
+              navigate([], '활동');
+              state.dismiss();
+            }}
+            scrollPositions={scrollPositions}
             footer={
               actionsLeft(g) === 0 &&
               !pending &&
               shownRoutes.at(-1)?.kind !== '주간 정산' ? (
                 <aside className="sheet-settlement-bar">
-                  <Button onClick={() => setRoutes([{ kind: '주간 정산' }])}>
+                  <Button onClick={() => navigate([{ kind: '주간 정산' }])}>
                     이번주 정산하기
                   </Button>
                 </aside>
@@ -480,7 +533,7 @@ export default function App() {
             <p>{state.saveError}</p>
             <Button
               onClick={() => {
-                setRoutes([{ kind: '저장 관리' }]);
+                navigate([{ kind: '저장 관리' }]);
               }}
             >
               백업·저장 관리 열기

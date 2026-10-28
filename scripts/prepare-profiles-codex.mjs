@@ -15,21 +15,18 @@ await build({
 });
 const { newGame, execute } =
   await import('../work/profile-qa/domain/engine.mjs');
-const { TRADERS } = await import('../work/profile-qa/content/traders.mjs');
+const { traderById } = await import('../work/profile-qa/content/traders.mjs');
 const { ITEM_CODEX, codexKey } =
   await import('../work/profile-qa/content/collection.mjs');
 let game, firm, flex;
 for (let seed = 1; seed < 100; seed++) {
   game = newGame(seed);
   firm = game.board.find(
-    (i) =>
-      i.marketId === 'street' &&
-      TRADERS.find((t) => t.id === i.traderId)?.style === 'firm',
+    (i) => i.marketId === 'street' && traderById(i.traderId)?.style === 'firm',
   );
   flex = game.board.find(
     (i) =>
-      i.marketId === 'street' &&
-      TRADERS.find((t) => t.id === i.traderId)?.style === 'flexible',
+      i.marketId === 'street' && traderById(i.traderId)?.style === 'flexible',
   );
   if (firm && flex) break;
 }
