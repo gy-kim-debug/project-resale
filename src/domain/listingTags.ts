@@ -1,3 +1,4 @@
+import { ITEM_PROFILES } from '../content/itemProfiles';
 import { MONEY_UNIT, moneyRatio } from './money';
 import type { Item, Kind, ListingInfo, ListingTag, SellerTrait } from './game';
 import {
@@ -49,12 +50,14 @@ export function createListingInfo(
 export function sellerProfile(item: Item) {
   return SELLER_PROFILES[item.listing?.facts.seller ?? 'ordinary'];
 }
-export function listingValuePercent(info: ListingInfo): number {
+export function listingValuePercent(info: ListingInfo, kind?: Kind): number {
+  const values = kind ? ITEM_PROFILES[kind].featureValues : undefined;
   const f = info.facts;
-  if (!f.authentic) return TAG_RULES.replicaValuePercent;
-  if (f.limited) return TAG_RULES.limitedValuePercent;
-  if (f.discontinued) return TAG_RULES.discontinuedValuePercent;
-  if (f.vintage) return TAG_RULES.vintageValuePercent;
+  if (!f.authentic) return values?.replica ?? TAG_RULES.replicaValuePercent;
+  if (f.limited) return values?.limited ?? TAG_RULES.limitedValuePercent;
+  if (f.discontinued)
+    return values?.discontinued ?? TAG_RULES.discontinuedValuePercent;
+  if (f.vintage) return values?.vintage ?? TAG_RULES.vintageValuePercent;
   return 100;
 }
 /** Findings are revealed only by appraisal in UI and result logs. */

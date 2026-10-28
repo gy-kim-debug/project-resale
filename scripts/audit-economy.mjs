@@ -37,6 +37,7 @@ await build({
     'src/domain/money.ts',
     'src/content/markets.ts',
     'src/content/businesses.ts',
+    'src/content/itemProfiles.ts',
     'src/content/rules.ts',
   ],
   bundle: true,
@@ -66,6 +67,8 @@ const { MARKETS } = await import('../work/economy-audit/content/markets.js');
 const { BUSINESSES, BUSINESS_LIMIT_PER_TYPE } =
   await import('../work/economy-audit/content/businesses.js');
 const { RULES, JOBS } = await import('../work/economy-audit/content/rules.js');
+const { ITEM_PROFILES } =
+  await import('../work/economy-audit/content/itemProfiles.js');
 const seeds = Number(process.env.AUDIT_SEEDS ?? 100);
 if (!Number.isSafeInteger(seeds) || seeds < 1 || seeds > 1000)
   throw Error('AUDIT_SEEDS must be 1..1000');
@@ -119,6 +122,8 @@ for (let seed = 1; seed <= 500; seed++) {
   for (const item of sample.board) {
     if (!item.price) continue;
     population[item.marketId].push({
+      kind: item.kind,
+      condition: item.condition,
       ratio: marketValue(sample, item) / item.price,
       instantNet: instantSalePrice(item) - item.price - checkCost(sample, item),
     });
@@ -466,6 +471,26 @@ const summary = {
     (n, b) => n + b.income * BUSINESS_LIMIT_PER_TYPE,
     0,
   ),
+  itemProfiles: ITEM_PROFILES,
+  populationByKind: Object.keys(ITEM_PROFILES).map((kind) => {
+    const rows = Object.values(population)
+      .flat()
+      .filter((item) => item.kind === kind);
+    return {
+      kind,
+      samples: rows.length,
+      brokenShare: rows.length
+        ? round(
+            rows.filter((item) => item.condition === '고장').length /
+              rows.length,
+          )
+        : null,
+      medianValueToAsk: quantile(
+        rows.map((item) => item.ratio),
+        0.5,
+      ),
+    };
+  }),
   realizedTradesByMarket: MARKETS.map((m) => {
     const rows = trades.filter((t) => t.market === m.id);
     return {

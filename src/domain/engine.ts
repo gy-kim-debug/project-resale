@@ -1,3 +1,9 @@
+import { ITEM_PROFILES } from '../content/itemProfiles';
+import {
+  generatedCondition,
+  conditionValuePercent,
+  rarityBoostPercent,
+} from './itemProfiles';
 import { SALE_FLOW } from '../content/saleFlow';
 import { saleInquiryChance } from './saleFlow';
 import { ABILITIES } from '../content/abilities';
@@ -80,11 +86,18 @@ export function marketValue(g: Game, item: Item) {
 export function checkCost(g: Game, item: Item) {
   return Math.max(
     MONEY_UNIT,
-    moneyRatio(item.base, 100 - level(g, 'checks') * 5, 10000),
+    moneyRatio(
+      item.base,
+      (100 - level(g, 'checks') * 5) * ITEM_PROFILES[item.kind].checkPercent,
+      10000,
+    ),
   );
 }
 export function repairCost(item: Item) {
-  return Math.max(300, moneyRatio(item.base, 12));
+  return Math.max(
+    300,
+    moneyRatio(item.base, ITEM_PROFILES[item.kind].repairPercent),
+  );
 }
 export function log(g: Game, text: string, category: LogCategory = 'activity') {
   g.logs.unshift({
@@ -121,13 +134,13 @@ function makeItem(
     (best, t, i) => (base >= t.base ? i : best),
     0,
   );
+  const profile = ITEM_PROFILES[template.kind];
   const categoryBase = marketItem
-    ? roundMoney(base)
+    ? moneyRatio(base, profile.marketValuePercent)
     : moneyRatio(base, CATEGORY_PRICING[template.kind].valuePercent);
   const quality = roll(g);
   const rarity = roll(g);
-  const condition =
-    quality < 0.18 ? '고장' : quality < 0.55 ? '사용감' : '양호';
+  const condition = generatedCondition(template.kind, quality);
   const listing = marketListing
     ? createListingInfo(
         template.kind,
@@ -137,17 +150,13 @@ function makeItem(
     : undefined;
   const rarityPercent = listing
     ? Math.floor(
-        (listingValuePercent(listing) *
-          (rarity > 0.97 ? 400 : rarity > 0.86 ? 150 : 100)) /
+        (listingValuePercent(listing, template.kind) *
+          rarityBoostPercent(template.kind, rarity)) /
           100,
       )
     : rarity < 0.1
-      ? 8
-      : rarity > 0.97
-        ? 400
-        : rarity > 0.86
-          ? 150
-          : 100;
+      ? (profile.featureValues?.replica ?? TAG_RULES.replicaValuePercent)
+      : rarityBoostPercent(template.kind, rarity);
   const actualBase = Math.max(100, moneyRatio(categoryBase, rarityPercent));
   let price = free
     ? 0
@@ -175,15 +184,15 @@ function makeItem(
     base: actualBase,
     value: moneyRatio(
       actualBase,
-      condition === '고장' ? 18 : condition === '사용감' ? 75 : 100,
+      conditionValuePercent(template.kind, condition),
     ),
     condition,
     defect: (listing ? !listing.facts.authentic : rarityPercent < 10)
       ? `${integrityLabel(template.kind, false)}. 비정상 요소가 확인됐습니다.`
       : condition === '고장'
-        ? '작동 불량·부품 손상이 있습니다.'
+        ? profile.brokenDescription
         : condition === '사용감'
-          ? '마모와 작은 흠집이 있습니다.'
+          ? profile.wornDescription
           : rarityPercent > 100
             ? '희귀한 구성·보존 가치가 확인됐습니다.'
             : '특별한 결함은 발견되지 않았습니다.',
@@ -310,7 +319,7 @@ function inquiries(g: Game) {
     const item = g.inventory.find((i) => i.id === sale.itemId);
     if (!item) continue;
     const value = marketValue(g, item);
-    if (roll(g) > saleInquiryChance(sale.price, value)) continue;
+    if (roll(g) > saleInquiryChance(sale.price, value, item.kind)) continue;
     for (let n = 0; n < 2; n++) {
       const max = Math.max(
         MONEY_UNIT,
@@ -664,7 +673,7 @@ export function execute(original: Game, command: Command): Result {
         if (success) {
           i.condition = '양호';
           i.value = i.base;
-          i.defect = '수리 완료. 정상 작동합니다.';
+          i.defect = ITEM_PROFILES[i.kind].repairedDescription;
         }
         message = success
           ? `수리 성공. 실제 가치 ${won(i.value)}.`

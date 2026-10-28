@@ -1,3 +1,9 @@
+import { ITEM_PROFILES } from '../src/content/itemProfiles';
+import {
+  generatedCondition,
+  conditionValuePercent,
+  rarityBoostPercent,
+} from '../src/domain/itemProfiles';
 import { SALE_FLOW } from '../src/content/saleFlow';
 import { saleInquiryChance } from '../src/domain/saleFlow';
 import { BUSINESS_LIMIT_PER_TYPE, BUSINESSES } from '../src/content/businesses';
@@ -2836,4 +2842,129 @@ test('new posts wait two later actions, retries are spaced, and jobs advance the
   assert.equal(gap.sales[0].nextCheck, failed.sales[0].nextCheck);
   assert.equal(gap.seed, failed.seed);
   assert.equal(gap.cash, failed.cash + 38000);
+});
+
+test('category personalities distinguish demand, condition loss and repair or appraisal cost without changing actions', () => {
+  assert.ok(
+    saleInquiryChance(10000, 10000, '생활') >
+      saleInquiryChance(10000, 10000, '디지털'),
+  );
+  assert.ok(
+    saleInquiryChance(10000, 10000, '디지털') >
+      saleInquiryChance(10000, 10000, '수집품'),
+  );
+  assert.ok(
+    saleInquiryChance(10000, 10000, '수집품') >
+      saleInquiryChance(10000, 10000, '부동산'),
+  );
+  assert.equal(saleInquiryChance(8000, 10000, '생활'), 0.95);
+  assert.equal(generatedCondition('디지털', 0.2), '고장');
+  assert.equal(generatedCondition('생활', 0.2), '사용감');
+  assert.equal(generatedCondition('생활', 0.6), '양호');
+  assert.equal(conditionValuePercent('악기', '사용감'), 85);
+  assert.equal(conditionValuePercent('가구', '사용감'), 60);
+  assert.equal(conditionValuePercent('부동산', '고장'), 65);
+  const g = newGame();
+  const item = g.board[0];
+  item.base = 100000;
+  for (const [kind, check, repair] of [
+    ['생활', 1000, 12000],
+    ['디지털', 1000, 8000],
+    ['수집품', 2000, 15000],
+    ['자동차', 2000, 16000],
+    ['부동산', 2000, 20000],
+  ] as const) {
+    const copy = { ...item, kind };
+    assert.equal(checkCost(g, copy), check);
+    assert.equal(repairCost(copy), repair);
+  }
+});
+
+test('collectible authenticity has stronger value consequences while public tag truth rules stay the same', () => {
+  const info = createListingInfo('수집품', () => 0.5);
+  info.facts = {
+    authentic: true,
+    limited: true,
+    discontinued: false,
+    vintage: false,
+    seller: 'ordinary',
+  };
+  const original = structuredClone(info);
+  assert.equal(listingValuePercent(info, '수집품'), 200);
+  assert.equal(listingValuePercent(info, '디지털'), 150);
+  assert.equal(listingValuePercent(info), 150);
+  info.facts.authentic = false;
+  assert.equal(listingValuePercent(info, '수집품'), 5);
+  assert.equal(listingValuePercent(info, '디지털'), 8);
+  assert.equal(TAG_RULES.truthChance, 0.85);
+  assert.equal(rarityBoostPercent('수집품', 0.99), 400);
+  assert.equal(rarityBoostPercent('부동산', 0.99), 150);
+  assert.equal(rarityBoostPercent('자동차', 0.99), 200);
+  assert.equal(rarityBoostPercent('생활', 0.99), 150);
+  assert.equal(original.facts.authentic, true);
+});
+
+test('new stock applies category value rules while retaining price bands, hidden inspection and integer won', () => {
+  let count = 0;
+  for (let seed = 1; seed <= 100; seed++)
+    for (const item of newGame(seed).board) {
+      if (
+        !item.price ||
+        item.special ||
+        item.listing!.facts.seller === 'urgent'
+      )
+        continue;
+      const profile = ITEM_PROFILES[item.kind],
+        market = MARKETS.find((m) => m.id === item.marketId)!;
+      assert.ok(item.price >= market.min && item.price <= market.max);
+      assert.equal(item.checked, false);
+      assert.equal(
+        item.value,
+        moneyRatio(item.base, conditionValuePercent(item.kind, item.condition)),
+      );
+      const reference = moneyRatio(
+        moneyRatio(item.price, 100, 55),
+        profile.marketValuePercent,
+      );
+      const candidates = [100, 150, 400].map((p) =>
+        Math.max(
+          100,
+          moneyRatio(
+            reference,
+            Math.floor(
+              (listingValuePercent(item.listing!, item.kind) *
+                Math.min(p, profile.maxRarityPercent)) /
+                100,
+            ),
+          ),
+        ),
+      );
+      assert.ok(candidates.includes(item.base), `${item.kind}: ${item.base}`);
+      assert.equal(item.value % 100, 0);
+      count++;
+    }
+  assert.ok(count > 2000);
+});
+
+test('old owned values and acquisition prices survive imports and inspection without category revaluation', () => {
+  const g = newGame();
+  const item = g.board.find((i) => i.marketId === 'computers')!;
+  g.board = g.board.filter((i) => i.id !== item.id);
+  g.inventory = [item];
+  item.base = 100000;
+  item.value = 75000;
+  item.condition = '사용감';
+  item.checked = false;
+  item.acquiredFor = 20000;
+  const original = structuredClone(g);
+  const loaded = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.deepEqual(loaded, original);
+  const checked = run(loaded, { type: 'check', id: item.id });
+  assert.equal(checked.inventory[0].value, 75000);
+  assert.equal(checked.inventory[0].base, 100000);
+  assert.equal(checked.inventory[0].acquiredFor, 20000);
+  assert.equal(checked.cash, g.cash - 1000);
+  assert.equal(checked.minute, g.minute);
+  assert.equal(checked.weekActions, g.weekActions);
+  assert.deepEqual(g, original);
 });

@@ -1,0 +1,281 @@
+{
+  "sourceCommit": "10f10bbb4d0cdfc9cea889dd596651edd7f5ef48",
+  "sourceSnapshotHash": "d617cc80e51ad83fda13e0d4b3ad555a37e84065d9c807dad341b1ba22503774",
+  "seedsPerStrategy": 30,
+  "populationSeeds": 500,
+  "itemProfiles": {
+    "생활": {
+      "marketValuePercent": 85,
+      "demandPercent": 125,
+      "brokenChance": 0.1,
+      "wornCutoff": 0.45,
+      "wornValuePercent": 80,
+      "brokenValuePercent": 25,
+      "checkPercent": 1,
+      "repairPercent": 12,
+      "maxRarityPercent": 150,
+      "brokenDescription": "작동 불량·부품 손상이 있습니다.",
+      "wornDescription": "마모와 작은 흠집이 있습니다.",
+      "repairedDescription": "수리 완료. 정상 작동합니다."
+    },
+    "디지털": {
+      "marketValuePercent": 100,
+      "demandPercent": 100,
+      "brokenChance": 0.26,
+      "wornCutoff": 0.65,
+      "wornValuePercent": 65,
+      "brokenValuePercent": 15,
+      "checkPercent": 1,
+      "repairPercent": 8,
+      "maxRarityPercent": 200,
+      "brokenDescription": "작동 불량·부품 손상이 있습니다.",
+      "wornDescription": "마모와 작은 흠집이 있습니다.",
+      "repairedDescription": "수리 완료. 정상 작동합니다."
+    },
+    "가구": {
+      "marketValuePercent": 100,
+      "demandPercent": 75,
+      "brokenChance": 0.12,
+      "wornCutoff": 0.65,
+      "wornValuePercent": 60,
+      "brokenValuePercent": 20,
+      "checkPercent": 1,
+      "repairPercent": 12,
+      "maxRarityPercent": 150,
+      "brokenDescription": "프레임 손상과 흔들림이 있습니다.",
+      "wornDescription": "표면 마모와 사용 흔적이 있습니다.",
+      "repairedDescription": "수리 완료. 정상 작동합니다."
+    },
+    "수집품": {
+      "marketValuePercent": 100,
+      "demandPercent": 65,
+      "brokenChance": 0.1,
+      "wornCutoff": 0.45,
+      "wornValuePercent": 85,
+      "brokenValuePercent": 30,
+      "checkPercent": 2,
+      "repairPercent": 15,
+      "maxRarityPercent": 400,
+      "brokenDescription": "파손과 구성품 손상이 있습니다.",
+      "wornDescription": "작은 흠집과 보관 흔적이 있습니다.",
+      "repairedDescription": "보수 완료. 손상된 부분을 보수했습니다.",
+      "featureValues": {
+        "limited": 200,
+        "discontinued": 150,
+        "vintage": 140,
+        "replica": 5
+      }
+    },
+    "악기": {
+      "marketValuePercent": 100,
+      "demandPercent": 85,
+      "brokenChance": 0.12,
+      "wornCutoff": 0.55,
+      "wornValuePercent": 85,
+      "brokenValuePercent": 25,
+      "checkPercent": 1,
+      "repairPercent": 10,
+      "maxRarityPercent": 200,
+      "brokenDescription": "연주에 지장을 주는 부품 손상이 있습니다.",
+      "wornDescription": "외관 사용감이 있지만 보존 상태를 확인했습니다.",
+      "repairedDescription": "수리 완료. 연주 기능을 회복했습니다."
+    },
+    "자동차": {
+      "marketValuePercent": 100,
+      "demandPercent": 75,
+      "brokenChance": 0.22,
+      "wornCutoff": 0.65,
+      "wornValuePercent": 65,
+      "brokenValuePercent": 15,
+      "checkPercent": 2,
+      "repairPercent": 16,
+      "maxRarityPercent": 200,
+      "brokenDescription": "주요 부품 정비가 필요합니다.",
+      "wornDescription": "마모와 정비할 부분이 있습니다.",
+      "repairedDescription": "정비 완료. 주요 부품을 수리했습니다."
+    },
+    "부동산": {
+      "marketValuePercent": 100,
+      "demandPercent": 55,
+      "brokenChance": 0.12,
+      "wornCutoff": 0.4,
+      "wornValuePercent": 90,
+      "brokenValuePercent": 65,
+      "checkPercent": 2,
+      "repairPercent": 20,
+      "maxRarityPercent": 150,
+      "brokenDescription": "누수와 설비 하자를 확인했습니다.",
+      "wornDescription": "노후 마감과 수선할 부분이 있습니다.",
+      "repairedDescription": "수선 완료. 물리적 설비 하자를 보수했습니다."
+    },
+    "항공기": {
+      "marketValuePercent": 100,
+      "demandPercent": 100,
+      "brokenChance": 0.18,
+      "wornCutoff": 0.55,
+      "wornValuePercent": 75,
+      "brokenValuePercent": 18,
+      "checkPercent": 1,
+      "repairPercent": 12,
+      "maxRarityPercent": 400,
+      "brokenDescription": "작동 불량·부품 손상이 있습니다.",
+      "wornDescription": "마모와 작은 흠집이 있습니다.",
+      "repairedDescription": "수리 완료. 정상 작동합니다."
+    }
+  },
+  "populationByKind": [
+    {
+      "kind": "생활",
+      "samples": 612,
+      "brokenShare": 0.1111,
+      "medianValueToAsk": 1.8543589743589743
+    },
+    {
+      "kind": "디지털",
+      "samples": 5417,
+      "brokenShare": 0.2581,
+      "medianValueToAsk": 1.181840490797546
+    },
+    {
+      "kind": "가구",
+      "samples": 779,
+      "brokenShare": 0.113,
+      "medianValueToAsk": 1.091156462585034
+    },
+    {
+      "kind": "수집품",
+      "samples": 5192,
+      "brokenShare": 0.1007,
+      "medianValueToAsk": 1.8181818088601416
+    },
+    {
+      "kind": "악기",
+      "samples": 4000,
+      "brokenShare": 0.12,
+      "medianValueToAsk": 1.8181626632954067
+    },
+    {
+      "kind": "자동차",
+      "samples": 4000,
+      "brokenShare": 0.22,
+      "medianValueToAsk": 1.181819115607827
+    },
+    {
+      "kind": "부동산",
+      "samples": 4000,
+      "brokenShare": 0.118,
+      "medianValueToAsk": 1.8181817695760385
+    },
+    {
+      "kind": "항공기",
+      "samples": 0,
+      "brokenShare": null,
+      "medianValueToAsk": null
+    }
+  ],
+  "strategies": [
+    {
+      "id": "parallel",
+      "name": "성장형 병렬 판매",
+      "fraction": 0.9,
+      "parallel": true,
+      "counter": true,
+      "runs": 30,
+      "medianMatchedInquiryWait": 4,
+      "expiredListings": 372,
+      "cleared": 6,
+      "bankrupt": 24,
+      "medianBankruptWeek": 4,
+      "medianClearWeek": 13,
+      "lastWeekP10": 1,
+      "lastWeekMedian": 4,
+      "lastWeekP90": 16,
+      "medianRealizedTradeProfit": 1008800,
+      "lossShare": 0.255,
+      "marketEntry": [
+        {
+          "market": "street",
+          "runs": 30,
+          "medianWeek": 1
+        },
+        {
+          "market": "computers",
+          "runs": 27,
+          "medianWeek": 2
+        },
+        {
+          "market": "instruments",
+          "runs": 18,
+          "medianWeek": 2
+        },
+        {
+          "market": "cars",
+          "runs": 14,
+          "medianWeek": 5
+        },
+        {
+          "market": "property",
+          "runs": 12,
+          "medianWeek": 8
+        },
+        {
+          "market": "auction",
+          "runs": 8,
+          "medianWeek": 11
+        }
+      ]
+    },
+    {
+      "id": "parallel-jobs",
+      "name": "병렬 판매 + 대기 중 아르바이트",
+      "fraction": 0.9,
+      "parallel": true,
+      "counter": true,
+      "workWhileWaiting": true,
+      "runs": 30,
+      "medianMatchedInquiryWait": 4,
+      "expiredListings": 397,
+      "cleared": 4,
+      "bankrupt": 26,
+      "medianBankruptWeek": 4,
+      "medianClearWeek": 13,
+      "lastWeekP10": 2,
+      "lastWeekMedian": 4,
+      "lastWeekP90": 15,
+      "medianRealizedTradeProfit": 707500,
+      "lossShare": 0.264,
+      "marketEntry": [
+        {
+          "market": "street",
+          "runs": 30,
+          "medianWeek": 1
+        },
+        {
+          "market": "computers",
+          "runs": 27,
+          "medianWeek": 2
+        },
+        {
+          "market": "instruments",
+          "runs": 21,
+          "medianWeek": 2
+        },
+        {
+          "market": "cars",
+          "runs": 13,
+          "medianWeek": 4
+        },
+        {
+          "market": "property",
+          "runs": 10,
+          "medianWeek": 7
+        },
+        {
+          "market": "auction",
+          "runs": 7,
+          "medianWeek": 12
+        }
+      ]
+    }
+  ]
+}

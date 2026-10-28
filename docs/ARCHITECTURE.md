@@ -104,3 +104,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 우편 기록은 Log의 선택적 category(start/market/special/activity)를 사용한다. log 기본값은 activity이며 엔진이 우편 대상에만 분류를 지정한다. notifications의 공통 필터가 목록·안 읽음·전체 읽음에 적용된다. 구 저장의 분류 없는 로그는 알려진 허용 문구로 판별하며 기존 로그·읽음 ID를 재생성하지 않는다.
 
 판매 유동성 수치는 content/saleFlow.ts에, 등록가/현재 시장 가치로 문의 확률을 정하는 순수 함수는 domain/saleFlow.ts에 둔다. 엔진의 첫 문의 예약·재시도 간격이 같은 콘텐츠 설정을 사용한다. 확률은 매칭 조회 시에만 적용하며 무료 읽기/흥정으로 추가 추첨하지 않는다.
+
+카테고리별 성격은 content/itemProfiles.ts가 관리하고 domain/itemProfiles.ts가 상태·희귀 배수·상태 표시를 계산한다. 엔진의 새 매물 생성/감정·수리비와 domain/saleFlow.ts의 수요가 같은 설정을 사용한다. base/value는 생성 시 저장하고 과거 보유품을 복원할 때 재평가하지 않는다. 현재 비용과 수요에는 새 설정을 사용한다.

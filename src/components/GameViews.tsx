@@ -10,6 +10,7 @@ import { useId, useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
 import { Icon } from './Icon';
 import { ItemComparison } from './ItemComparison';
+import { conditionLabel } from '../domain/itemProfiles';
 import { acquisitionCost } from '../domain/inventory';
 import { TradeChat } from './TradeChat';
 import { ItemTags, ItemFindings } from './ItemTags';
@@ -718,7 +719,7 @@ export function OwnedView({
       <ItemComparison g={g} item={item} />
       <ItemFindings item={item} />
       <Details>
-        <p>상태: {item.condition}</p>
+        <p>상태: {conditionLabel(item.kind, item.condition)}</p>
         {item.checked ? (
           <>
             <p>실제 가치 {won(item.value)}</p>
