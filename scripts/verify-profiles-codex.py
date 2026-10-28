@@ -11,7 +11,7 @@ with sync_playwright() as p:
  for width in [320,375,390,430]:
   c=b.new_context(viewport={'width':width,'height':844},is_mobile=True,has_touch=True);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for();page.evaluate(WRITE,DATA['initial']);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
-  nav=page.get_by_role('navigation',name='주요 메뉴');nav.get_by_role('button',name='내 정보',exact=True).click();page.get_by_role('button',name='아이템 도감',exact=True).click()
+  nav=page.get_by_role('navigation',name='주요 메뉴');nav.get_by_role('button',name='내 정보',exact=True).click();expect(page.get_by_role('button',name='아이템 도감',exact=True)).to_have_count(0);nav.get_by_role('button',name='보관함',exact=True).click();page.get_by_role('button',name='아이템 도감',exact=True).click()
   expect(page.locator('.codex-locked')).to_have_count(DATA['codexSize']);expect(page.locator('.codex-toggle')).to_have_count(0);expect(page.locator('.sheet-layer')).not_to_contain_text(DATA['flex']['title']);page.get_by_role('button',name='닫기',exact=True).click()
   nav.get_by_role('button',name='활동',exact=True).click();page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click()
   rows=[i for i in DATA['initial']['game']['board'] if i.get('marketId','street')=='street' and i['price']>0]
@@ -25,7 +25,7 @@ with sync_playwright() as p:
      page.locator('.sheet-content').evaluate('(e)=>e.scrollTop=0');page.screenshot(path='work/trader-profile-390.png',full_page=True)
     page.get_by_role('button',name='구매 내용 확인',exact=False).click();page.get_by_role('button',name='지불·수령 확정',exact=True).click();expect(page.locator('.action-layer')).to_have_count(0)
   saved=page.evaluate(READ);assert saved['game']['weekActions']==1 and saved['game']['discoveredItems']==[DATA['key']] and not saved['game']['inventory'][0]['checked']
-  page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();nav.get_by_role('button',name='내 정보',exact=True).click();page.get_by_role('button',name='아이템 도감',exact=True).click();expect(page.locator('.codex-toggle')).to_have_count(1);expect(page.locator('.codex-locked')).to_have_count(DATA['codexSize']-1)
+  page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for();nav.get_by_role('button',name='내 정보',exact=True).click();expect(page.get_by_role('button',name='아이템 도감',exact=True)).to_have_count(0);nav.get_by_role('button',name='보관함',exact=True).click();page.get_by_role('button',name='아이템 도감',exact=True).click();expect(page.locator('.codex-toggle')).to_have_count(1);expect(page.locator('.codex-locked')).to_have_count(DATA['codexSize']-1)
   page.get_by_role('button',name=DATA['flex']['kind'],exact=True).click();page.locator('.codex-toggle').click();expect(page.locator('.codex-detail')).to_contain_text('참고 시세');expect(page.locator('.codex-detail')).to_contain_text('시장 동향');expect(page.locator('.codex-detail ul li').first).to_be_visible()
   if width==390:page.screenshot(path='work/item-codex-390.png',full_page=True)
   page.get_by_role('button',name='전체',exact=True).click();expect(page.locator('.codex-toggle')).to_have_count(1)

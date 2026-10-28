@@ -21,7 +21,7 @@ import {
 } from './components/GameViews';
 import type { Game } from './domain/game';
 import { weekOf, actionsLeft, won, ACTIONS_PER_WEEK } from './domain/game';
-import { listingLimit, tier } from './domain/engine';
+import { listingLimit } from './domain/engine';
 import { ActionBudget, ActionProgress } from './components/ActionProgress';
 import type {
   ActionPresentation,
@@ -30,7 +30,6 @@ import type {
 } from './app/actionPresentation';
 import { unreadCount } from './app/notifications';
 import { MARKETS, marketDefinition } from './content/markets';
-import { TIERS } from './content/rules';
 import {
   interestPending,
   interestAmount,
@@ -290,7 +289,6 @@ function ActivityHome({
         <div>
           <h1>활동</h1>
         </div>
-        <span className="tier-label">{TIERS[tier(g)].name}</span>
       </div>
       {[groups[1], groups[0], groups[2]].map((group) => (
         <section
@@ -464,7 +462,7 @@ export default function App() {
                 settle={() => navigate([{ kind: '주간 정산' }])}
               />
             ) : state.tab === '내 정보' ? (
-              <InfoView g={g} open={open} />
+              <InfoView g={g} />
             ) : state.tab === '채무' ? (
               <DebtView g={g} act={act} />
             ) : state.tab === '보관함' ? (

@@ -247,11 +247,10 @@ export function ItemRow({
     </button>
   );
 }
-export function InfoView({ g, open }: { g: Game; open: Open }) {
+export function InfoView({ g }: { g: Game }) {
   return (
     <>
       <h1>내 정보</h1>
-      <Button onClick={() => open({ kind: '아이템 도감' })}>아이템 도감</Button>
       <div className="abilities">
         {ABILITIES.map((a) => (
           <section className="card" key={a.stat}>
@@ -281,12 +280,17 @@ export function InfoView({ g, open }: { g: Game; open: Open }) {
 export function InventoryView({ g, open }: { g: Game; open: Open }) {
   return (
     <>
-      <h1>
-        보관함{' '}
-        <span className="count">
-          {g.inventory.length}/{RULES.capacity}
-        </span>
-      </h1>
+      <div className="page-heading">
+        <h1>
+          보관함{' '}
+          <span className="count">
+            {g.inventory.length}/{RULES.capacity}
+          </span>
+        </h1>
+        <Button onClick={() => open({ kind: '아이템 도감' })}>
+          아이템 도감
+        </Button>
+      </div>
       {g.inventory.length ? (
         g.inventory.map((i) => (
           <ItemRow
