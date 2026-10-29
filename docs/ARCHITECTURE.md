@@ -124,3 +124,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 새 매물 가치 조정은 content/valuation.ts의 사용자 확정 수치와 domain/valuation.ts의 기준 가치 생성·보너스 상한 함수가 관리한다. Item.valuationReference는 생성 시 한 번 확정하며 감정·수리·협상·저장/복원으로 재추첨하지 않는다. 일반 생성·특별 소장품·현재 시장 가치가 같은 상한을 사용한다. 필드가 없는 과거 물품은 기존 값과 시장 계산을 유지한다. 세부 규칙과 재현 비교는 design/economy/VALUATION_BALANCE.md를 참조한다.
 
 시작 화면은 StartMenu, 게임 세션은 GameApp으로 분리한다. store가 menu/game 화면·활성 SlotId·슬롯 목록·저장 큐를 관리하며 큐마다 대상 슬롯을 캡처한다. 저장소의 load/save/listSlots/create/remove가 IndexedDB 키를 추상화하고 legacy current 이전과 슬롯 생성의 점유 검사를 트랜잭션으로 처리한다. 각 게임의 선택적 player 프로필은 content/player.ts와 domain/player.ts에서 정의/검증하며 PixelCharacter와 ActionScene에서 공유한다. 외형은 시뮬레이션 RNG를 소비하지 않는다.
+
+닉네임 외 입력 UI는 선택지로 구성한다. app/amountChoices.ts가 공개된 현재 가치/매입가/상환 가능액에서 후보를 생성하고 100원 단위·중복·상하한을 처리한다. AmountChoice는 후보 선택과 확정을 공유한다. MarketView는 임시 query 필드에 선택한 정확한 품목명을 보관하며 직접 검색어 입력은 제공하지 않는다. 엔진/저장 명령 형식은 변경하지 않는다.

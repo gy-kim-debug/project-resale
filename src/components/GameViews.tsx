@@ -1,3 +1,9 @@
+import {
+  selectableAmounts,
+  repaymentPresets,
+  listingPresets,
+  type AmountPreset,
+} from '../app/amountChoices';
 import { playerOf } from '../domain/player';
 import { PixelCharacter } from './PixelCharacter';
 import { SellerConversation } from './SellerConversation';
@@ -16,7 +22,7 @@ import {
   weeklyBusinessIncome,
   pendingBusinessIncome,
 } from '../domain/business';
-import { MONEY_UNIT, roundMoney, moneyRatio } from '../domain/money';
+import { MONEY_UNIT, moneyRatio } from '../domain/money';
 import { useId, useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
 import { Icon } from './Icon';
@@ -126,92 +132,58 @@ export function Button({
 function Details({ children }: { children: ReactNode }) {
   return <div className="details">{children}</div>;
 }
-export function AmountForm({
+export function AmountChoice({
   title,
   label,
-  initial = '',
   actionCost = 0,
-  presets = [],
+  presets,
   min = MONEY_UNIT,
   max,
   submit,
 }: {
   title: string;
   label: string;
-  initial?: string;
-  presets?: { label: string; amount: number | null }[];
+  presets: AmountPreset[];
   actionCost?: number;
   min?: number;
   max: number;
   submit: (n: number) => void;
 }) {
   const costId = useId();
-  const [amount, setAmount] = useState(initial);
-  const rounded =
-    /^\d+$/.test(amount) && Number.isSafeInteger(Number(amount))
-      ? roundMoney(Number(amount))
-      : NaN;
-  const valid =
-    /^\d+$/.test(amount) &&
-    Number.isSafeInteger(Number(amount)) &&
-    rounded >= min &&
-    rounded <= max;
+  const [amount, setAmount] = useState<number | null>(null);
+  const choices = selectableAmounts(presets, min, max);
+  const selected = choices.find((choice) => choice.amount === amount);
   return (
     <form
       className="amount-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid) submit(rounded);
+        if (selected) submit(selected.amount);
       }}
     >
-      {presets.length > 0 && (
-        <fieldset className="price-presets">
-          <legend>가격 선택</legend>
-          <div className="price-options">
-            {presets.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                aria-pressed={valid && rounded === preset.amount}
-                disabled={
-                  preset.amount === null ||
-                  preset.amount < min ||
-                  preset.amount > max
-                }
-                onClick={() =>
-                  preset.amount !== null && setAmount(String(preset.amount))
-                }
-              >
-                {preset.label}
-                <strong>
-                  {preset.amount === null ? '미확인' : won(preset.amount)}
-                </strong>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      )}
-      <label>
-        {label}
-        <input
-          inputMode="numeric"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="금액 입력"
-          required
-          pattern="[0-9]+"
-          maxLength={16}
-        />
-      </label>
-      <p>
-        {Number.isFinite(rounded)
-          ? `${won(rounded)} · 100원 단위 반올림`
-          : '정수 금액을 입력하세요.'}
-      </p>
+      <fieldset className="price-presets">
+        <legend>{label}</legend>
+        <div className="price-options">
+          {choices.map((choice) => (
+            <button
+              key={choice.amount}
+              type="button"
+              aria-pressed={selected?.amount === choice.amount}
+              onClick={() => setAmount(choice.amount)}
+            >
+              <span>{choice.label}</span>
+              <strong>{won(choice.amount)}</strong>
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <output className="selected-amount" aria-live="polite">
+        {selected ? `선택 금액 ${won(selected.amount)}` : '금액을 선택하세요.'}
+      </output>
       <button
         className="action-button primary"
         type="submit"
-        disabled={!valid}
+        disabled={!selected}
         aria-describedby={actionCost > 0 ? costId : undefined}
       >
         {title}
@@ -451,8 +423,9 @@ export function DebtView({
         </Button>
       )}
       {canRepay && (
-        <AmountForm
-          title="입력 금액 상환"
+        <AmountChoice
+          title="선택 금액 상환"
+          presets={repaymentPresets(Math.min(g.cash, g.principal), required)}
           actionCost={due ? 0 : 1}
           label="상환 금액"
           max={Math.min(g.cash, g.principal)}
@@ -573,7 +546,7 @@ export function MarketView({
           i.category === category ||
           i.kind === category) &&
         (!onlyFavorites || favorites.includes(i.id)) &&
-        i.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+        (!query || i.title === query),
     )
     .sort((a, b) =>
       sort === 'low'
@@ -587,15 +560,38 @@ export function MarketView({
       <div className="market-search-row">
         <label className="search-field">
           <Icon name="search" size={19} />
-          <input
-            aria-label="매물 검색"
-            placeholder="어떤 물건을 찾으세요?"
+          <select
+            aria-label="매물 품목 선택"
             value={query}
             onChange={(event) => update({ query: event.target.value })}
-          />
+          >
+            <option value="">모든 품목</option>
+            {query &&
+              !g.board.some(
+                (i) =>
+                  marketOf(i) === market.id &&
+                  (free ? i.price === 0 : i.price > 0) &&
+                  i.title === query,
+              ) && <option value={query}>{query} (매물 없음)</option>}
+            {[
+              ...new Set(
+                g.board
+                  .filter(
+                    (i) =>
+                      marketOf(i) === market.id &&
+                      (free ? i.price === 0 : i.price > 0),
+                  )
+                  .map((i) => i.title),
+              ),
+            ].map((title) => (
+              <option key={title} value={title}>
+                {title}
+              </option>
+            ))}
+          </select>
           {query && (
             <button
-              aria-label="검색 지우기"
+              aria-label="품목 선택 해제"
               onClick={() => update({ query: '' })}
             >
               ×
@@ -992,7 +988,7 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
             {sale &&
               q.rounds < SALE_BARGAINING.maxRounds &&
               q.price < sale.price && (
-                <AmountForm
+                <AmountChoice
                   key={`${q.id}-${q.rounds}`}
                   presets={presets}
                   title="가격 제안"
@@ -1171,26 +1167,13 @@ export function RouteView({
             <p>
               현재 가치 {currentValue === null ? '미확인' : won(currentValue)}
             </p>
-            <AmountForm
+            <AmountChoice
               key={item.id}
-              presets={[
-                { label: '현재 가치', amount: currentValue },
-                {
-                  label: '현재 가치 80%',
-                  amount:
-                    currentValue === null ? null : moneyRatio(currentValue, 80),
-                },
-                {
-                  label: '현재 가치 120%',
-                  amount:
-                    currentValue === null
-                      ? null
-                      : moneyRatio(currentValue, 120),
-                },
-                ...(purchaseCost > 0
-                  ? [{ label: '매입가', amount: purchaseCost }]
-                  : []),
-              ]}
+              presets={listingPresets(
+                currentValue,
+                purchaseCost,
+                marketDefinition(marketOf(item)).min,
+              )}
               title="판매 글 등록 확정"
               actionCost={1}
               label="판매 가격 (원)"

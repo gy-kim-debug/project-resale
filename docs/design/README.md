@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [닉네임 외 선택지 전용 UI](ui/CHOICE_INPUTS.md)
+
 - [앱 시작 화면](ui/START_SCREEN.md)
 - [독립 저장 슬롯과 기존 데이터 이전](saving/SLOTS.md)
 - [새 게임 닉네임·외형 설정](character/CUSTOMIZATION.md)

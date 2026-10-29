@@ -12,6 +12,7 @@ await build({
     'tests/dialogue.test.ts',
     'tests/valuation.test.ts',
     'tests/player-slots.test.ts',
+    'tests/amountChoices.test.ts',
   ],
   bundle: true,
   platform: 'node',
@@ -31,6 +32,7 @@ const result = spawnSync(
     'work/test-bundles/dialogue.test.mjs',
     'work/test-bundles/valuation.test.mjs',
     'work/test-bundles/player-slots.test.mjs',
+    'work/test-bundles/amountChoices.test.mjs',
   ],
   { stdio: 'inherit' },
 );

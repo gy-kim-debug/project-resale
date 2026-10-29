@@ -2387,3 +2387,28 @@ html {
 .start-hero h1:focus {
   outline: none;
 }
+.selected-amount {
+  display: block;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.market-search-row .search-field {
+  flex: 1;
+  min-width: 0;
+}
+.market-search-row .search-field select {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+.price-options button strong {
+  display: block;
+  overflow-wrap: anywhere;
+}

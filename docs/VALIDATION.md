@@ -571,3 +571,11 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - 시작 화면/슬롯 키에 맞춰 회귀 스크립트를 갱신하고 `verify-dialogue.py`, `verify-profiles-codex.py`를 모바일 4개 폭에서 재실행했다. 기존 대화·구매·기록 복원·인물 프로필·도감 동작 모두 통과했다.
 - 로그: work/slots-{tests,lint,build,mobile,dialogue,profiles,format}.txt. 시각 확인: start-menu-390.png, character-create-390.png, save-slots-390.png, custom-player-action-390.png.
 - 실제 iOS/Android 기기와 클라우드/기기 간 동기화는 이번 범위가 아니다. 슬롯은 브라우저/기기에 저장하며 기존 JSON 백업으로 이동한다.
+
+## 닉네임 외 선택지 전용 UI (2026-10-29)
+
+- `npm test` 167개 통과. 후보의 100원 반올림·중복 제거·상하한, 감당 가능한 상환액/의무 원금, 미감정 매입가 기준/감정된 현재 가치, 무료·수집·0원 물건의 등록 가능 후보, 큰 금액의 정수 안전성을 확인했다.
+- TypeScript·ESLint·프로덕션 빌드·포맷·diff 검사 통과. 소스 검색으로 남은 input이 닉네임·외형 radio·관심 checkbox·백업 file뿐임을 확인했다. textarea/contenteditable/text prompt는 없다.
+- `node scripts/prepare-choice-fixtures.mjs` 후 `python scripts/verify-choice-inputs.py`: 프로덕션 Chromium 320×568 / 375×667 / 390×844 / 430×932에서 닉네임 화면만 텍스트 입력 1개, 모든 검증 게임 화면의 텍스트/숫자 입력 0개를 확인했다.
+- 선택 전 확정 비활성화, 의무 원금 선택·상환의 정확한 원장 변화, 품목 선택/해제, 미감정 매입가 판매 등록, 감정 후 현재 가치 후보, 미감정 무료 수집품 5개 후보/실제 등록, 구매자 절충가 선택/무료 재제안, 가로 넘침·브라우저 오류 없음을 검증했다.
+- 로그 work/choices-{tests,lint,build,format,mobile}.txt. 화면 work/choice-listing-390.png, choice-buyer-390.png를 시각 확인했다. 실제 iOS/Android 소프트 키보드는 이번 검증 범위에 포함하지 않는다.
