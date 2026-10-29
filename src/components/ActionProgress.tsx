@@ -1,3 +1,4 @@
+import { ActionScene } from './ActionScene';
 import { useEffect, useRef, useState } from 'react';
 import type { ActionPresentation } from '../app/actionPresentation';
 import {
@@ -61,6 +62,7 @@ export function ActionProgress({ action }: { action: ActionPresentation }) {
           { '--action-duration': `${action.duration}ms` } as React.CSSProperties
         }
       >
+        <ActionScene kind={action.scene} />
         <h2 id="action-title" role="status">
           {action.label}
         </h2>

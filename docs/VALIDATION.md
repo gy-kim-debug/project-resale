@@ -544,3 +544,12 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - `scripts/verify-dialogue.py`: 모바일 4개 폭의 질문·조건 응답·기록 복원·가격 제안·구매 및 행동 비용 검증 통과.
 - `scripts/verify-profiles-codex.py`: 판매자/구매자 프로필·고정가/유연한 흥정·도감 회귀 검사 4개 폭 통과.
 - 로그 `work/chat-ui-{tests,lint,format,build,mobile,layout,profiles}.txt`. 화면 `work/chat-layout-320.png`, `work/chat-layout-390.png`를 시각 확인했다. 실제 모바일 기기는 검증 범위에 포함하지 않았다.
+
+## 도트 캐릭터와 행동 장면 (2026-10-29)
+
+- 공통 24×32 SVG 캐릭터를 내 정보와 행동 연출에 연결했다. 구매/판매/무료나눔, 수집, 아르바이트, 감정, 수리, 등록, 정산, 이동 장면을 표시 전용 ActionPresentation.scene으로 선택하며 저장 형식과 엔진을 바꾸지 않는다.
+- TypeScript·ESLint·포맷 검사·프로덕션 빌드·diff 검사 통과. `npm test` 151개 통과. 장면별 매핑과 구매/판매 방향, 무료나눔 구분, 기존 로딩의 한 번 실행/저장 및 중복 입력 차단을 검사했다.
+- `python scripts/verify-pixel-actions.py`: Chromium 320×568 / 375×667 / 390×844 / 430×932에서 내 정보 포트레이트, 실제 구매·판매·수집·일·감정 장면, 749ms 동안 유지/750ms에 종료, 저장된 경제 상태가 연출 후 재변경되지 않음, 화면 안 배치를 확인했다. SVG 스프라이트가 장면 좌표에서 24×32인지도 확인했다.
+- 무료나눔은 상대 캐릭터가 있지만 돈 그림과 현금 차감이 없음을 확인했다. 동작 줄이기에서는 장식 애니메이션 0개와 정상 종료를 확인했다.
+- 화면 `work/pixel-profile-390.png`, `work/pixel-buy-390.png`를 시각 확인했다. 로그 `work/pixel-{tests,lint,format,build,mobile}.txt`.
+- 실제 모바일 기기 조작과 모든 10종 장면의 브라우저 개별 실행은 별도 범위다. 감정·수리 등 기존에 행동을 소비하지 않는 명령의 비용 규칙도 유지한다.

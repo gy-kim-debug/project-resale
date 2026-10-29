@@ -1,3 +1,4 @@
+import { PixelCharacter } from './PixelCharacter';
 import { SellerConversation } from './SellerConversation';
 import { categoryLabel } from '../content/productCategories';
 import {
@@ -252,6 +253,15 @@ export function InfoView({ g }: { g: Game }) {
   return (
     <>
       <h1>내 정보</h1>
+      <section className="player-character-card" aria-label="내 캐릭터">
+        <div className="player-character-portrait">
+          <PixelCharacter />
+        </div>
+        <div>
+          <h2>내 캐릭터</h2>
+          <span>거래 {g.stats.purchases + g.stats.sales}회</span>
+        </div>
+      </section>
       <div className="abilities">
         {ABILITIES.map((a) => (
           <section className="card" key={a.stat}>

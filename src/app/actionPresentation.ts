@@ -5,7 +5,47 @@ export const ACTION_DURATION_MS = 750;
 export const HIGHLIGHT_DURATION_MS = 1400;
 export type ChangeKey = 'minute' | 'cash' | 'debt';
 export type Changes = Partial<Record<ChangeKey, number>>;
+export type ActionSceneKind =
+  | 'gift'
+  | 'buy'
+  | 'sell'
+  | 'search'
+  | 'work'
+  | 'inspect'
+  | 'repair'
+  | 'listing'
+  | 'finance'
+  | 'walk';
+export function actionScene(command: Command, before?: Game): ActionSceneKind {
+  switch (command.type) {
+    case 'buy':
+      return before?.board.find((item) => item.id === command.id)?.price === 0
+        ? 'gift'
+        : 'buy';
+    case 'accept':
+    case 'outletSell':
+      return 'sell';
+    case 'scavenge':
+      return 'search';
+    case 'job':
+      return 'work';
+    case 'check':
+      return 'inspect';
+    case 'repair':
+      return 'repair';
+    case 'post':
+    case 'cancel':
+      return 'listing';
+    case 'repay':
+    case 'payInterest':
+    case 'buyBusiness':
+      return 'finance';
+    default:
+      return 'walk';
+  }
+}
 export interface ActionPresentation {
+  scene: ActionSceneKind;
   id: number;
   label: string;
   before: Game;

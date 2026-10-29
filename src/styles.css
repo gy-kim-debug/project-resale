@@ -1887,3 +1887,232 @@ html {
   z-index: 80;
   padding-top: env(safe-area-inset-top, 0px);
 }
+
+.pixel-character {
+  display: block;
+  image-rendering: pixelated;
+  overflow: visible;
+}
+.player-character-card {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin: 20px 0;
+  padding: 20px;
+  background: #18232d;
+  border: 1px solid #33483f;
+  border-radius: 16px;
+}
+.player-character-portrait {
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 120px;
+  flex-shrink: 0;
+  background: #233b35;
+  border-radius: 12px;
+}
+.player-character-card h2 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.player-character-card span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.action-scene {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 22px;
+  border: 1px solid #344740;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.action-scene > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+.action-scene .pixel-character {
+  width: 24px;
+  height: 32px;
+}
+.action-scene .scene-player {
+  animation: pixel-approach var(--action-duration) steps(5, end) both;
+}
+.action-scene .scene-trader {
+  animation: pixel-meet var(--action-duration) steps(5, end) both;
+}
+.action-scene .pixel-body {
+  animation: pixel-bob 180ms steps(2, end) infinite;
+}
+.action-scene .pixel-leg-left {
+  animation: pixel-step 180ms steps(2, end) infinite;
+}
+.action-scene .pixel-leg-right {
+  animation: pixel-step 180ms steps(2, end) infinite reverse;
+}
+.action-scene .pixel-arm-front {
+  animation: pixel-reach var(--action-duration) steps(2, end) both;
+}
+.action-scene .scene-parcel {
+  animation: pixel-exchange var(--action-duration) steps(6, end) both;
+}
+.scene-sell .scene-parcel {
+  animation-direction: reverse;
+}
+.action-scene .scene-payment {
+  animation: pixel-pay var(--action-duration) steps(6, end) both;
+}
+.scene-sell .scene-payment {
+  animation-direction: reverse;
+}
+.action-scene .scene-spark {
+  animation: pixel-spark var(--action-duration) steps(2, end) both;
+}
+.action-scene .scene-tool {
+  animation: pixel-tool 220ms steps(2, end) infinite;
+}
+.action-scene .scene-carried-box {
+  animation: pixel-approach var(--action-duration) steps(5, end) both;
+}
+.scene-inspect .scene-player,
+.scene-repair .scene-player,
+.scene-listing .scene-player,
+.scene-finance .scene-player {
+  animation-name: pixel-at-desk;
+}
+.scene-search .pixel-body {
+  animation-name: pixel-search;
+  animation-duration: var(--action-duration);
+  animation-iteration-count: 1;
+  animation-fill-mode: both;
+}
+@keyframes pixel-approach {
+  0% {
+    transform: translateX(0);
+  }
+  35%,
+  100% {
+    transform: translateX(14px);
+  }
+}
+@keyframes pixel-meet {
+  0% {
+    transform: translateX(0);
+  }
+  35%,
+  100% {
+    transform: translateX(-12px);
+  }
+}
+@keyframes pixel-exchange {
+  0%,
+  40% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  45% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  85%,
+  100% {
+    transform: translateX(-32px);
+    opacity: 1;
+  }
+}
+@keyframes pixel-pay {
+  0%,
+  40% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  45% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  85%,
+  100% {
+    transform: translateX(32px);
+    opacity: 1;
+  }
+}
+@keyframes pixel-bob {
+  to {
+    transform: translateY(-1px);
+  }
+}
+@keyframes pixel-step {
+  to {
+    transform: translateY(-2px);
+  }
+}
+@keyframes pixel-reach {
+  0%,
+  30% {
+    transform: translate(0, 0);
+  }
+  45%,
+  100% {
+    transform: translate(3px, -3px);
+  }
+}
+@keyframes pixel-spark {
+  0%,
+  40% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  60%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pixel-tool {
+  to {
+    transform: translate(2px, 3px);
+  }
+}
+@keyframes pixel-at-desk {
+  to {
+    transform: translateX(8px);
+  }
+}
+@keyframes pixel-search {
+  0%,
+  30% {
+    transform: translateY(0);
+  }
+  45%,
+  70% {
+    transform: translateY(4px);
+  }
+  90%,
+  100% {
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-scene * {
+    animation: none !important;
+  }
+  .action-scene .scene-player {
+    transform: translateX(14px);
+  }
+  .action-scene .scene-trader {
+    transform: translateX(-12px);
+  }
+}
+@media (max-height: 620px) {
+  .action-scene {
+    max-width: 230px;
+    margin-bottom: 12px;
+  }
+  .action-time {
+    margin-block: 12px;
+    font-size: 11px;
+  }
+}

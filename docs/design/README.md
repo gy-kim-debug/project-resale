@@ -33,6 +33,7 @@
 
 ### 캐릭터
 
+- [도트 캐릭터와 행동 장면](character/PIXEL_CHARACTER.md)
 - [능력치 도입 계획](character/ABILITIES.md)
 - [거래 상대 프로필과 성향](character/TRADERS.md)
 - [아이템 도감과 해금](collection/ITEM_CODEX.md)

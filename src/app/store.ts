@@ -14,6 +14,7 @@ import {
   actionLabel,
   changesBetween,
   type ActionPresentation,
+  actionScene,
   type Changes,
 } from './actionPresentation';
 export type Act = (command: Command) => Promise<boolean>;
@@ -148,6 +149,7 @@ export const useGameStore = create<State>((set, get) => ({
       action: {
         id,
         label: actionLabel(command),
+        scene: actionScene(command, g),
         before: g,
         after: result.game,
         duration: ACTION_DURATION_MS,

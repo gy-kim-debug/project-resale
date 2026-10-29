@@ -16,6 +16,7 @@ import { auctionBidOptions } from '../src/domain/auction';
 import { ACTION_TICK } from '../src/domain/game';
 import {
   ACTION_DURATION_MS,
+  actionScene,
   changesBetween,
 } from '../src/app/actionPresentation';
 
@@ -46,6 +47,7 @@ test('action is committed once, briefly presented, then highlighted; all input p
   const completion = store.getState().act({ type: 'job', id: 'flyer' });
   const active = store.getState();
   assert.equal(active.action?.duration, 750);
+  assert.equal(active.action?.scene, 'work');
   assert.ok(ACTION_DURATION_MS >= 500 && ACTION_DURATION_MS <= 1000);
   assert.equal(active.action?.before.minute, before.minute);
   assert.equal(active.action?.after.minute, before.minute + ACTION_TICK);
@@ -259,6 +261,7 @@ test('all-read covers visible mail only; new mail is unread and expired ids are 
     action: {
       id: 1,
       label: '처리 중',
+      scene: 'walk',
       before: next,
       after: next,
       duration: 750,
@@ -465,4 +468,22 @@ test('dialogue choices save immediately without a loading layer, toast or econom
     writes.at(-1)!.game.board.find((i) => i.id === item.id)!.dialogue?.topics,
     ['greet'],
   );
+});
+
+test('action illustrations distinguish trade direction and free actions keep their existing presentation rules', () => {
+  assert.equal(actionScene({ type: 'buy', id: 'x' }), 'buy');
+  const freeGame = newGame();
+  freeGame.board[0].price = 0;
+  assert.equal(
+    actionScene({ type: 'buy', id: freeGame.board[0].id }, freeGame),
+    'gift',
+  );
+  assert.equal(actionScene({ type: 'accept', id: 'x' }), 'sell');
+  assert.equal(actionScene({ type: 'outletSell', id: 'x' }), 'sell');
+  assert.equal(actionScene({ type: 'scavenge' }), 'search');
+  assert.equal(actionScene({ type: 'check', id: 'x' }), 'inspect');
+  assert.equal(actionScene({ type: 'repair', id: 'x' }), 'repair');
+  assert.equal(actionScene({ type: 'post', id: 'x', price: 100 }), 'listing');
+  assert.equal(actionScene({ type: 'repay', amount: 100 }), 'finance');
+  assert.equal(actionScene({ type: 'refresh' }), 'walk');
 });
