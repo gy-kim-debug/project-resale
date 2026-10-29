@@ -34,6 +34,8 @@ export function normalizeMoney(original: Game): Game {
     const limitSteps = auction
       ? (auction.competitorMax - oldPrice) / auction.step
       : 0;
+    if (item.valuationReference !== undefined)
+      item.valuationReference = roundMoney(item.valuationReference);
     item.base = roundMoney(item.base);
     item.value = roundMoney(item.value);
     item.price = positivePrice(item.price);
@@ -110,6 +112,8 @@ export function allMoneyAligned(g: Game): boolean {
   ];
   for (const item of [...g.board, ...g.inventory]) {
     amounts.push(item.price, item.base, item.value, ...item.offers);
+    if (item.valuationReference !== undefined)
+      amounts.push(item.valuationReference);
     if (item.acquiredFor !== undefined) amounts.push(item.acquiredFor);
     if (item.negotiatedPrice !== null) amounts.push(item.negotiatedPrice);
     if (item.purchaseBargain)

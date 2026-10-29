@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [매물 가치·대박 확률·중첩 상한 조정](economy/VALUATION_BALANCE.md)
+
 - [선택지형 거래 대화와 조건 확인 이벤트](trading/bargaining/TRADE_DIALOGUE.md)
 
 - [240품목·36분류 확장](items/CATALOG_EXPANSION.md)

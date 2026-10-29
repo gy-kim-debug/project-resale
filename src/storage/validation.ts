@@ -74,6 +74,10 @@ function listing(v: unknown, itemKind: unknown): boolean {
 function item(v: unknown): v is Item {
   return (
     record(v) &&
+    (v.valuationReference === undefined ||
+      (integer(v.valuationReference, RULES.maxMoney) &&
+        v.valuationReference >= 100 &&
+        v.valuationReference % 100 === 0)) &&
     (v.traderId === undefined || isTraderId(v.traderId)) &&
     (v.category === undefined ||
       (isProductCategory(v.category) &&

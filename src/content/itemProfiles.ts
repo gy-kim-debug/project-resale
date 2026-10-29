@@ -29,7 +29,7 @@ const common: ItemTradeProfile = {
   brokenValuePercent: 18,
   checkPercent: 1,
   repairPercent: 12,
-  maxRarityPercent: 400,
+  maxRarityPercent: 300,
   brokenDescription: '작동 불량·부품 손상이 있습니다.',
   wornDescription: '마모와 작은 흠집이 있습니다.',
   repairedDescription: '수리 완료. 정상 작동합니다.',

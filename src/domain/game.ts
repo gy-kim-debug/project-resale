@@ -67,6 +67,8 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
+  /** Fixed generation reference for capped new valuations; absent in legacy saves. */
+  valuationReference?: number;
   dialogue?: { topics: DialogueTopic[]; rapport: number };
   category?: ProductCategory;
   caseId?: ItemCaseId;

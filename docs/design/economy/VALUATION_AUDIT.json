@@ -1,0 +1,200 @@
+{
+  "beforeSha": "2b28b448b345839b8659d74447fe28be79d6b7ce",
+  "seeds": 1000,
+  "scope": "60,000 paid non-auction listings per version, before bargaining/fees/repair/buyer matching; initial boards only. Instant sale comparison is potential gross price, not completed profit.",
+  "pairedListings": 60000,
+  "capBreaches": 0,
+  "referenceBreaches": 0,
+  "before": {
+    "count": 60000,
+    "median": 1.55,
+    "p95": 2.85,
+    "value2x": 21.75,
+    "value3x": 3.86,
+    "value5x": 0.25,
+    "belowAsking": 34.12,
+    "instantSaleProfit": 43.32,
+    "max": 16.23
+  },
+  "after": {
+    "count": 60000,
+    "median": 0.8,
+    "p95": 1.62,
+    "value2x": 1.62,
+    "value3x": 0.11,
+    "value5x": 0,
+    "belowAsking": 66.94,
+    "instantSaleProfit": 4.32,
+    "max": 3.9
+  },
+  "byKind": {
+    "생활": {
+      "before": {
+        "count": 7183,
+        "median": 1.49,
+        "p95": 2.59,
+        "value2x": 17.11,
+        "value3x": 2.03,
+        "value5x": 0.06,
+        "belowAsking": 33.55,
+        "instantSaleProfit": 34.19,
+        "max": 5.87
+      },
+      "after": {
+        "count": 7183,
+        "median": 0.88,
+        "p95": 1.73,
+        "value2x": 2.45,
+        "value3x": 0.1,
+        "value5x": 0,
+        "belowAsking": 60.35,
+        "instantSaleProfit": 6.01,
+        "max": 3.55
+      }
+    },
+    "디지털": {
+      "before": {
+        "count": 13782,
+        "median": 1.18,
+        "p95": 2.82,
+        "value2x": 18.27,
+        "value3x": 3.5,
+        "value5x": 0.21,
+        "belowAsking": 44.46,
+        "instantSaleProfit": 32.75,
+        "max": 6.8
+      },
+      "after": {
+        "count": 13782,
+        "median": 0.59,
+        "p95": 1.52,
+        "value2x": 1.21,
+        "value3x": 0.13,
+        "value5x": 0,
+        "belowAsking": 76.72,
+        "instantSaleProfit": 3.2,
+        "max": 3.9
+      }
+    },
+    "수집품": {
+      "before": {
+        "count": 1625,
+        "median": 1.82,
+        "p95": 4.09,
+        "value2x": 38.89,
+        "value3x": 14.52,
+        "value5x": 3.45,
+        "belowAsking": 33.17,
+        "instantSaleProfit": 54.58,
+        "max": 16.23
+      },
+      "after": {
+        "count": 1625,
+        "median": 0.92,
+        "p95": 2.18,
+        "value2x": 6.83,
+        "value3x": 0.86,
+        "value5x": 0,
+        "belowAsking": 56.06,
+        "instantSaleProfit": 12.74,
+        "max": 3.75
+      }
+    },
+    "가구": {
+      "before": {
+        "count": 1410,
+        "median": 1.18,
+        "p95": 2.89,
+        "value2x": 18.51,
+        "value3x": 4.18,
+        "value5x": 0,
+        "belowAsking": 36.1,
+        "instantSaleProfit": 31.91,
+        "max": 4.65
+      },
+      "after": {
+        "count": 1410,
+        "median": 0.62,
+        "p95": 1.61,
+        "value2x": 1.49,
+        "value3x": 0,
+        "value5x": 0,
+        "belowAsking": 78.16,
+        "instantSaleProfit": 4.33,
+        "max": 2.84
+      }
+    },
+    "악기": {
+      "before": {
+        "count": 12000,
+        "median": 1.72,
+        "p95": 3.13,
+        "value2x": 31.1,
+        "value3x": 6.28,
+        "value5x": 0.33,
+        "belowAsking": 34.67,
+        "instantSaleProfit": 51.99,
+        "max": 12.12
+      },
+      "after": {
+        "count": 12000,
+        "median": 0.86,
+        "p95": 1.68,
+        "value2x": 1.93,
+        "value3x": 0.13,
+        "value5x": 0,
+        "belowAsking": 62.75,
+        "instantSaleProfit": 5.24,
+        "max": 3.75
+      }
+    },
+    "자동차": {
+      "before": {
+        "count": 12000,
+        "median": 1.18,
+        "p95": 2.78,
+        "value2x": 19.52,
+        "value3x": 3.62,
+        "value5x": 0.19,
+        "belowAsking": 41.27,
+        "instantSaleProfit": 33.4,
+        "max": 6.55
+      },
+      "after": {
+        "count": 12000,
+        "median": 0.65,
+        "p95": 1.59,
+        "value2x": 1.47,
+        "value3x": 0.13,
+        "value5x": 0,
+        "belowAsking": 74.31,
+        "instantSaleProfit": 3.91,
+        "max": 3.78
+      }
+    },
+    "부동산": {
+      "before": {
+        "count": 12000,
+        "median": 1.82,
+        "p95": 2.73,
+        "value2x": 19.47,
+        "value3x": 1.73,
+        "value5x": 0,
+        "belowAsking": 14.76,
+        "instantSaleProfit": 62,
+        "max": 3.79
+      },
+      "after": {
+        "count": 12000,
+        "median": 0.95,
+        "p95": 1.51,
+        "value2x": 0.73,
+        "value3x": 0,
+        "value5x": 0,
+        "belowAsking": 56.63,
+        "instantSaleProfit": 2.95,
+        "max": 2.67
+      }
+    }
+  }
+}

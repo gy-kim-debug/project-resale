@@ -1,3 +1,4 @@
+import { VALUATION_RULES } from '../content/valuation';
 import { ITEM_PROFILES } from '../content/itemProfiles';
 import type { Condition, Kind } from './game';
 
@@ -23,7 +24,11 @@ export function conditionValuePercent(
 export function rarityBoostPercent(kind: Kind, roll: number): number {
   return Math.min(
     ITEM_PROFILES[kind].maxRarityPercent,
-    roll > 0.97 ? 400 : roll > 0.86 ? 150 : 100,
+    roll >= 1 - VALUATION_RULES.jackpotChance
+      ? VALUATION_RULES.jackpotPercent
+      : roll >= 1 - VALUATION_RULES.jackpotChance - VALUATION_RULES.modestChance
+        ? VALUATION_RULES.modestPercent
+        : 100,
   );
 }
 

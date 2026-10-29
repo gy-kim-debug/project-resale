@@ -1,3 +1,4 @@
+import { referenceValue, generatedBase, capValue } from './valuation';
 import { dialogueReply } from './tradeDialogue';
 import { FIND_PRODUCTS } from '../content/marketProducts';
 import { itemCase } from '../content/itemCases';
@@ -86,9 +87,9 @@ export function tier(g: Game) {
   );
 }
 export function marketValue(g: Game, item: Item) {
-  return moneyRatio(
-    item.value,
-    g.marketFactor + (item.kind === g.trend ? 20 : 0),
+  return capValue(
+    moneyRatio(item.value, g.marketFactor + (item.kind === g.trend ? 20 : 0)),
+    item.valuationReference,
   );
 }
 export function checkCost(g: Game, item: Item) {
@@ -166,18 +167,13 @@ function makeItem(
         free || marketItem?.marketId === 'auction',
       )
     : undefined;
-  const rarityPercent = listing
-    ? Math.floor(
-        (listingValuePercent(listing, template.kind) *
-          rarityBoostPercent(template.kind, rarity)) /
-          100,
-      )
+  const featurePercent = listing
+    ? listingValuePercent(listing, template.kind)
     : rarity < 0.1
       ? (profile.featureValues?.replica ?? TAG_RULES.replicaValuePercent)
-      : rarityBoostPercent(template.kind, rarity);
-  const actualBase = Math.max(
-    100,
-    moneyRatio(moneyRatio(categoryBase, rarityPercent), variant.valuePercent),
+      : 100;
+  const rarityPercent = Math.floor(
+    (featurePercent * rarityBoostPercent(template.kind, rarity)) / 100,
   );
   let price = free
     ? 0
@@ -207,7 +203,17 @@ function makeItem(
     );
   if (marketItem?.entry)
     price = marketItem.product.min ?? marketDefinition(marketItem.marketId).min;
+  const valuationReference = marketItem
+    ? referenceValue(price, `${g.seed}:${g.serial + 1}:value-reference`)
+    : Math.max(100, categoryBase);
+  const actualBase = generatedBase(
+    valuationReference,
+    featurePercent,
+    rarityBoostPercent(template.kind, rarity),
+    variant.valuePercent,
+  );
   const item: Item = {
+    valuationReference,
     caseId,
     category: template.category,
     listing,
@@ -280,7 +286,7 @@ function board(g: Game, selected?: MarketId) {
           ? low
           : low + Math.floor(roll(g) * ((high - low) / 1000 + 1)) * 1000;
       list.push(
-        makeItem(g, moneyRatio(asking, 100, 55), false, true, {
+        makeItem(g, asking, false, true, {
           marketId: market.id,
           product,
           asking,

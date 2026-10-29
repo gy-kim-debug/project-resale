@@ -120,3 +120,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 케이스 설정은 content/itemCases.ts, 독립 추첨/품질 변환은 domain/itemCases.ts에 둔다. 새 Item의 선택적 category/caseId로 저장하고 기존 metadata 없는 데이터도 지원한다. 케이스는 새 물건 생성 시 base/value/상태/게시가에 적용하며 감정·수리·로드 때 재추첨하지 않는다. 특별 소장품은 조정된 base에서 상태 가치를 계산해 중간 반올림 오차를 피한다. 가격표 문서는 scripts/export-market-catalog.mjs로 같은 데이터에서 생성한다.
 
 선택지형 판매자 대화는 content/tradeDialogue.ts의 주제/수치와 domain/tradeDialogue.ts의 순수 응답 함수로 분리한다. Item.dialogue의 일회성 주제/호감 및 기존 chat을 저장하고, 엔진 dialogue 명령은 경제 RNG·시간·자금을 소비하지 않는다. store는 로딩 없이 답변을 저장한다. 인물 나이/성별은 문장 표현에만 쓰며 가격·정직함 계산에는 쓰지 않는다. 호감은 최초 구매 흥정 하한에만 제한적으로 적용한다. 상세 규칙은 design/trading/bargaining/TRADE_DIALOGUE.md를 참조한다.
+
+새 매물 가치 조정은 content/valuation.ts의 사용자 확정 수치와 domain/valuation.ts의 기준 가치 생성·보너스 상한 함수가 관리한다. Item.valuationReference는 생성 시 한 번 확정하며 감정·수리·협상·저장/복원으로 재추첨하지 않는다. 일반 생성·특별 소장품·현재 시장 가치가 같은 상한을 사용한다. 필드가 없는 과거 물품은 기존 값과 시장 계산을 유지한다. 세부 규칙과 재현 비교는 design/economy/VALUATION_BALANCE.md를 참조한다.

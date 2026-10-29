@@ -1,5 +1,3 @@
-import { itemCase } from '../src/content/itemCases';
-import { ITEM_PROFILES } from '../src/content/itemProfiles';
 import {
   generatedCondition,
   conditionValuePercent,
@@ -2915,7 +2913,7 @@ test('collectible authenticity has stronger value consequences while public tag 
   assert.equal(listingValuePercent(info, '수집품'), 5);
   assert.equal(listingValuePercent(info, '디지털'), 8);
   assert.equal(TAG_RULES.truthChance, 0.85);
-  assert.equal(rarityBoostPercent('수집품', 0.99), 400);
+  assert.equal(rarityBoostPercent('수집품', 0.99), 300);
   assert.equal(rarityBoostPercent('부동산', 0.99), 150);
   assert.equal(rarityBoostPercent('자동차', 0.99), 200);
   assert.equal(rarityBoostPercent('생활', 0.99), 150);
@@ -2932,8 +2930,7 @@ test('new stock applies category value rules while retaining price bands, hidden
         item.listing!.facts.seller === 'urgent'
       )
         continue;
-      const profile = ITEM_PROFILES[item.kind],
-        market = MARKETS.find((m) => m.id === item.marketId)!;
+      const market = MARKETS.find((m) => m.id === item.marketId)!;
       assert.ok(item.price >= market.min && item.price <= market.max);
       assert.equal(item.checked, false);
       assert.equal(
@@ -2942,25 +2939,9 @@ test('new stock applies category value rules while retaining price bands, hidden
       );
       const product = market.products.find((p) => p.title === item.title)!;
       assert.ok(item.price >= product.min! && item.price <= product.max!);
-      const rarityPercent = listingValuePercent(item.listing!, item.kind);
-      const baseAt = (price: number, boost: number) =>
-        Math.max(
-          100,
-          moneyRatio(
-            moneyRatio(
-              moneyRatio(
-                moneyRatio(price, 100, 55),
-                profile.marketValuePercent,
-              ),
-              Math.floor((rarityPercent * boost) / 100),
-            ),
-            itemCase(item.caseId).valuePercent,
-          ),
-        );
-      assert.ok(
-        item.base >= baseAt(product.min!, 100) &&
-          item.base <= baseAt(product.max!, profile.maxRarityPercent),
-      );
+      assert.ok(item.valuationReference! >= moneyRatio(item.price, 80));
+      assert.ok(item.valuationReference! <= moneyRatio(item.price, 130));
+      assert.ok(item.base <= moneyRatio(item.valuationReference!, 300));
       assert.equal(item.value % 100, 0);
       count++;
     }

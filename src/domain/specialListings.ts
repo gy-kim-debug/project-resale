@@ -1,3 +1,4 @@
+import { boostedBase } from './valuation';
 import { conditionValuePercent } from './itemProfiles';
 import { chooseTrader } from '../content/traders';
 import { ACTION_TICK, type Item } from './game';
@@ -36,7 +37,7 @@ export function applySpecialListing(
   item.description = `${SPECIAL_LISTINGS[id].description} ${original.description}`;
   item.price = specialAsking(item, id, min);
   if (id === 'collector' && item.listing!.facts.authentic) {
-    item.base = moneyRatio(item.base, 200);
+    item.base = boostedBase(item, 200);
     item.value = moneyRatio(
       item.base,
       conditionValuePercent(item.kind, item.condition),
