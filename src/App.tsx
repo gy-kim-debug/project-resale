@@ -1,3 +1,4 @@
+import { StartMenu } from './components/StartMenu';
 import { usePageNavigation } from './app/navigation';
 import {
   useEffect,
@@ -371,7 +372,7 @@ function ActivityHome({
     </>
   );
 }
-export default function App() {
+function GameApp() {
   const state = useGameStore();
   const g = state.game;
   const { routes, navigate, back } = usePageNavigation(state.tab, state.setTab);
@@ -392,7 +393,7 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [state.tab]);
   const open = (r: Route) => {
-    if (state.action || pending || over) return;
+    if (state.action || state.slotBusy || pending || over) return;
     if (r.kind === '장터') state.selectMarket(r.marketId ?? 'street');
     navigate([...routes, r]);
   };
@@ -430,7 +431,7 @@ export default function App() {
         changes={state.changes}
         actionId={state.actionId}
         onOpen={(kind) => {
-          if (state.action || pending || over) return;
+          if (state.action || state.slotBusy || pending || over) return;
           navigate([{ kind }]);
           state.dismiss();
         }}
@@ -449,8 +450,8 @@ export default function App() {
         )}
       <div
         className="game-scene"
-        aria-busy={!!state.action}
-        inert={!!state.action}
+        aria-busy={!!state.action || state.slotBusy}
+        inert={!!state.action || state.slotBusy}
         aria-hidden={state.action ? true : undefined}
       >
         <div className="base-content" inert={shownRoutes.length > 0 || over}>
@@ -587,4 +588,21 @@ export default function App() {
       )}
     </div>
   );
+}
+
+export default function App() {
+  const ready = useGameStore((s) => s.ready);
+  const screen = useGameStore((s) => s.screen);
+  const slot = useGameStore((s) => s.activeSlot);
+  useEffect(() => {
+    void useGameStore.getState().hydrate();
+  }, []);
+  if (!ready)
+    return (
+      <div className="loading" role="status">
+        저장된 이야기를 불러오는 중…
+      </div>
+    );
+  if (screen === 'menu') return <StartMenu />;
+  return <GameApp key={slot} />;
 }

@@ -122,3 +122,5 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 선택지형 판매자 대화는 content/tradeDialogue.ts의 주제/수치와 domain/tradeDialogue.ts의 순수 응답 함수로 분리한다. Item.dialogue의 일회성 주제/호감 및 기존 chat을 저장하고, 엔진 dialogue 명령은 경제 RNG·시간·자금을 소비하지 않는다. store는 로딩 없이 답변을 저장한다. 인물 나이/성별은 문장 표현에만 쓰며 가격·정직함 계산에는 쓰지 않는다. 호감은 최초 구매 흥정 하한에만 제한적으로 적용한다. 상세 규칙은 design/trading/bargaining/TRADE_DIALOGUE.md를 참조한다.
 
 새 매물 가치 조정은 content/valuation.ts의 사용자 확정 수치와 domain/valuation.ts의 기준 가치 생성·보너스 상한 함수가 관리한다. Item.valuationReference는 생성 시 한 번 확정하며 감정·수리·협상·저장/복원으로 재추첨하지 않는다. 일반 생성·특별 소장품·현재 시장 가치가 같은 상한을 사용한다. 필드가 없는 과거 물품은 기존 값과 시장 계산을 유지한다. 세부 규칙과 재현 비교는 design/economy/VALUATION_BALANCE.md를 참조한다.
+
+시작 화면은 StartMenu, 게임 세션은 GameApp으로 분리한다. store가 menu/game 화면·활성 SlotId·슬롯 목록·저장 큐를 관리하며 큐마다 대상 슬롯을 캡처한다. 저장소의 load/save/listSlots/create/remove가 IndexedDB 키를 추상화하고 legacy current 이전과 슬롯 생성의 점유 검사를 트랜잭션으로 처리한다. 각 게임의 선택적 player 프로필은 content/player.ts와 domain/player.ts에서 정의/검증하며 PixelCharacter와 ActionScene에서 공유한다. 외형은 시뮬레이션 RNG를 소비하지 않는다.

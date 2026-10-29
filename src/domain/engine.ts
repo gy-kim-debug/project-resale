@@ -1,3 +1,5 @@
+import type { PlayerProfile } from '../content/player';
+import { isPlayer } from './player';
 import { referenceValue, generatedBase, capValue } from './valuation';
 import { dialogueReply } from './tradeDialogue';
 import { FIND_PRODUCTS } from '../content/marketProducts';
@@ -490,8 +492,11 @@ function preItem(g: Game, itemId: string) {
   return i;
 }
 
-export function newGame(seed = 1): Game {
+export function newGame(seed = 1, player?: PlayerProfile): Game {
+  if (player !== undefined && !isPlayer(player))
+    throw Error('캐릭터 설정이 올바르지 않습니다.');
   const g: Game = {
+    ...(player ? { player: structuredClone(player) } : {}),
     version: 2,
     moneyUnit: 100,
     discoveredItems: [],

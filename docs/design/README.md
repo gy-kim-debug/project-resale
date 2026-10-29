@@ -13,6 +13,10 @@
 
 ## 현재 구현 원칙
 
+- [앱 시작 화면](ui/START_SCREEN.md)
+- [독립 저장 슬롯과 기존 데이터 이전](saving/SLOTS.md)
+- [새 게임 닉네임·외형 설정](character/CUSTOMIZATION.md)
+
 - [매물 가치·대박 확률·중첩 상한 조정](economy/VALUATION_BALANCE.md)
 
 - [선택지형 거래 대화와 조건 확인 이벤트](trading/bargaining/TRADE_DIALOGUE.md)

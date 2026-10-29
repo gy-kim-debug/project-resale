@@ -62,7 +62,10 @@ export function ActionProgress({ action }: { action: ActionPresentation }) {
           { '--action-duration': `${action.duration}ms` } as React.CSSProperties
         }
       >
-        <ActionScene kind={action.scene} />
+        <ActionScene
+          kind={action.scene}
+          appearance={action.after.player?.appearance}
+        />
         <h2 id="action-title" role="status">
           {action.label}
         </h2>

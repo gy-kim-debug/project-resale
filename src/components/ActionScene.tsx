@@ -1,6 +1,13 @@
+import type { PlayerAppearance } from '../content/player';
 import type { ActionSceneKind } from '../app/actionPresentation';
 import { PixelCharacter } from './PixelCharacter';
-export function ActionScene({ kind }: { kind: ActionSceneKind }) {
+export function ActionScene({
+  kind,
+  appearance,
+}: {
+  kind: ActionSceneKind;
+  appearance?: PlayerAppearance;
+}) {
   const trade = kind === 'buy' || kind === 'sell' || kind === 'gift';
   const desk = ['inspect', 'repair', 'listing', 'finance'].includes(kind);
   return (
@@ -132,7 +139,7 @@ export function ActionScene({ kind }: { kind: ActionSceneKind }) {
         )}
         <g className="scene-player">
           <g transform={`translate(${trade ? 27 : desk ? 43 : 42} 25)`}>
-            <PixelCharacter animated scale={1} />
+            <PixelCharacter animated scale={1} appearance={appearance} />
           </g>
         </g>
         {kind === 'work' && (

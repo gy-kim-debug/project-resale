@@ -11,9 +11,26 @@ export interface SaveData {
   selectedMarket?: MarketId;
   readNotificationIds?: number[];
 }
+export const SLOT_IDS = [1, 2, 3] as const;
+export type SlotId = (typeof SLOT_IDS)[number];
+export interface SaveSlot {
+  id: SlotId;
+  data?: SaveData;
+  updatedAt: number;
+  error?: string;
+}
+export const isSlotId = (id: unknown): id is SlotId =>
+  SLOT_IDS.some((slot) => slot === id);
+const slotKey = (id: SlotId) => {
+  if (!isSlotId(id)) throw Error('없는 저장 슬롯입니다.');
+  return `slot:${id}`;
+};
 export interface SaveRepository {
-  load(): Promise<SaveData | undefined>;
-  save(data: SaveData): Promise<void>;
+  load(slot?: SlotId): Promise<SaveData | undefined>;
+  save(data: SaveData, slot?: SlotId): Promise<void>;
+  listSlots(): Promise<SaveSlot[]>;
+  create(data: SaveData, slot: SlotId): Promise<void>;
+  remove(slot: SlotId): Promise<void>;
 }
 export function parseSave(value: unknown): SaveData {
   if (
@@ -68,30 +85,116 @@ const database = () =>
       if (!db.objectStoreNames.contains('saves')) db.createObjectStore('saves');
     },
   });
-export const saveRepository: SaveRepository = {
-  async load() {
-    const db = await database();
-    try {
-      const value: unknown = await db.get('saves', 'current');
-      // v1 held favorites only, never actual progress; retain it as a separate backup.
+/** Copy legacy current exactly once, atomically. Retain the original as a recovery copy. */
+async function migrate(db: Awaited<ReturnType<typeof database>>) {
+  const tx = db.transaction('saves', 'readwrite');
+  if (!(await tx.store.get('slots-initialized'))) {
+    const current: unknown = await tx.store.get('current');
+    if (current !== undefined && (await tx.store.get('slot:1')) === undefined) {
       if (
-        typeof value === 'object' &&
-        value !== null &&
-        'version' in value &&
-        value.version === 1
-      ) {
-        await db.put('saves', value, 'legacy-v1');
-        return undefined;
+        typeof current === 'object' &&
+        current !== null &&
+        'version' in current &&
+        current.version === 1
+      )
+        await tx.store.put(current, 'legacy-v1');
+      else {
+        await tx.store.put(current, 'slot:1');
+        await tx.store.put(0, 'slot-time:1');
       }
+    }
+    await tx.store.put(true, 'slots-initialized');
+  }
+  await tx.done;
+}
+export const saveRepository: SaveRepository = {
+  async load(slot = 1) {
+    const key = slotKey(slot),
+      db = await database();
+    try {
+      await migrate(db);
+      const value: unknown = await db.get('saves', key);
       return value === undefined ? undefined : parseSave(value);
     } finally {
       db.close();
     }
   },
-  async save(data) {
+  async listSlots() {
     const db = await database();
     try {
-      await db.put('saves', data, 'current');
+      await migrate(db);
+      const tx = db.transaction('saves', 'readonly');
+      const raw = await Promise.all(
+        SLOT_IDS.map(async (id) => ({
+          id,
+          value: await tx.store.get(slotKey(id)),
+          time: await tx.store.get(`slot-time:${id}`),
+        })),
+      );
+      await tx.done;
+      return raw.map(({ id, value, time }): SaveSlot => {
+        const updatedAt =
+          typeof time === 'number' &&
+          Number.isSafeInteger(time) &&
+          time >= 0 &&
+          Number.isFinite(new Date(time).getTime())
+            ? time
+            : 0;
+        try {
+          return {
+            id,
+            updatedAt,
+            ...(value === undefined ? {} : { data: parseSave(value) }),
+          };
+        } catch {
+          return { id, updatedAt, error: '저장 데이터를 읽을 수 없습니다.' };
+        }
+      });
+    } finally {
+      db.close();
+    }
+  },
+  async save(data, slot = 1) {
+    const key = slotKey(slot);
+    parseSave(data);
+    const db = await database();
+    try {
+      await migrate(db);
+      const tx = db.transaction('saves', 'readwrite');
+      await tx.store.put(data, key);
+      await tx.store.put(Date.now(), `slot-time:${slot}`);
+      await tx.done;
+    } finally {
+      db.close();
+    }
+  },
+  async create(data, slot) {
+    const key = slotKey(slot);
+    parseSave(data);
+    const db = await database();
+    try {
+      await migrate(db);
+      const tx = db.transaction('saves', 'readwrite');
+      if ((await tx.store.get(key)) !== undefined) {
+        await tx.done;
+        throw Error('이미 사용 중인 슬롯입니다. 다른 슬롯을 선택하세요.');
+      }
+      await tx.store.put(data, key);
+      await tx.store.put(Date.now(), `slot-time:${slot}`);
+      await tx.done;
+    } finally {
+      db.close();
+    }
+  },
+  async remove(slot) {
+    const key = slotKey(slot),
+      db = await database();
+    try {
+      await migrate(db);
+      const tx = db.transaction('saves', 'readwrite');
+      await tx.store.delete(key);
+      await tx.store.delete(`slot-time:${slot}`);
+      await tx.done;
     } finally {
       db.close();
     }

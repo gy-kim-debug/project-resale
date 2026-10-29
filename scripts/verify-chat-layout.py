@@ -4,12 +4,12 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
 DATA=json.loads(Path('work/dialogue-fixture.json').read_text())
-WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""
+WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'slot:1');tx.oncomplete=r});db.close()}"""
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=os.getenv('CHROMIUM_PATH','/usr/bin/chromium'),args=['--no-sandbox'])
  for width,height in [(320,568),(375,667),(390,844),(430,932),(900,900)]:
   c=b.new_context(viewport={'width':width,'height':height},has_touch=True);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-  page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for();page.evaluate(WRITE,DATA['save']);page.reload();page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click();page.locator('.item-row').filter(has=page.get_by_text(DATA['item']['title'],exact=True)).click();page.get_by_role('button',name='판매자와 채팅',exact=True).click()
+  page.goto(BASE);page.get_by_role('heading',name='시작하기',exact=True).wait_for();page.evaluate(WRITE,DATA['save']);page.reload();page.get_by_role('button',name='이어하기',exact=True).click();page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click();page.locator('.item-row').filter(has=page.get_by_text(DATA['item']['title'],exact=True)).click();page.get_by_role('button',name='판매자와 채팅',exact=True).click()
   def fits():
    v=page.evaluate("""()=>{const c=document.querySelector('.sheet-content'),log=document.querySelector('.trade-chat'),dock=document.querySelector('.purchase-dock');return {overflow:c.scrollHeight-c.clientHeight,log:log.clientHeight,bottom:dock.getBoundingClientRect().bottom,nav:document.querySelector('nav').getBoundingClientRect().top,width:document.documentElement.scrollWidth-innerWidth}}""")
    assert v['overflow']<=2,v;assert v['log']>=60,v;assert v['bottom']<=v['nav']+2,v;assert v['width']<=0,v

@@ -1,3 +1,4 @@
+import type { PlayerProfile } from '../content/player';
 import type { DialogueTopic } from '../content/tradeDialogue';
 import type { ProductCategory } from '../content/productCategories';
 import type { ItemCaseId } from '../content/itemCases';
@@ -140,6 +141,7 @@ export interface Event {
   expires: number;
 }
 export interface Game {
+  player?: PlayerProfile;
   discoveredItems?: string[];
   businesses?: { id: BusinessId; purchasedWeek: number }[];
   businessIncomeWeek?: number;

@@ -1,3 +1,4 @@
+import { playerOf } from '../domain/player';
 import { PixelCharacter } from './PixelCharacter';
 import { SellerConversation } from './SellerConversation';
 import { categoryLabel } from '../content/productCategories';
@@ -255,10 +256,10 @@ export function InfoView({ g }: { g: Game }) {
       <h1>내 정보</h1>
       <section className="player-character-card" aria-label="내 캐릭터">
         <div className="player-character-portrait">
-          <PixelCharacter />
+          <PixelCharacter appearance={playerOf(g).appearance} />
         </div>
         <div>
-          <h2>내 캐릭터</h2>
+          <h2>{playerOf(g).nickname}</h2>
           <span>거래 {g.stats.purchases + g.stats.sales}회</span>
         </div>
       </section>
@@ -1022,7 +1023,6 @@ export function InquiriesView({ g, act }: { g: Game; act: Act }) {
 }
 export function StorageView() {
   const s = useGameStore();
-  const [confirm, setConfirm] = useState(false);
   function download() {
     if (!s.game) return;
     const blob = new Blob(
@@ -1091,28 +1091,9 @@ export function StorageView() {
         삭제·브라우저 변경 시 저장이 사라질 수 있으니 백업을 권장합니다.
       </p>
       <Button onClick={() => s.save()}>저장 다시 시도</Button>
-      {!confirm ? (
-        <Button danger onClick={() => setConfirm(true)}>
-          현재 진행을 버리고 새 게임
-        </Button>
-      ) : (
-        <section className="card">
-          <p>
-            기존 진행은 삭제됩니다. 계승·부활 없이 현금 0원부터 새로 시작합니다.
-            먼저 백업을 내려받을 수 있습니다.
-          </p>
-          <Button
-            danger
-            onClick={() => {
-              s.startOver();
-              setConfirm(false);
-            }}
-          >
-            새 게임 시작 확정
-          </Button>
-          <Button onClick={() => setConfirm(false)}>취소</Button>
-        </section>
-      )}
+      <Button disabled={s.slotBusy} onClick={() => void s.returnToMenu()}>
+        시작 화면으로
+      </Button>
     </>
   );
 }
@@ -1296,9 +1277,14 @@ export function RouteView({
       return <MailboxView g={g} open={open} />;
     case '설정':
       return (
-        <Button onClick={() => open({ kind: '저장 관리' })}>
-          저장·백업 관리
-        </Button>
+        <>
+          <Button onClick={() => void useGameStore.getState().returnToMenu()}>
+            시작 화면으로
+          </Button>
+          <Button onClick={() => open({ kind: '저장 관리' })}>
+            저장·백업 관리
+          </Button>
+        </>
       );
     case '기록':
       return (

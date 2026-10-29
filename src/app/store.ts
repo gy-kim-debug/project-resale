@@ -1,3 +1,5 @@
+import type { PlayerProfile } from '../content/player';
+import { isPlayer } from '../domain/player';
 import { create } from 'zustand';
 import type { Command, Game, MarketId } from '../domain/game';
 import { isActiveMarketId } from '../content/markets';
@@ -7,6 +9,8 @@ import {
   saveRepository,
   parseSave,
   type SaveData,
+  type SlotId,
+  type SaveSlot,
 } from '../storage/saveRepository';
 import {
   ACTION_DURATION_MS,
@@ -20,6 +24,16 @@ import {
 export type Act = (command: Command) => Promise<boolean>;
 export type Tab = '내 정보' | '채무' | '활동' | '보관함' | '사업';
 interface State {
+  screen: 'menu' | 'game';
+  unsaved: boolean;
+  activeSlot: SlotId;
+  slots: SaveSlot[];
+  slotBusy: boolean;
+  continueSlot(id: SlotId): Promise<boolean>;
+  createSlot(id: SlotId, player: PlayerProfile): Promise<boolean>;
+  deleteSlot(id: SlotId): Promise<boolean>;
+  returnToMenu(): Promise<boolean>;
+
   game: Game | null;
   ready: boolean;
   saveError: string;
@@ -53,6 +67,11 @@ let actionFinished: Promise<boolean> = Promise.resolve(false);
 let hydration: Promise<void> | null = null;
 const seed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 export const useGameStore = create<State>((set, get) => ({
+  screen: 'menu',
+  unsaved: false,
+  activeSlot: 1,
+  slots: [],
+  slotBusy: false,
   game: null,
   ready: false,
   saveError: '',
@@ -73,18 +92,24 @@ export const useGameStore = create<State>((set, get) => ({
     if (hydration) return hydration;
     hydration = (async () => {
       try {
-        const saved = await saveRepository.load();
+        const slots = await saveRepository.listSlots();
+        const recent = slots
+          .filter((slot) => slot.data)
+          .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+        const saved = recent?.data;
         set({
-          game: saved?.game ?? newGame(seed()),
+          slots,
+          activeSlot: recent?.id ?? 1,
+          screen: 'menu',
+          game: saved?.game ?? null,
           favoriteIds: saved?.favoriteIds ?? [],
           selectedMarket: saved?.selectedMarket ?? 'street',
           readNotificationIds: saved?.readNotificationIds ?? [],
           ready: true,
         });
-        if (!saved) get().save();
       } catch (e) {
         set({
-          game: newGame(seed()),
+          game: null,
           ready: true,
           storageBlocked: true,
           saveError: `저장 데이터를 불러오지 못했습니다. 자동 저장을 멈췄습니다. ${e instanceof Error ? e.message : ''} 백업을 가져오거나 새 게임을 명시적으로 시작할 수 있습니다.`,
@@ -93,10 +118,140 @@ export const useGameStore = create<State>((set, get) => ({
     })();
     return hydration;
   },
+  async continueSlot(id) {
+    if (get().action || get().slotBusy || !get().ready) return false;
+    set({ slotBusy: true });
+    try {
+      await flushSaves();
+      if (get().unsaved && !get().storageBlocked)
+        throw Error('이전 진행 저장을 확인한 뒤 다시 시도하세요.');
+      const data = await saveRepository.load(id);
+      if (!data) throw Error('비어 있는 슬롯입니다.');
+      clearTimeout(highlightTimer);
+      set({
+        activeSlot: id,
+        game: data.game,
+        favoriteIds: data.favoriteIds,
+        selectedMarket: data.selectedMarket ?? 'street',
+        readNotificationIds: data.readNotificationIds ?? [],
+        screen: 'game',
+        tab: '활동',
+        changes: {},
+        notice: '',
+        storageBlocked: false,
+        saveError: '',
+      });
+      return true;
+    } catch (e) {
+      set({
+        saveError:
+          e instanceof Error ? e.message : '진행을 불러오지 못했습니다.',
+      });
+      return false;
+    } finally {
+      set({ slotBusy: false });
+    }
+  },
+  async createSlot(id, player) {
+    if (get().action || get().slotBusy || !get().ready) return false;
+    set({ slotBusy: true });
+    try {
+      if (!isPlayer(player)) throw Error('닉네임과 캐릭터 설정을 확인하세요.');
+      await flushSaves();
+      if (get().unsaved && !get().storageBlocked)
+        throw Error('기존 진행 저장을 확인한 뒤 다시 시도하세요.');
+      const data: SaveData = {
+        version: 2,
+        game: newGame(seed(), player),
+        favoriteIds: [],
+        selectedMarket: 'street',
+        readNotificationIds: [],
+      };
+      await saveRepository.create(data, id);
+      const slots = await saveRepository.listSlots();
+      clearTimeout(highlightTimer);
+      set({
+        slots,
+        activeSlot: id,
+        game: data.game,
+        favoriteIds: [],
+        selectedMarket: 'street',
+        readNotificationIds: [],
+        screen: 'game',
+        tab: '활동',
+        changes: {},
+        notice: '',
+        saveError: '',
+        storageBlocked: false,
+      });
+      return true;
+    } catch (e) {
+      const slots = await saveRepository.listSlots().catch(() => get().slots);
+      set({
+        slots,
+        saveError:
+          e instanceof Error ? e.message : '새 게임을 저장하지 못했습니다.',
+      });
+      return false;
+    } finally {
+      set({ slotBusy: false });
+    }
+  },
+  async deleteSlot(id) {
+    if (get().action || get().slotBusy || get().screen !== 'menu') return false;
+    set({ slotBusy: true });
+    try {
+      await flushSaves();
+      await saveRepository.remove(id);
+      const slots = await saveRepository.listSlots();
+      set({
+        slots,
+        saveError: '',
+        ...(id === get().activeSlot
+          ? {
+              game: null,
+              favoriteIds: [],
+              readNotificationIds: [],
+              storageBlocked: false,
+            }
+          : {}),
+      });
+      return true;
+    } catch {
+      set({ saveError: '슬롯을 삭제하지 못했습니다.' });
+      return false;
+    } finally {
+      set({ slotBusy: false });
+    }
+  },
+  async returnToMenu() {
+    if (get().action || get().slotBusy) return false;
+    set({ slotBusy: true });
+    try {
+      get().save();
+      await flushSaves();
+      if (get().unsaved) return false;
+      const slots = await saveRepository.listSlots();
+      set({ screen: 'menu', slots, notice: '', changes: {} });
+      return true;
+    } catch {
+      set({ saveError: '저장 상태를 확인하지 못했습니다.' });
+      return false;
+    } finally {
+      set({ slotBusy: false });
+    }
+  },
   async act(command) {
     const current = get();
     const g = current.game;
-    if (!g || !current.ready || current.action) return false;
+    if (
+      !g ||
+      !current.ready ||
+      current.action ||
+      current.slotBusy ||
+      current.screen !== 'game'
+    )
+      return false;
     const result = execute(g, command);
     if (!result.ok) {
       set({ notice: result.message, noticeId: get().noticeId + 1, ok: false });
@@ -174,11 +329,11 @@ export const useGameStore = create<State>((set, get) => ({
     return actionFinished;
   },
   setTab(tab) {
-    if (get().action || get().game?.inquiries.length) return;
+    if (get().action || get().slotBusy || get().game?.inquiries.length) return;
     set({ tab, notice: '' });
   },
   toggleFavorite(id) {
-    if (!get().ready || get().action) return;
+    if (!get().ready || get().action || get().slotBusy) return;
     const ids = get().favoriteIds;
     set({
       favoriteIds: ids.includes(id)
@@ -193,6 +348,7 @@ export const useGameStore = create<State>((set, get) => ({
       !current.ready ||
       !current.game ||
       current.action ||
+      current.slotBusy ||
       current.game.inquiries.length ||
       !isActiveMarketId(id) ||
       current.selectedMarket === id
@@ -206,6 +362,7 @@ export const useGameStore = create<State>((set, get) => ({
     if (
       !game ||
       !ready ||
+      get().slotBusy ||
       action ||
       readNotificationIds.includes(id) ||
       !mailboxLogs(game).some((log) => log.id === id)
@@ -216,7 +373,7 @@ export const useGameStore = create<State>((set, get) => ({
   },
   readAllNotifications() {
     const { game, ready, action, readNotificationIds } = get();
-    if (!game || !ready || action) return;
+    if (!game || !ready || action || get().slotBusy) return;
     const unread = mailboxLogs(game).filter(
       (log) => !readNotificationIds.includes(log.id),
     );
@@ -234,7 +391,7 @@ export const useGameStore = create<State>((set, get) => ({
       set({ notice: '' });
   },
   save() {
-    const { game, favoriteIds, storageBlocked } = get();
+    const { game, favoriteIds, storageBlocked, activeSlot } = get();
     if (!game || storageBlocked) return;
     const readNotificationIds = get().readNotificationIds.filter((id) =>
       game.logs.some((log) => log.id === id),
@@ -247,20 +404,31 @@ export const useGameStore = create<State>((set, get) => ({
       readNotificationIds,
       selectedMarket: get().selectedMarket,
     });
-    set({ saving: true });
+    set({ saving: true, unsaved: true });
     queue = queue
-      .then(() => saveRepository.save(data))
-      .then(() => set({ saving: false, saveError: '' }))
+      .then(() => saveRepository.save(data, activeSlot))
+      .then(() =>
+        set((state) => ({
+          saving: false,
+          saveError: '',
+          unsaved: false,
+          slots: [
+            ...state.slots.filter((slot) => slot.id !== activeSlot),
+            { id: activeSlot, data, updatedAt: Date.now() },
+          ].sort((a, b) => a.id - b.id),
+        })),
+      )
       .catch(() =>
         set({
           saving: false,
+          unsaved: true,
           saveError:
             '기기에 저장하지 못했습니다. 백업 내보내기로 진행을 보관하세요. 다음 행동에서 자동 저장을 재시도합니다.',
         }),
       );
   },
   importSave(raw) {
-    if (get().action) return false;
+    if (get().action || get().slotBusy) return false;
     try {
       const data = parseSave(JSON.parse(raw));
       clearTimeout(highlightTimer);
@@ -271,6 +439,7 @@ export const useGameStore = create<State>((set, get) => ({
         selectedMarket: data.selectedMarket ?? 'street',
         readNotificationIds: data.readNotificationIds ?? [],
         tab: '활동',
+        screen: 'game',
         notice: '백업을 불러왔습니다.',
         noticeId: get().noticeId + 1,
         ok: true,
@@ -289,11 +458,12 @@ export const useGameStore = create<State>((set, get) => ({
     }
   },
   startOver() {
-    if (get().action) return;
+    if (get().action || get().slotBusy) return;
     clearTimeout(highlightTimer);
     set({ changes: {} });
     set({
       game: newGame(seed()),
+      screen: 'game',
       favoriteIds: [],
       selectedMarket: 'street',
       readNotificationIds: [],

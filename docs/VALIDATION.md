@@ -561,3 +561,13 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - `node scripts/audit-valuations.mjs`: 조정 전/후 동일 시드 1000개, 일반 유료 매물 6만 개씩 비교. 6만 개의 품명·제시 가격 일치, 기준 범위·상한 위반 0건. 가치 2배 이상 21.75→1.62%, 즉시 판매 차익 가능 43.32→4.32%. 결과는 design/economy/VALUATION_AUDIT.json에 보관한다. 완료된 판매 수익률이나 전체 회차 난이도를 측정한 수치는 아니다.
 - 프로덕션 Chromium 모바일 320/375/390/430px에서 선택지 대화·흥정·구매·기록 복원, 인물/도감, 6시장 목록·카테고리, 이전 저장의 보유 가치 보존·새 매물 탐색을 검증했다. 초기 병렬 실행에서 대화 구매 저장 대기/프로필 첫 화면 대기가 각각 시간 초과되었다. 동일 코드의 두 검사를 순차 재실행해 통과했다. 초기 실패 로그도 work/balance-{mobile,profiles}-initial.txt에 보관한다.
 - 로그: work/balance-{tests,lint,format,build,audit,mobile,profiles,content}.txt. 실제 모바일 기기 및 전체 회차 경제 진행은 이번 검증 범위에 포함하지 않는다.
+
+## 시작 화면·저장 슬롯·캐릭터 생성 (2026-10-29)
+
+- `npm test` 162개 통과. 프로필 검증/복원, 외형이 경제 시드에 영향 없음, 슬롯 간 저장 대상 분리, 생성 충돌/실패 시 원본 유지, 진행 중 행동의 전환 차단, 저장 실패 시 현재 게임 유지와 재시도를 검사했다.
+- 타입 검사·ESLint·프로덕션 빌드·포맷 검사·diff 검사 통과. 전체 린트에서 발견한 이전 가치 감사 스크립트의 명시적 Node process import도 보완했다.
+- `python scripts/verify-slots.py`: 프로덕션 Chromium 320×568 / 375×667 / 390×844 / 430×932에서 첫 방문 빈 슬롯, 캐릭터 실시간 미리보기, 이름/헤어/옷/피부 저장, 선택 외형의 실제 행동 연출, 3개 독립 진행, 재접속·이어하기, 가득 찬 슬롯 보호, 삭제 취소/확정을 검증했다.
+- 실제 과거 저장 fixture의 current→슬롯1 이전과 원본 보존, 삭제 후 복구 사본에서 재생성되지 않음, 손상된 기존 데이터 유지/다른 빈 슬롯 진행, 이미 열린 다른 창의 슬롯 생성 충돌/목록 갱신을 검증했다.
+- 시작 화면/슬롯 키에 맞춰 회귀 스크립트를 갱신하고 `verify-dialogue.py`, `verify-profiles-codex.py`를 모바일 4개 폭에서 재실행했다. 기존 대화·구매·기록 복원·인물 프로필·도감 동작 모두 통과했다.
+- 로그: work/slots-{tests,lint,build,mobile,dialogue,profiles,format}.txt. 시각 확인: start-menu-390.png, character-create-390.png, save-slots-390.png, custom-player-action-390.png.
+- 실제 iOS/Android 기기와 클라우드/기기 간 동기화는 이번 범위가 아니다. 슬롯은 브라우저/기기에 저장하며 기존 JSON 백업으로 이동한다.

@@ -1,3 +1,4 @@
+import { isPlayer } from '../domain/player';
 import { DIALOGUE_RULES, isDialogueTopic } from '../content/tradeDialogue';
 import {
   isProductCategory,
@@ -180,6 +181,7 @@ export function isGame(v: unknown): v is Game {
   if (
     !record(v) ||
     v.version !== 2 ||
+    (v.player !== undefined && !isPlayer(v.player)) ||
     (v.timeMode !== undefined &&
       !['daily-actions', 'weekly-actions'].includes(String(v.timeMode))) ||
     !['playing', 'bankrupt', 'dead', 'cleared'].includes(String(v.status))

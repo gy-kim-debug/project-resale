@@ -1,3 +1,4 @@
+import process from 'node:process';
 /** Reproducible valuation-only audit. Does not read or write any player's save. */
 import { build } from 'esbuild';
 import { execFileSync } from 'node:child_process';

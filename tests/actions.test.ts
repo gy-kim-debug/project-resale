@@ -28,6 +28,10 @@ function setup() {
   writes.length = 0;
   useGameStore.setState({
     game: newGame(42),
+    screen: 'game',
+    unsaved: false,
+    activeSlot: 1,
+    slotBusy: false,
     ready: true,
     tab: '활동',
     action: null,

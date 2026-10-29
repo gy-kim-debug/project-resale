@@ -1,16 +1,25 @@
+import {
+  OUTFITS,
+  SKINS,
+  DEFAULT_PLAYER,
+  type PlayerAppearance,
+} from '../content/player';
 /** Shared 24×32 sprite. Integer SVG pixels stay sharp at every display size. */
 export function PixelCharacter({
   variant = 'player',
   animated = false,
   scale = 3,
+  appearance = DEFAULT_PLAYER.appearance,
 }: {
   variant?: 'player' | 'trader';
   animated?: boolean;
   scale?: number;
+  appearance?: PlayerAppearance;
 }) {
   const player = variant === 'player';
-  const shirt = player ? '#83dec0' : '#8dadd3';
-  const shade = player ? '#3b8e7d' : '#506d9b';
+  const shirt = player ? OUTFITS[appearance.outfit].main : '#8dadd3';
+  const shade = player ? OUTFITS[appearance.outfit].shade : '#506d9b';
+  const skin = SKINS[player ? appearance.skin : 'tan'];
   return (
     <svg
       className={`pixel-character ${animated ? 'pixel-character-active' : ''}`}
@@ -33,10 +42,17 @@ export function PixelCharacter({
         <rect x="13" y="31" width="7" height="1" fill="#101722" />
       </g>
       <g className="pixel-body">
+        {player && appearance.hair === 'long' && (
+          <>
+            <rect x="4" y="5" width="5" height="13" fill="#24313d" />
+            <rect x="17" y="5" width="3" height="12" fill="#24313d" />
+          </>
+        )}
+
         <rect x="6" y="15" width="13" height="10" fill={shade} />
         <rect x="8" y="14" width="9" height="10" fill={shirt} />
         <rect x="8" y="24" width="9" height="2" fill="#263243" />
-        <rect x="10" y="13" width="5" height="3" fill="#d79872" />
+        <rect x="10" y="13" width="5" height="3" fill={skin.neck} />
         <rect x="8" y="16" width="3" height="2" fill={shade} />
         <rect x="14" y="16" width="3" height="2" fill={shade} />
         <rect x="12" y="17" width="1" height="6" fill="#c4f2d9" />
@@ -49,9 +65,9 @@ export function PixelCharacter({
           fill={player ? '#24313d' : '#637482'}
         />
         <rect x="5" y="4" width="3" height="7" fill="#24313d" />
-        <rect x="8" y="5" width="11" height="8" fill="#e8b58a" />
-        <rect x="7" y="9" width="2" height="3" fill="#cf936f" />
-        <rect x="10" y="12" width="7" height="2" fill="#d99d76" />
+        <rect x="8" y="5" width="11" height="8" fill={skin.main} />
+        <rect x="7" y="9" width="2" height="3" fill={skin.shade} />
+        <rect x="10" y="12" width="7" height="2" fill={skin.neck} />
         <rect
           x="7"
           y="4"
@@ -73,20 +89,27 @@ export function PixelCharacter({
           height="2"
           fill={player ? '#24313d' : '#718693'}
         />
+        {player && appearance.hair === 'cap' && (
+          <>
+            <rect x="5" y="2" width="14" height="4" fill={shade} />
+            <rect x="7" y="1" width="9" height="2" fill={shirt} />
+            <rect x="17" y="5" width="5" height="2" fill={shade} />
+          </>
+        )}
         <rect x="12" y="8" width="1" height="2" fill="#263243" />
         <rect x="17" y="8" width="1" height="2" fill="#263243" />
         <rect x="15" y="11" width="2" height="1" fill="#995f50" />
         <g className="pixel-arm-back">
           <rect x="4" y="16" width="4" height="7" fill={shade} />
-          <rect x="4" y="22" width="3" height="3" fill="#d99d76" />
+          <rect x="4" y="22" width="3" height="3" fill={skin.neck} />
         </g>
         <rect x="8" y="16" width="2" height="7" fill="#354253" />
         <rect x="5" y="22" width="6" height="5" fill="#ad8054" />
         <rect x="6" y="23" width="4" height="1" fill="#dfb883" />
         <g className="pixel-arm-front">
           <rect x="17" y="16" width="4" height="6" fill={shirt} />
-          <rect x="18" y="21" width="3" height="4" fill="#e8b58a" />
-          <rect x="19" y="22" width="3" height="2" fill="#e8b58a" />
+          <rect x="18" y="21" width="3" height="4" fill={skin.main} />
+          <rect x="19" y="22" width="3" height="2" fill={skin.main} />
         </g>
       </g>
     </svg>
