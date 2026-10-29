@@ -1,3 +1,5 @@
+import { beforeTrade, afterAction, storyLines, storyChoices } from './story';
+import { STORY_RULES } from '../content/story';
 import type { PlayerProfile } from '../content/player';
 import { isPlayer } from './player';
 import { referenceValue, generatedBase, capValue } from './valuation';
@@ -542,10 +544,107 @@ export function newGame(seed = 1, player?: PlayerProfile): Game {
   log(g, `현금 ${won(RULES.startingCash)}, 채무 100억 원.`, 'start');
   return g;
 }
-export function execute(original: Game, command: Command): Result {
+export function execute(
+  original: Game,
+  command: Command,
+  sceneResolved = false,
+  bundleId?: string,
+): Result {
   // Copy first; any rejected/invalid command leaves all state and RNG unchanged.
   const g = structuredClone(toWeeklyActions(original));
   try {
+    if (command.type === 'storyNext' || command.type === 'storyChoice') {
+      const st = g.story;
+      const scene = st?.active;
+      if (!st || !scene) throw Error('진행 중인 장면이 없습니다.');
+      const lines = storyLines(g);
+      if (command.type === 'storyNext') {
+        if (scene.step >= lines.length - 1)
+          throw Error('선택지를 골라 주세요.');
+        scene.step++;
+        return { game: g, ok: true, message: '' };
+      }
+      if (
+        scene.step !== lines.length - 1 ||
+        !storyChoices(g).some((c) => c.id === command.choice)
+      )
+        throw Error('선택할 수 없는 답변입니다.');
+      if (command.choice === 'explain') {
+        // An explanation is a separate persisted dialogue beat, not a hidden-value inspection.
+        if (scene.explained) throw Error('이미 설명을 들었습니다.');
+        scene.explained = true;
+        return { game: g, ok: true, message: '' };
+      }
+      const finish = (target: Game) => {
+        const state = target.story!;
+        state.history = [...state.history, scene.kind].slice(
+          -STORY_RULES.historyLimit,
+        );
+        state.lastAt = target.minute;
+        state.active = null;
+        if (scene.kind === 'success' || scene.kind === 'failure')
+          state.endingDone = true;
+      };
+      finish(g);
+      if (['cancel', 'decline'].includes(command.choice)) {
+        if (scene.resume?.type === 'accept') endInquiry(g, scene.resume.id);
+        return {
+          game: g,
+          ok: true,
+          message:
+            command.choice === 'cancel'
+              ? '거래를 취소했습니다.'
+              : '제안을 거절했습니다.',
+        };
+      }
+      if (scene.kind === 'regular' && command.choice === 'request') {
+        const item =
+          g.board.find((i) => i.id === scene.target) ??
+          g.inventory.find((i) => i.id === scene.target);
+        if (!item) throw Error('판매가 끝난 매물입니다.');
+        st.requests = [...new Set([...st.requests, item.kind])];
+      }
+      if (scene.kind === 'competitor' && command.choice === 'deal') {
+        const targets = scene.targets ?? [scene.target!];
+        const items = targets.map((id) => owned(g, id));
+        for (const item of items) unlisted(g, item.id);
+        money(g, scene.price!);
+        for (const item of items) unlockItem(g, item);
+        g.inventory = g.inventory.filter((i) => !targets.includes(i.id));
+        g.stats.sales += items.length;
+        log(
+          g,
+          `${items[0].title}${items.length > 1 ? ` 외 ${items.length - 1}개` : ''} 특별 거래 완료. ${won(scene.price!)} 수령.`,
+          'special',
+        );
+        advance(g, 1, false);
+        afterAction(g, command, original);
+        return { game: g, ok: true, message: '특별 거래를 마쳤습니다.' };
+      }
+      if (scene.resume) {
+        if (command.choice === 'deal' && scene.kind === 'missing') {
+          const item = preItem(g, scene.resume.id);
+          item.negotiatedPrice = scene.price!;
+        }
+        if (command.choice === 'deal' && scene.kind === 'rehaggle') {
+          const inquiry = g.inquiries.find((q) => q.id === scene.resume!.id);
+          if (!inquiry) throw Error('종료된 문의입니다.');
+          inquiry.price = scene.price!;
+        }
+        const result = execute(
+          g,
+          scene.resume,
+          true,
+          scene.kind === 'bundle' && command.choice === 'deal'
+            ? scene.extra
+            : undefined,
+        );
+        if (!result.ok) throw Error(result.message);
+        return result;
+      }
+      return { game: g, ok: true, message: '' };
+    }
+    if (g.story?.active) throw Error('진행 중인 대화를 마쳐 주세요.');
     if (g.status !== 'playing') throw Error('종료된 게임입니다.');
     if (
       !interestPending(g) &&
@@ -555,6 +654,21 @@ export function execute(original: Game, command: Command): Result {
       throw Error('구매 문의 응답이 필요합니다.');
     if (interestPending(g) && !['repay', 'payInterest'].includes(command.type))
       throw Error('주간 이자 납부가 필요합니다.');
+    if (!sceneResolved && g.story && ['buy', 'accept'].includes(command.type)) {
+      if (command.type === 'buy') {
+        const item = preItem(g, command.id);
+        room(g);
+        affordable(g, item.negotiatedPrice ?? item.price);
+        if (item.purchaseBargain?.walked)
+          throw Error('판매자가 거래를 종료했습니다.');
+      }
+      if (actionsLeft(g) < 1) throw Error('이번 주 행동을 모두 사용했습니다.');
+      const scene = beforeTrade(g, command);
+      if (scene) {
+        g.story.active = scene;
+        return { game: g, ok: true, message: '' };
+      }
+    }
     const beforeLevels = ABILITIES.map((ability) => level(g, ability.stat));
     let message = '';
     switch (command.type) {
@@ -686,15 +800,34 @@ export function execute(original: Game, command: Command): Result {
         room(g);
         if (item.marketId === 'auction' && item.auction?.status !== 'won')
           throw Error('낙찰 후 결제할 수 있습니다.');
-        const cost =
+        let cost =
           item.marketId === 'auction'
             ? item.auction!.currentBid
             : (item.negotiatedPrice ?? item.price);
+        let extra: Item | undefined;
+        let mainCost = cost;
+        let extraCost = 0;
+        if (bundleId) {
+          extra = preItem(g, bundleId);
+          if (
+            extra.id === item.id ||
+            extra.marketId !== item.marketId ||
+            extra.marketId === 'auction' ||
+            extra.price === 0 ||
+            extra.purchaseBargain?.walked
+          )
+            throw Error('묶음 거래를 진행할 수 없습니다.');
+          if (g.inventory.length + 2 > RULES.capacity)
+            throw Error('보관함이 가득 찼습니다.');
+          cost = moneyRatio(cost + (extra.negotiatedPrice ?? extra.price), 95);
+          mainCost = moneyRatio(mainCost, 95);
+          extraCost = cost - mainCost;
+        }
         affordable(g, cost);
         money(g, -cost);
         const received = {
           ...item,
-          acquiredFor: cost,
+          acquiredFor: mainCost,
           chat: item.chat ? [...item.chat] : undefined,
         };
         if (received.chat && !received.chatSettled) {
@@ -708,6 +841,16 @@ export function execute(original: Game, command: Command): Result {
         unlockItem(g, received);
         g.board = g.board.filter((i) => i.id !== item.id);
         g.stats.purchases++;
+        if (extra) {
+          g.inventory.push({
+            ...extra,
+            acquiredFor: extraCost,
+            chatSettled: true,
+          });
+          unlockItem(g, extra);
+          g.board = g.board.filter((i) => i.id !== extra.id);
+          g.stats.purchases++;
+        }
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
         log(g, message);
         advance(g, 1);
@@ -990,6 +1133,7 @@ export function execute(original: Game, command: Command): Result {
     if (missed)
       message =
         '주간 의무 원금 또는 이자를 납부하지 못해 게임이 종료되었습니다.';
+    afterAction(g, command, original);
     return { game: g, ok: true, message };
   } catch (e) {
     return {

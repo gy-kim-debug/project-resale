@@ -2412,3 +2412,201 @@ html {
   display: block;
   overflow-wrap: anywhere;
 }
+
+/* Narrative scenes share sprites with action presentation, with manual pacing. */
+.story-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: #080e17;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  overscroll-behavior: contain;
+}
+.story-player {
+  width: min(100%, 540px);
+  max-height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: #101923;
+  border: 1px solid #34404c;
+}
+.story-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+}
+.story-toolbar h1 {
+  font-size: 15px;
+  margin: 0;
+  color: #adb9c9;
+}
+.story-toolbar button {
+  min-height: 44px;
+  color: #a9b5c5;
+  padding: 8px;
+  font-size: 12px;
+}
+.story-stage {
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #18212e;
+}
+.story-stage > svg {
+  display: block;
+  width: 100%;
+  max-height: 36dvh;
+  image-rendering: pixelated;
+}
+.story-actor {
+  animation: story-approach 1s steps(5) both;
+}
+.story-npc {
+  animation: story-approach-right 1s steps(5) both;
+}
+.story-room .story-actor {
+  animation: story-breathe 2s steps(2) infinite;
+}
+.story-motion-phone .story-phone {
+  animation: story-ring 0.8s steps(2) infinite;
+}
+.story-motion-listen .story-phone {
+  transform: translate(-12px, -22px);
+}
+.story-motion-look .story-phone {
+  transform: translate(-7px, -8px);
+}
+.story-motion-leave .story-actor {
+  animation: story-leave 2s steps(6) both;
+}
+.story-dialogue {
+  padding: 18px;
+  border-top: 2px solid #46574f;
+}
+.story-line {
+  min-height: 120px;
+}
+.story-line strong {
+  display: block;
+  color: #91e0bc;
+  font-size: 14px;
+  min-height: 22px;
+}
+.story-line p {
+  margin: 12px 0 20px;
+  font-size: 17px;
+  line-height: 1.8;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.story-item {
+  color: #aab7c8;
+  font-size: 12px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.story-next,
+.story-choices button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #45594f;
+  background: #1c302b;
+  border-radius: 10px;
+  color: #e6f1ed;
+  text-align: left;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.story-next {
+  justify-content: flex-end;
+}
+.story-choices {
+  display: grid;
+  gap: 8px;
+}
+.story-action {
+  flex-shrink: 0;
+  color: #91e0bc;
+}
+@keyframes story-approach {
+  from {
+    transform: translateX(-18px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes story-approach-right {
+  from {
+    transform: translateX(18px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes story-breathe {
+  50% {
+    transform: translateY(-1px);
+  }
+}
+@keyframes story-ring {
+  50% {
+    transform: translateX(2px);
+  }
+}
+@keyframes story-leave {
+  to {
+    transform: translateX(12px);
+  }
+}
+@media (max-height: 600px) {
+  .story-toolbar {
+    padding: 4px 14px;
+  }
+  .story-dialogue {
+    padding: 12px 14px;
+  }
+  .story-line {
+    min-height: 95px;
+  }
+  .story-line p {
+    margin: 6px 0 12px;
+    font-size: 15px;
+  }
+  .story-choices {
+    gap: 6px;
+  }
+  .story-stage > svg {
+    max-height: 28dvh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-player *,
+  .story-player *::before,
+  .story-player *::after {
+    animation: none !important;
+  }
+}
+.story-targets {
+  margin-bottom: 12px;
+  color: #b1bfce;
+  font-size: 13px;
+}
+.story-targets summary {
+  padding: 10px 0;
+  cursor: pointer;
+  min-height: 44px;
+}
+.story-targets ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}

@@ -13,6 +13,9 @@
 
 ## 현재 구현 원칙
 
+- [시작·엔딩 스토리와 도트 대화 연출](story/INTRO_AND_ENDINGS.md)
+- [거래 도트 대화 이벤트 8종](events/TRADE_SCENES.md)
+
 - [닉네임 외 선택지 전용 UI](ui/CHOICE_INPUTS.md)
 
 - [앱 시작 화면](ui/START_SCREEN.md)

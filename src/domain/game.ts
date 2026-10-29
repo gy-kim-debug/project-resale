@@ -1,3 +1,4 @@
+import type { StoryState } from './story';
 import type { PlayerProfile } from '../content/player';
 import type { DialogueTopic } from '../content/tradeDialogue';
 import type { ProductCategory } from '../content/productCategories';
@@ -141,6 +142,7 @@ export interface Event {
   expires: number;
 }
 export interface Game {
+  story?: StoryState;
   player?: PlayerProfile;
   discoveredItems?: string[];
   businesses?: { id: BusinessId; purchasedWeek: number }[];
@@ -184,6 +186,8 @@ export interface Game {
   lastEvent: number;
 }
 export type Command =
+  | { type: 'storyNext' }
+  | { type: 'storyChoice'; choice: string }
   | { type: 'job'; id: string }
   | { type: 'buyBusiness'; id: string }
   | { type: 'scavenge' }

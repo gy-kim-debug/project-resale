@@ -126,3 +126,7 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 시작 화면은 StartMenu, 게임 세션은 GameApp으로 분리한다. store가 menu/game 화면·활성 SlotId·슬롯 목록·저장 큐를 관리하며 큐마다 대상 슬롯을 캡처한다. 저장소의 load/save/listSlots/create/remove가 IndexedDB 키를 추상화하고 legacy current 이전과 슬롯 생성의 점유 검사를 트랜잭션으로 처리한다. 각 게임의 선택적 player 프로필은 content/player.ts와 domain/player.ts에서 정의/검증하며 PixelCharacter와 ActionScene에서 공유한다. 외형은 시뮬레이션 RNG를 소비하지 않는다.
 
 닉네임 외 입력 UI는 선택지로 구성한다. app/amountChoices.ts가 공개된 현재 가치/매입가/상환 가능액에서 후보를 생성하고 100원 단위·중복·상하한을 처리한다. AmountChoice는 후보 선택과 확정을 공유한다. MarketView는 임시 query 필드에 선택한 정확한 품목명을 보관하며 직접 검색어 입력은 제공하지 않는다. 엔진/저장 명령 형식은 변경하지 않는다.
+
+## 시작·엔딩과 거래 장면
+
+`Game.story`는 슬롯별 진행 중 장면·대사 위치·사건 이력을 저장한다. React의 `StoryPlayer`는 표시와 선택 명령만 담당하며, `domain/story.ts`는 조건·대사·선택지를 구성한다. `engine.execute`가 결제 전 사건으로 거래를 보류하고 최종 선택 후 기존 구매/판매 처리를 한 번 실행한다. 구매 사건의 두 번째 묶음 물건도 같은 원자적 처리에 포함된다. 읽기·건너뛰기는 경제 난수와 행동을 변경하지 않는다. 기존 저장은 선택 필드 없이도 읽으며 이어하기/가져오기에서 도입 없이 사건 상태를 추가한다. 상세 규칙은 [이벤트](design/events/TRADE_SCENES.md), [시작·엔딩](design/story/INTRO_AND_ENDINGS.md)을 따른다.

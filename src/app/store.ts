@@ -1,3 +1,4 @@
+import { enableStory } from '../domain/story';
 import type { PlayerProfile } from '../content/player';
 import { isPlayer } from '../domain/player';
 import { create } from 'zustand';
@@ -130,7 +131,7 @@ export const useGameStore = create<State>((set, get) => ({
       clearTimeout(highlightTimer);
       set({
         activeSlot: id,
-        game: data.game,
+        game: enableStory(data.game),
         favoriteIds: data.favoriteIds,
         selectedMarket: data.selectedMarket ?? 'street',
         readNotificationIds: data.readNotificationIds ?? [],
@@ -162,7 +163,7 @@ export const useGameStore = create<State>((set, get) => ({
         throw Error('기존 진행 저장을 확인한 뒤 다시 시도하세요.');
       const data: SaveData = {
         version: 2,
-        game: newGame(seed(), player),
+        game: enableStory(newGame(seed(), player), true),
         favoriteIds: [],
         selectedMarket: 'street',
         readNotificationIds: [],
@@ -173,7 +174,7 @@ export const useGameStore = create<State>((set, get) => ({
       set({
         slots,
         activeSlot: id,
-        game: data.game,
+        game: enableStory(data.game),
         favoriteIds: [],
         selectedMarket: 'street',
         readNotificationIds: [],
@@ -260,25 +261,30 @@ export const useGameStore = create<State>((set, get) => ({
     clearTimeout(highlightTimer);
     // Navigation and chat replies update immediately, without action presentation.
     if (
-      [
-        'startSettlement',
-        'dialogue',
-        'offer',
-        'bid',
-        'withdrawAuction',
-        'reject',
-        'counter',
-        'break',
-        'closeChat',
-        'visit',
-        'event',
-      ].includes(command.type) &&
+      ((result.game.story?.active && !g.story?.active) ||
+        [
+          'storyNext',
+          'storyChoice',
+          'startSettlement',
+          'dialogue',
+          'offer',
+          'bid',
+          'withdrawAuction',
+          'reject',
+          'counter',
+          'break',
+          'closeChat',
+          'visit',
+          'event',
+        ].includes(command.type)) &&
       result.game.minute === g.minute
     ) {
       set({
         game: result.game,
         noticeId: get().noticeId + 1,
         notice:
+          command.type === 'storyNext' ||
+          (command.type === 'storyChoice' && result.message === '') ||
           command.type === 'dialogue' ||
           command.type === 'offer' ||
           command.type === 'bid' ||
@@ -294,6 +300,14 @@ export const useGameStore = create<State>((set, get) => ({
       return true;
     }
     const id = current.actionId + 1;
+    const pendingScene = g.story?.active;
+    const presentationCommand: Command =
+      command.type === 'storyChoice' && pendingScene
+        ? (pendingScene.resume ??
+          (pendingScene.kind === 'competitor'
+            ? { type: 'outletSell', id: pendingScene.target! }
+            : command))
+        : command;
     // Commit and save once before presentation: reload cannot lose or replay an action.
     set({
       game: result.game,
@@ -303,8 +317,8 @@ export const useGameStore = create<State>((set, get) => ({
       actionId: id,
       action: {
         id,
-        label: actionLabel(command),
-        scene: actionScene(command, g),
+        label: actionLabel(presentationCommand),
+        scene: actionScene(presentationCommand, g),
         before: g,
         after: result.game,
         duration: ACTION_DURATION_MS,
@@ -434,7 +448,7 @@ export const useGameStore = create<State>((set, get) => ({
       clearTimeout(highlightTimer);
       set({
         changes: {},
-        game: data.game,
+        game: enableStory(data.game),
         favoriteIds: data.favoriteIds,
         selectedMarket: data.selectedMarket ?? 'street',
         readNotificationIds: data.readNotificationIds ?? [],
@@ -462,7 +476,7 @@ export const useGameStore = create<State>((set, get) => ({
     clearTimeout(highlightTimer);
     set({ changes: {} });
     set({
-      game: newGame(seed()),
+      game: enableStory(newGame(seed()), true),
       screen: 'game',
       favoriteIds: [],
       selectedMarket: 'street',

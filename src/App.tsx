@@ -1,3 +1,4 @@
+import { StoryPlayer } from './components/StoryPlayer';
 import { StartMenu } from './components/StartMenu';
 import { usePageNavigation } from './app/navigation';
 import {
@@ -591,6 +592,8 @@ function GameApp() {
 }
 
 export default function App() {
+  const story = useGameStore((s) => s.game?.story?.active);
+  const action = useGameStore((s) => s.action);
   const ready = useGameStore((s) => s.ready);
   const screen = useGameStore((s) => s.screen);
   const slot = useGameStore((s) => s.activeSlot);
@@ -604,5 +607,14 @@ export default function App() {
       </div>
     );
   if (screen === 'menu') return <StartMenu />;
-  return <GameApp key={slot} />;
+  return (
+    <>
+      <div inert={!!story && !action}>
+        <GameApp key={slot} />
+      </div>
+      {story && !action && (
+        <StoryPlayer key={`${slot}-${story.kind}-${story.target ?? ''}`} />
+      )}
+    </>
+  );
 }

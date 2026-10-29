@@ -1,3 +1,4 @@
+import { storyLines } from '../src/domain/story';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_PLAYER, type PlayerProfile } from '../src/content/player';
@@ -104,6 +105,23 @@ async function setup() {
   });
 }
 
+async function finishIntro() {
+  const s = useGameStore;
+  while (s.getState().game?.story?.active) {
+    const g = s.getState().game!;
+    assert.ok(
+      await s
+        .getState()
+        .act(
+          g.story!.active!.step < storyLines(g).length - 1
+            ? { type: 'storyNext' }
+            : { type: 'storyChoice', choice: 'continue' },
+        ),
+    );
+  }
+  await flushSaves();
+}
+
 test('new games only occupy empty slots and each profile/progress is independent', async () => {
   await setup();
   const s = useGameStore;
@@ -120,6 +138,7 @@ test('new games only occupy empty slots and each profile/progress is independent
   assert.ok(
     await s.getState().createSlot(2, { ...player, nickname: '두번째' }),
   );
+  await finishIntro();
   assert.ok(await s.getState().act({ type: 'job', id: 'flyer' }));
   await flushSaves();
   assert.equal(records.get(2)!.game.weekActions, 1);
@@ -135,6 +154,7 @@ test('slot switches wait for pending saves and block during an action', async ()
   const s = useGameStore;
   records.set(2, data('다른사람'));
   await s.getState().createSlot(1, player);
+  await finishIntro();
   const action = s.getState().act({ type: 'job', id: 'flyer' });
   assert.equal(await s.getState().continueSlot(2), false);
   assert.equal(await s.getState().returnToMenu(), false);
@@ -151,6 +171,7 @@ test('failed writes cannot silently exit or switch; retries keep the correct slo
   const s = useGameStore;
   records.set(2, data('다른사람'));
   await s.getState().createSlot(1, player);
+  await finishIntro();
   failSave = true;
   await s.getState().act({ type: 'job', id: 'flyer' });
   await flushSaves();

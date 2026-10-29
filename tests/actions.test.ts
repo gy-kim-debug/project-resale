@@ -1,3 +1,4 @@
+import { enableStory } from '../src/domain/story';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { useGameStore, flushSaves } from '../src/app/store';
@@ -314,7 +315,7 @@ test('market selection is free, persisted and restored without changing any game
   assert.equal(s.getState().selectedMarket, 'computers');
   s.getState().selectMarket('unknown' as never);
   assert.equal(s.getState().selectedMarket, 'computers');
-  assert.deepEqual(s.getState().game, before);
+  assert.deepEqual(s.getState().game, enableStory(before));
   await flushSaves();
   s.getState().startOver();
   assert.equal(s.getState().selectedMarket, 'street');

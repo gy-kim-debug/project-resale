@@ -1,3 +1,5 @@
+import { isSceneKind, storyLines, type StoryState } from '../domain/story';
+import { STORY_RULES } from '../content/story';
 import { isPlayer } from '../domain/player';
 import { DIALOGUE_RULES, isDialogueTopic } from '../content/tradeDialogue';
 import {
@@ -176,12 +178,162 @@ function item(v: unknown): v is Item {
     (v.negotiatedPrice === null || integer(v.negotiatedPrice, RULES.maxMoney))
   );
 }
+function validStory(g: Record<string, unknown>): boolean {
+  const v = g.story;
+  if (v === undefined) return true;
+  if (
+    !record(v) ||
+    typeof v.endingDone !== 'boolean' ||
+    !integer(v.lastAt, Number(g.minute)) ||
+    !Array.isArray(v.history) ||
+    v.history.length > STORY_RULES.historyLimit ||
+    !v.history.every(isSceneKind) ||
+    !Array.isArray(v.contacts) ||
+    v.contacts.length > 100 ||
+    !v.contacts.every(text) ||
+    new Set(v.contacts).size !== v.contacts.length ||
+    !Array.isArray(v.requests) ||
+    v.requests.length > Object.keys(KIND_TAGS).length ||
+    !v.requests.every(kind) ||
+    new Set(v.requests).size !== v.requests.length
+  )
+    return false;
+  const scene = v.active;
+  if (scene === null) return true;
+  if (
+    !record(scene) ||
+    !isSceneKind(scene.kind) ||
+    !integer(scene.step, 10) ||
+    (scene.explained !== undefined &&
+      (scene.kind !== 'model' || typeof scene.explained !== 'boolean'))
+  )
+    return false;
+  if (
+    scene.targets !== undefined &&
+    (scene.kind !== 'competitor' ||
+      !Array.isArray(scene.targets) ||
+      scene.targets.length < 1 ||
+      scene.targets.length > RULES.capacity ||
+      !scene.targets.every(text) ||
+      new Set(scene.targets).size !== scene.targets.length ||
+      scene.targets[0] !== scene.target)
+  )
+    return false;
+  if (
+    ['target', 'extra', 'name'].some(
+      (k) => scene[k] !== undefined && !text(scene[k]),
+    )
+  )
+    return false;
+  if (
+    scene.price !== undefined &&
+    (!integer(scene.price, RULES.maxMoney) ||
+      scene.price < 100 ||
+      scene.price % 100 !== 0)
+  )
+    return false;
+  if (
+    scene.resume !== undefined &&
+    (!record(scene.resume) ||
+      !['buy', 'accept'].includes(String(scene.resume.type)) ||
+      !text(scene.resume.id) ||
+      scene.resume.id !== scene.target)
+  )
+    return false;
+  const state = v as unknown as StoryState;
+  if (
+    scene.step >= storyLines({ ...g, story: state } as unknown as Game).length
+  )
+    return false;
+  if (['success', 'failure'].includes(scene.kind))
+    return (
+      scene.resume === undefined &&
+      scene.target === undefined &&
+      !v.endingDone &&
+      (scene.kind === 'success'
+        ? g.status === 'cleared'
+        : ['bankrupt', 'dead'].includes(String(g.status)))
+    );
+  if (g.status !== 'playing') return false;
+  const board = Array.isArray(g.board) ? g.board.filter(record) : [];
+  const inventory = Array.isArray(g.inventory)
+    ? g.inventory.filter(record)
+    : [];
+  const inquiries = Array.isArray(g.inquiries)
+    ? g.inquiries.filter(record)
+    : [];
+  if (scene.kind === 'regular' && scene.resume === undefined) {
+    return (
+      inventory.some((i) => i.id === scene.target) &&
+      typeof scene.name === 'string'
+    );
+  }
+  if (
+    ['missing', 'model', 'memory', 'regular', 'bundle'].includes(scene.kind)
+  ) {
+    const target = board.find((i) => i.id === scene.target);
+    if (
+      !target ||
+      Number(target.expires) <= Number(g.minute) ||
+      target.price === 0 ||
+      target.marketId === 'auction' ||
+      !record(scene.resume) ||
+      scene.resume.type !== 'buy'
+    )
+      return false;
+    if (
+      scene.kind === 'bundle' &&
+      (!board.some(
+        (i) =>
+          i.id === scene.extra &&
+          i.id !== scene.target &&
+          i.marketId === target.marketId &&
+          Number(i.price) > 0 &&
+          Number(i.expires) > Number(g.minute),
+      ) ||
+        !integer(scene.price, RULES.maxMoney))
+    )
+      return false;
+    if (scene.kind === 'missing' && !integer(scene.price, RULES.maxMoney))
+      return false;
+  } else if (scene.kind === 'rehaggle') {
+    if (
+      !inquiries.some((i) => i.id === scene.target) ||
+      !record(scene.resume) ||
+      scene.resume.type !== 'accept' ||
+      !integer(scene.price, RULES.maxMoney)
+    )
+      return false;
+  } else if (scene.kind === 'competitor') {
+    if (
+      !inventory.some((i) => i.id === scene.target) ||
+      (Array.isArray(scene.targets) &&
+        !scene.targets.every((id) => inventory.some((i) => i.id === id))) ||
+      (Array.isArray(g.sales) &&
+        g.sales
+          .filter(record)
+          .some((s) =>
+            (Array.isArray(scene.targets)
+              ? scene.targets
+              : [scene.target]
+            ).includes(s.itemId),
+          )) ||
+      scene.resume !== undefined ||
+      !integer(scene.price, RULES.maxMoney)
+    )
+      return false;
+  } else if (scene.resume !== undefined || scene.target !== undefined)
+    return false;
+  return true;
+}
+
 /** Validate imported and persisted snapshots before they can reach the engine/UI. */
 export function isGame(v: unknown): v is Game {
   if (
     !record(v) ||
     v.version !== 2 ||
     (v.player !== undefined && !isPlayer(v.player)) ||
+    !validStory(v) ||
     (v.timeMode !== undefined &&
       !['daily-actions', 'weekly-actions'].includes(String(v.timeMode))) ||
     !['playing', 'bankrupt', 'dead', 'cleared'].includes(String(v.status))
