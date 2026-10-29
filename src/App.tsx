@@ -40,8 +40,8 @@ import {
 } from './domain/debt';
 
 const nav: { tab: Tab; icon: IconName }[] = [
-  { tab: '내 정보', icon: 'user' },
   { tab: '채무', icon: 'debt' },
+  { tab: '내 정보', icon: 'user' },
   { tab: '활동', icon: 'activity' },
   { tab: '보관함', icon: 'bag' },
   { tab: '사업', icon: 'market' },
