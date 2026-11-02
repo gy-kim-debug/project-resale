@@ -589,3 +589,10 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - OS 동작 줄이기에서 도트 장면의 실제 computed animation이 `none`인 것을 별도 확인했다. 실제 iOS/Android 기기에서의 터치·접근성 읽기 도구 검증은 포함하지 않는다.
 - `scripts/verify-choice-inputs.py`의 새 게임 진입을 도입 완료 흐름에 맞췄다. 상환·품목 선택·미감정/감정/무료 물품 판매 등록·구매자 금액 재제안 회귀가 위 4개 화면 크기에서 모두 통과했다.
 - 로그: `work/story-{tests,lint,build,format-check,mobile}.txt`, `work/story-choice-regression.txt`. 화면 `work/story-intro-390.png`, `work/story-bundle-390.png`를 시각 확인했다. 구매자 사건 화면은 `work/story-buyer-390.png`에도 보관한다.
+
+## 매물 상단 검색 제거 (2026-11-02)
+
+- 상단 품목 선택과 해제 버튼, `MarketFilters.query` 및 품목별 목록 제한을 제거했다. 카테고리·관심·가격 정렬은 유지했다. 사용하지 않는 검색 CSS도 정리했다.
+- TypeScript·ESLint·프로덕션 빌드·포맷 검사와 diff 검사 통과.
+- Chromium 320×568 / 390×844에서 6개 시장과 무료나눔 각각 검색·품목 선택 없음, 정렬 사용 가능, 가로 넘침·브라우저 오류 없음을 확인했다. `work/no-market-search-390.png`를 시각 확인했다.
+- 기존 선택지 UI 검증을 검색 제거 정책에 맞췄다. 상환·카테고리/정렬·판매 등록·구매자 흥정 흐름의 실행 결과는 `work/remove-search-mobile.txt`에 기록한다. 전 시장 확인 로그는 `work/remove-search-markets.txt`.

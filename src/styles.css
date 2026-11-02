@@ -747,41 +747,13 @@ progress {
   border-color: transparent;
   font-weight: 650;
 }
-.market-search-row {
+.market-sort-row {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
   margin-bottom: 10px;
 }
-.search-field {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-  flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0 12px;
-  color: var(--muted);
-}
-.search-field input {
-  width: 100%;
-  min-width: 0;
-  min-height: 46px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #edf0f4;
-  font-size: 16px;
-  outline-offset: 1px;
-}
-.search-field button {
-  min-width: 44px;
-  background: transparent;
-  font-size: 22px;
-  padding: 0 2px;
-}
-.market-search-row select {
+.market-sort-row select {
   width: 104px;
   min-height: 48px;
   border: 1px solid var(--border);
@@ -1558,15 +1530,9 @@ html {
     font-size: 9px;
     padding: 3px 4px;
   }
-  .market-search-row select {
+  .market-sort-row select {
     width: 88px;
     font-size: 11px;
-  }
-  .search-field {
-    padding: 0 10px;
-  }
-  .search-field input {
-    font-size: 16px;
   }
   .purchase-dock {
     margin-left: -16px;
@@ -2393,20 +2359,6 @@ html {
   font-size: 13px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-}
-.market-search-row .search-field {
-  flex: 1;
-  min-width: 0;
-}
-.market-search-row .search-field select {
-  width: 100%;
-  min-width: 0;
-  flex: 1;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: 13px;
 }
 .price-options button strong {
   display: block;

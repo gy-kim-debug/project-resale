@@ -520,7 +520,7 @@ export function MarketView({
   marketId?: MarketId;
 }) {
   const filterKey = free ? 'giveaway' : marketId;
-  const { category, onlyFavorites, query, sort } = useMarketUi(
+  const { category, onlyFavorites, sort } = useMarketUi(
     (state) => state.filters[filterKey] ?? DEFAULT_MARKET_FILTERS,
   );
   const update = (patch: Partial<MarketFilters>) =>
@@ -545,8 +545,7 @@ export function MarketView({
         (category === '전체' ||
           i.category === category ||
           i.kind === category) &&
-        (!onlyFavorites || favorites.includes(i.id)) &&
-        (!query || i.title === query),
+        (!onlyFavorites || favorites.includes(i.id)),
     )
     .sort((a, b) =>
       sort === 'low'
@@ -557,47 +556,7 @@ export function MarketView({
     );
   return (
     <>
-      <div className="market-search-row">
-        <label className="search-field">
-          <Icon name="search" size={19} />
-          <select
-            aria-label="매물 품목 선택"
-            value={query}
-            onChange={(event) => update({ query: event.target.value })}
-          >
-            <option value="">모든 품목</option>
-            {query &&
-              !g.board.some(
-                (i) =>
-                  marketOf(i) === market.id &&
-                  (free ? i.price === 0 : i.price > 0) &&
-                  i.title === query,
-              ) && <option value={query}>{query} (매물 없음)</option>}
-            {[
-              ...new Set(
-                g.board
-                  .filter(
-                    (i) =>
-                      marketOf(i) === market.id &&
-                      (free ? i.price === 0 : i.price > 0),
-                  )
-                  .map((i) => i.title),
-              ),
-            ].map((title) => (
-              <option key={title} value={title}>
-                {title}
-              </option>
-            ))}
-          </select>
-          {query && (
-            <button
-              aria-label="품목 선택 해제"
-              onClick={() => update({ query: '' })}
-            >
-              ×
-            </button>
-          )}
-        </label>
+      <div className="market-sort-row">
         <select
           aria-label="매물 정렬"
           value={sort}
