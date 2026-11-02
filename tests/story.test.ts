@@ -1,3 +1,5 @@
+import { createEventPreview } from '../src/app/eventPreview';
+import { EVENT_KINDS } from '../src/content/story';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execute, newGame } from '../src/domain/engine';
@@ -377,4 +379,19 @@ test('conditional follow-ups use real contacts; competitor bulk targets exclude 
   const bad = structuredClone(g);
   bad.story!.active!.targets = [items[0].id, items[0].id];
   assert.equal(isGame(bad), false);
+});
+
+test('all event console samples validate and every available choice completes on a detached affordable snapshot', () => {
+  for (const kind of EVENT_KINDS) {
+    const g = createEventPreview(kind);
+    assert.equal(isGame(g), true, kind);
+    g.story!.active!.step = storyLines(g).length - 1;
+    const before = structuredClone(g);
+    for (const choice of storyChoices(g)) {
+      const result = execute(g, { type: 'storyChoice', choice: choice.id });
+      assert.equal(result.ok, true, kind + ': ' + result.message);
+      assert.equal(isGame(result.game), true, kind + ': ' + choice.id);
+      assert.deepEqual(g, before);
+    }
+  }
 });

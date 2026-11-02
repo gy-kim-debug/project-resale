@@ -603,3 +603,12 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - TypeScript·ESLint·프로덕션 빌드 검사 통과. 기존 StoryPlayer의 기본 동작은 유지하며 미리보기 입력·종료 버튼을 선택적으로 전달한다. 다중 대화 루트의 접근성 제목 ID는 useId와 미리보기 identifierPrefix로 구분한다.
 - `scripts/verify-ending-preview.py`: Chromium 320×568 / 390×844 / 1024×768에서 저장 없는 시작 메뉴·진행 중 도입 장면 위에 성공/실패 미리보기, 다음·건너뛰기·완료·중도 닫기, 중복 실행 거절, 접근 가능한 대화 제목, 종료 후 원래 화면/도입 대사 복원, IndexedDB의 모든 키·값이 실행 전후 동일함, 새로고침 후 원래 저장 유지와 가로 넘침·브라우저 오류 없음을 검사한다.
 - 로그 `work/ending-preview-{lint,build,mobile,format-check}.txt`. 실제 게임의 클리어/파산을 강제하는 명령은 추가하지 않았다.
+
+## 콘솔 이벤트 미리보기 (2026-11-02)
+
+- `previewEvent()`로 8종 목록을 열고 선택한다. ID/한글 이름 인수는 해당 장면을 직접 연다. 기존 `previewEnding`과 표시 잠금·임시 루트를 공유하며, 실제 데이터/저장/발생 조건을 바꾸지 않는다.
+- `npm test` **180개 통과**. 추가 검증은 8종 샘플이 저장 형식에 맞고, 각 사건의 모든 선택지가 실제 도메인 엔진에서 유효하게 실행되며 입력 샘플을 변경하지 않는지 확인한다.
+- TypeScript·ESLint·프로덕션 빌드·포맷 검사 통과.
+- `scripts/verify-event-preview.py`: Chromium 320×568 / 390×844 / 1024×768에서 8종 모두 목록→대사→실제 선택 처리→목록 복귀, 모델 추가 설명, 일괄 판매 대상 표시, 영문 ID/한글 이름 직접 실행·닫기, 엔딩/이벤트 중복 실행 차단, 잘못된 이름 거절, 저장 없는 시작 화면 지원, 실제 도입 장면·IndexedDB 전체 키/값의 미리보기 전후 동일함과 새로고침 후 보존, 가로 넘침·브라우저 오류 없음을 확인했다.
+- 이벤트 미리보기의 선택지는 본 게임 문구·번개 표시를 유지한다. 엔딩의 완료 버튼 문구만 ‘미리보기 마치기’다. 엔딩 미리보기 회귀도 `scripts/verify-ending-preview.py`로 같은 3개 화면 크기에서 모두 통과했다.
+- 로그 `work/event-preview-{tests,lint,build,mobile,format-check}.txt`, `work/event-preview-ending-regression.txt`. 실제 iOS/Android 기기 테스트는 포함하지 않는다.

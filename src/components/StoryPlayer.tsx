@@ -218,7 +218,9 @@ export function StoryPlayer({
                     void act({ type: 'storyChoice', choice: choice.id })
                   }
                 >
-                  {preview ? '미리보기 마치기' : choice.label}
+                  {preview && ['success', 'failure'].includes(scene.kind)
+                    ? '미리보기 마치기'
+                    : choice.label}
                   {choice.actions && (
                     <span className="story-action">
                       <Icon name="activity" size={16} />

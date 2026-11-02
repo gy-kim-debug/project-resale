@@ -1,5 +1,9 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
+import { EventPreviewMenu } from '../components/EventPreviewMenu';
+import { createEventPreview } from './eventPreview';
+import { EVENT_KINDS, STORY_TITLES } from '../content/story';
+import type { Game } from '../domain/game';
 import { EndingPreview } from '../components/EndingPreview';
 import { newGame } from '../domain/engine';
 import { enableStory } from '../domain/story';
@@ -8,6 +12,7 @@ export type EndingKind = 'success' | 'failure';
 declare global {
   interface Window {
     previewEnding: (kind?: EndingKind) => boolean;
+    previewEvent: (kind?: string) => boolean;
   }
 }
 let showing = false;
@@ -26,24 +31,50 @@ export function installEndingPreview() {
     }
     game.story!.active = { kind, step: 0 };
     game.story!.endingDone = false;
-    const host = document.createElement('div');
-    host.dataset.endingPreview = 'true';
-    document.body.append(host);
-    const app = document.getElementById('root');
-    const previousInert = app?.inert ?? false;
-    if (app) app.inert = true;
-    const root = createRoot(host, { identifierPrefix: 'ending-preview-' });
-    showing = true;
-    let closed = false;
-    function close() {
-      if (closed) return;
-      closed = true;
-      if (app) app.inert = previousInert;
-      root.unmount();
-      host.remove();
-      showing = false;
-    }
-    root.render(createElement(EndingPreview, { initialGame: game, close }));
-    return true;
+    return openPreview(game, 'ending');
   };
+  window.previewEvent = (name) => {
+    const state = useGameStore.getState();
+    if (showing || state.action || state.slotBusy) return false;
+    const kind =
+      name === undefined
+        ? undefined
+        : EVENT_KINDS.find((id) => id === name || STORY_TITLES[id] === name);
+    if (name !== undefined && !kind)
+      throw Error(`이벤트: ${EVENT_KINDS.join(', ')}`);
+    return openPreview(
+      kind ? createEventPreview(kind, state.game?.player) : null,
+      'event',
+    );
+  };
+}
+function openPreview(game: Game | null, mode: 'ending' | 'event') {
+  const host = document.createElement('div');
+  host.dataset.scenePreview = 'true';
+  if (mode === 'ending') host.dataset.endingPreview = 'true';
+  else host.dataset.eventPreview = 'true';
+  document.body.append(host);
+  const app = document.getElementById('root');
+  const previousInert = app?.inert ?? false;
+  if (app) app.inert = true;
+  const root = createRoot(host, { identifierPrefix: 'scene-preview-' });
+  showing = true;
+  let closed = false;
+  function close() {
+    if (closed) return;
+    closed = true;
+    if (app) app.inert = previousInert;
+    root.unmount();
+    host.remove();
+    showing = false;
+  }
+  root.render(
+    game
+      ? createElement(EndingPreview, { initialGame: game, close })
+      : createElement(EventPreviewMenu, {
+          player: useGameStore.getState().game?.player,
+          close,
+        }),
+  );
+  return true;
 }
