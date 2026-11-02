@@ -206,7 +206,7 @@ export function StoryPlayer({
               data-story-primary
               onClick={() => void act({ type: 'storyNext' })}
             >
-              다음 <span aria-hidden="true">▾</span>
+              다음
             </button>
           ) : (
             <div className="story-choices">

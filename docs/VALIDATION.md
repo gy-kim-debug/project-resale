@@ -612,3 +612,9 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - `scripts/verify-event-preview.py`: Chromium 320×568 / 390×844 / 1024×768에서 8종 모두 목록→대사→실제 선택 처리→목록 복귀, 모델 추가 설명, 일괄 판매 대상 표시, 영문 ID/한글 이름 직접 실행·닫기, 엔딩/이벤트 중복 실행 차단, 잘못된 이름 거절, 저장 없는 시작 화면 지원, 실제 도입 장면·IndexedDB 전체 키/값의 미리보기 전후 동일함과 새로고침 후 보존, 가로 넘침·브라우저 오류 없음을 확인했다.
 - 이벤트 미리보기의 선택지는 본 게임 문구·번개 표시를 유지한다. 엔딩의 완료 버튼 문구만 ‘미리보기 마치기’다. 엔딩 미리보기 회귀도 `scripts/verify-ending-preview.py`로 같은 3개 화면 크기에서 모두 통과했다.
 - 로그 `work/event-preview-{tests,lint,build,mobile,format-check}.txt`, `work/event-preview-ending-regression.txt`. 실제 iOS/Android 기기 테스트는 포함하지 않는다.
+
+## 대사 다음 표시 단순화 (2026-11-02)
+
+- 공유 대화 장면의 ‘다음’에서 화살표·테두리·배경·둥근 도형을 제거했다. 48px 터치 높이와 실제 button 의미는 유지한다. 키보드 포커스는 큰 사각형 대신 텍스트 밑줄로 표시하며 선택지 버튼 모양은 바꾸지 않았다.
+- TypeScript·ESLint·프로덕션 빌드·포맷·diff 검사 통과. Chromium 320×568 / 390×844 / 1024×768의 엔딩·이벤트 미리보기에서 다음 텍스트 정확 일치, computed border 0px·투명 배경·radius 0px·48px 높이, 클릭 후 다음 대사 표시, 최종 선택지 테두리 유지와 가로 넘침·오류 없음을 확인했다.
+- 로그 `work/story-next-{lint,build,mobile,format-check}.txt`. `work/story-next-390.png` 시각 확인.
