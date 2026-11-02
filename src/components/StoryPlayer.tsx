@@ -1,15 +1,23 @@
 import { Toast } from './Toast';
-import { useLayoutEffect, useRef } from 'react';
-import { useGameStore } from '../app/store';
+import { useId, useLayoutEffect, useRef } from 'react';
+import { useGameStore, type Act } from '../app/store';
+import type { Game } from '../domain/game';
 import { STORY_TITLES } from '../content/story';
 import { storyChoices, storyLines } from '../domain/story';
 import { playerOf } from '../domain/player';
 import { PixelCharacter } from './PixelCharacter';
 import { Icon } from './Icon';
 import { won } from '../domain/game';
-export function StoryPlayer() {
-  const game = useGameStore((s) => s.game)!;
-  const act = useGameStore((s) => s.act);
+export function StoryPlayer({
+  preview,
+}: {
+  preview?: { game: Game; act: Act; skip: () => void; close: () => void };
+} = {}) {
+  const titleId = useId();
+  const liveGame = useGameStore((s) => s.game);
+  const liveAct = useGameStore((s) => s.act);
+  const game = preview?.game ?? liveGame!;
+  const act = preview?.act ?? liveAct;
   const notice = useGameStore((s) => s.notice);
   const noticeId = useGameStore((s) => s.noticeId);
   const ok = useGameStore((s) => s.ok);
@@ -35,6 +43,10 @@ export function StoryPlayer() {
       ?.focus({ preventScroll: true });
   }, [scene.step, scene.kind, scene.explained]);
   async function skip() {
+    if (preview) {
+      preview.skip();
+      return;
+    }
     while (true) {
       const active = useGameStore.getState().game?.story?.active;
       if (
@@ -56,7 +68,7 @@ export function StoryPlayer() {
         className={`story-player story-${solo ? 'room' : 'street'}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="story-title"
+        aria-labelledby={titleId}
         onKeyDown={(e) => {
           if (e.key === 'Tab') {
             const buttons = Array.from(
@@ -77,7 +89,8 @@ export function StoryPlayer() {
         }}
       >
         <header className="story-toolbar">
-          <h1 id="story-title">{STORY_TITLES[scene.kind]}</h1>
+          <h1 id={titleId}>{STORY_TITLES[scene.kind]}</h1>
+          {preview && <button onClick={preview.close}>닫기</button>}
           {!last && <button onClick={() => void skip()}>건너뛰기</button>}
         </header>
         <div
@@ -205,7 +218,7 @@ export function StoryPlayer() {
                     void act({ type: 'storyChoice', choice: choice.id })
                   }
                 >
-                  {choice.label}
+                  {preview ? '미리보기 마치기' : choice.label}
                   {choice.actions && (
                     <span className="story-action">
                       <Icon name="activity" size={16} />
@@ -217,7 +230,7 @@ export function StoryPlayer() {
           )}
         </div>
       </section>
-      {notice && !ok && (
+      {!preview && notice && !ok && (
         <Toast
           key={noticeId}
           id={noticeId}

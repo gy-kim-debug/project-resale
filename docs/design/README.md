@@ -14,6 +14,7 @@
 ## 현재 구현 원칙
 
 - [시작·엔딩 스토리와 도트 대화 연출](story/INTRO_AND_ENDINGS.md)
+- [개발자 콘솔 엔딩 미리보기](story/DEBUG_PREVIEW.md)
 - [거래 도트 대화 이벤트 8종](events/TRADE_SCENES.md)
 
 - [닉네임 외 선택지 전용 UI](ui/CHOICE_INPUTS.md)

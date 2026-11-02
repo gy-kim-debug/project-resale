@@ -596,3 +596,10 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - TypeScript·ESLint·프로덕션 빌드·포맷 검사와 diff 검사 통과.
 - Chromium 320×568 / 390×844에서 6개 시장과 무료나눔 각각 검색·품목 선택 없음, 정렬 사용 가능, 가로 넘침·브라우저 오류 없음을 확인했다. `work/no-market-search-390.png`를 시각 확인했다.
 - 기존 선택지 UI 검증을 검색 제거 정책에 맞췄다. 상환·카테고리/정렬·판매 등록·구매자 흥정 흐름의 실행 결과는 `work/remove-search-mobile.txt`에 기록한다. 전 시장 확인 로그는 `work/remove-search-markets.txt`.
+
+## 콘솔 엔딩 미리보기 (2026-11-02)
+
+- 프로덕션에서도 `previewEnding()` / `previewEnding('failure')`를 사용할 수 있다. 실제 게임 복사본과 별도 React 루트를 사용하고, 정상 게임의 action/save 호출을 우회하는 것이 아니라 미리보기 전용 대화 진행에만 도메인 엔진을 사용한다.
+- TypeScript·ESLint·프로덕션 빌드 검사 통과. 기존 StoryPlayer의 기본 동작은 유지하며 미리보기 입력·종료 버튼을 선택적으로 전달한다. 다중 대화 루트의 접근성 제목 ID는 useId와 미리보기 identifierPrefix로 구분한다.
+- `scripts/verify-ending-preview.py`: Chromium 320×568 / 390×844 / 1024×768에서 저장 없는 시작 메뉴·진행 중 도입 장면 위에 성공/실패 미리보기, 다음·건너뛰기·완료·중도 닫기, 중복 실행 거절, 접근 가능한 대화 제목, 종료 후 원래 화면/도입 대사 복원, IndexedDB의 모든 키·값이 실행 전후 동일함, 새로고침 후 원래 저장 유지와 가로 넘침·브라우저 오류 없음을 검사한다.
+- 로그 `work/ending-preview-{lint,build,mobile,format-check}.txt`. 실제 게임의 클리어/파산을 강제하는 명령은 추가하지 않았다.
