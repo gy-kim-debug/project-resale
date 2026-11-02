@@ -70,6 +70,11 @@ export function StoryPlayer({
         aria-modal="true"
         aria-labelledby={titleId}
         onKeyDown={(e) => {
+          if (e.key === 'Escape' && preview) {
+            e.preventDefault();
+            preview.close();
+            return;
+          }
           if (e.key === 'Tab') {
             const buttons = Array.from(
               ref.current!.querySelectorAll<HTMLButtonElement>(
@@ -90,11 +95,10 @@ export function StoryPlayer({
       >
         <header className="story-toolbar">
           <h1 id={titleId}>{STORY_TITLES[scene.kind]}</h1>
-          {preview && <button onClick={preview.close}>닫기</button>}
-          {!last && <button onClick={() => void skip()}>건너뛰기</button>}
+          {!last && <button onClick={() => void skip()}>스킵</button>}
         </header>
         <div
-          key={`${scene.kind}-${scene.step}`}
+          key={scene.kind}
           className={`story-stage story-motion-${line.motion}`}
           aria-hidden="true"
         >

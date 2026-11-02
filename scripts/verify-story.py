@@ -30,7 +30,7 @@ with sync_playwright() as p:
   expect(page.locator('.story-line')).to_contain_text('작은 방');before=read(page)
   if width==390:page.screenshot(path='work/story-intro-390.png')
   page.locator('.story-next').click();stored(page,'g.story.active.step===1');page.reload();page.get_by_role('button',name='이어하기',exact=True).click();expect(page.locator('.story-line')).to_contain_text('100억 원')
-  page.get_by_role('button',name='건너뛰기',exact=True).click();expect(page.locator('.story-choices')).to_be_visible();page.get_by_role('button',name='시작하기',exact=True).click();expect(page.locator('.story-layer')).to_have_count(0);stored(page,'g.story.active===null');after=read(page)
+  page.get_by_role('button',name='스킵',exact=True).click();expect(page.locator('.story-choices')).to_be_visible();page.get_by_role('button',name='시작하기',exact=True).click();expect(page.locator('.story-layer')).to_have_count(0);stored(page,'g.story.active===null');after=read(page)
   for k in ['cash','principal','minute','seed','weekActions']:assert before[k]==after[k],k
   page.reload();page.get_by_role('button',name='이어하기',exact=True).click();expect(page.locator('.story-layer')).to_have_count(0)
   for kind in ['missing','model','memory','regular','bundle','rehaggle','competitor','creditor','regularCall','success','failure']:

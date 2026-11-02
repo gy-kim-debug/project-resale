@@ -2386,19 +2386,43 @@ html {
   background: #101923;
   border: 1px solid #34404c;
 }
+.story-player:has(.story-stage) {
+  height: min(
+    760px,
+    calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+  );
+  overflow: hidden;
+}
+.story-player:has(.story-stage) > .story-dialogue {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .story-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 64px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
+  height: 64px;
+  flex-shrink: 0;
+  gap: 0;
+  padding: 10px 14px;
 }
 .story-toolbar h1 {
+  grid-column: 2;
+  text-align: center;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 15px;
   margin: 0;
   color: #adb9c9;
 }
 .story-toolbar button {
+  min-width: 44px;
+  grid-column: 3;
+  justify-self: end;
   min-height: 44px;
   color: #a9b5c5;
   padding: 8px;
