@@ -1,3 +1,9 @@
+import { EVENT_QUESTIONS, QUESTIONS_FOR } from '../content/eventScenes';
+import {
+  isEventKind,
+  PURCHASE_EVENTS,
+  PRIVATE_SALE_EVENTS,
+} from '../domain/eventDepth';
 import { isSceneKind, storyLines, type StoryState } from '../domain/story';
 import { STORY_RULES } from '../content/story';
 import { isPlayer } from '../domain/player';
@@ -198,14 +204,115 @@ function validStory(g: Record<string, unknown>): boolean {
     new Set(v.requests).size !== v.requests.length
   )
     return false;
+  if (
+    v.pending !== undefined &&
+    (!Array.isArray(v.pending) ||
+      v.pending.length > 8 ||
+      new Set(v.pending.filter(record).map((p) => p.id)).size !==
+        v.pending.length ||
+      !v.pending.every(
+        (p) =>
+          record(p) &&
+          text(p.id) &&
+          text(p.name) &&
+          ['referral', 'reunion', 'returnBuyer'].includes(String(p.kind)) &&
+          kind(p.itemKind) &&
+          integer(p.variant, 2) &&
+          integer(p.dueAt) &&
+          integer(p.expiresAt) &&
+          p.expiresAt > p.dueAt &&
+          (p.target === undefined || text(p.target)) &&
+          (p.price === undefined ||
+            (integer(p.price, RULES.maxMoney) &&
+              p.price >= 100 &&
+              p.price % 100 === 0)),
+      ))
+  )
+    return false;
   const scene = v.active;
   if (scene === null) return true;
   if (
     !record(scene) ||
     !isSceneKind(scene.kind) ||
     !integer(scene.step, 10) ||
+    (scene.variant !== undefined && !integer(scene.variant, 2)) ||
+    (scene.traderId !== undefined && !isTraderId(scene.traderId)) ||
+    (scene.marketId !== undefined &&
+      !['street', 'computers', 'instruments', 'cars', 'property'].includes(
+        String(scene.marketId),
+      )) ||
     (scene.explained !== undefined &&
       (scene.kind !== 'model' || typeof scene.explained !== 'boolean'))
+  )
+    return false;
+  if (
+    scene.asked !== undefined &&
+    (!isEventKind(scene.kind) ||
+      !Array.isArray(scene.asked) ||
+      scene.asked.length > 4 ||
+      new Set(scene.asked).size !== scene.asked.length ||
+      !scene.asked.every(
+        (q) =>
+          EVENT_QUESTIONS.includes(q) &&
+          QUESTIONS_FOR[scene.kind as keyof typeof QUESTIONS_FOR].includes(q),
+      ))
+  )
+    return false;
+  if (
+    scene.branch !== undefined &&
+    (!Array.isArray(scene.asked) || !scene.asked.includes(scene.branch))
+  )
+    return false;
+  if (
+    scene.outcome !== undefined &&
+    (!isEventKind(scene.kind) ||
+      scene.variant === undefined ||
+      ![
+        'purchased',
+        'sold',
+        'cancelled',
+        'declined',
+        'reported',
+        'promised',
+        'discovered',
+      ].includes(String(scene.outcome)) ||
+      scene.target !== undefined ||
+      scene.resume !== undefined ||
+      scene.targets !== undefined ||
+      scene.extra !== undefined ||
+      scene.branch !== undefined ||
+      scene.asked !== undefined)
+  )
+    return false;
+  if (
+    scene.decision !== undefined &&
+    (!scene.outcome ||
+      ![
+        'continue',
+        'deal',
+        'decline',
+        'cancel',
+        'wait',
+        'hold',
+        'report',
+        'request',
+        'look',
+      ].includes(String(scene.decision)))
+  )
+    return false;
+  if (
+    isEventKind(scene.kind) &&
+    ![
+      'missing',
+      'rehaggle',
+      'regular',
+      'model',
+      'memory',
+      'competitor',
+      'bundle',
+      'creditor',
+    ].includes(scene.kind) &&
+    scene.variant === undefined
   )
     return false;
   if (
@@ -255,6 +362,7 @@ function validStory(g: Record<string, unknown>): boolean {
         : ['bankrupt', 'dead'].includes(String(g.status)))
     );
   if (g.status !== 'playing') return false;
+  if (scene.outcome) return true;
   const board = Array.isArray(g.board) ? g.board.filter(record) : [];
   const inventory = Array.isArray(g.inventory)
     ? g.inventory.filter(record)
@@ -268,9 +376,7 @@ function validStory(g: Record<string, unknown>): boolean {
       typeof scene.name === 'string'
     );
   }
-  if (
-    ['missing', 'model', 'memory', 'regular', 'bundle'].includes(scene.kind)
-  ) {
+  if (PURCHASE_EVENTS.includes(scene.kind as never)) {
     const target = board.find((i) => i.id === scene.target);
     if (
       !target ||
@@ -294,9 +400,12 @@ function validStory(g: Record<string, unknown>): boolean {
         !integer(scene.price, RULES.maxMoney))
     )
       return false;
-    if (scene.kind === 'missing' && !integer(scene.price, RULES.maxMoney))
+    if (
+      ['missing', 'rush'].includes(scene.kind) &&
+      !integer(scene.price, RULES.maxMoney)
+    )
       return false;
-  } else if (scene.kind === 'rehaggle') {
+  } else if (['rehaggle', 'inspection', 'reservation'].includes(scene.kind)) {
     if (
       !inquiries.some((i) => i.id === scene.target) ||
       !record(scene.resume) ||
@@ -304,12 +413,13 @@ function validStory(g: Record<string, unknown>): boolean {
       !integer(scene.price, RULES.maxMoney)
     )
       return false;
-  } else if (scene.kind === 'competitor') {
+  } else if (PRIVATE_SALE_EVENTS.includes(scene.kind as never)) {
     if (
       !inventory.some((i) => i.id === scene.target) ||
       (Array.isArray(scene.targets) &&
         !scene.targets.every((id) => inventory.some((i) => i.id === id))) ||
-      (Array.isArray(g.sales) &&
+      (scene.kind !== 'returnBuyer' &&
+        Array.isArray(g.sales) &&
         g.sales
           .filter(record)
           .some((s) =>
@@ -320,6 +430,13 @@ function validStory(g: Record<string, unknown>): boolean {
           )) ||
       scene.resume !== undefined ||
       !integer(scene.price, RULES.maxMoney)
+    )
+      return false;
+  } else if (scene.kind === 'marketTip') {
+    if (
+      scene.target !== undefined ||
+      scene.resume !== undefined ||
+      scene.marketId === undefined
     )
       return false;
   } else if (scene.resume !== undefined || scene.target !== undefined)

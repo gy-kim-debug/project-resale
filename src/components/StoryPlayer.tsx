@@ -7,11 +7,17 @@ import { storyChoices, storyLines } from '../domain/story';
 import { playerOf } from '../domain/player';
 import { PixelCharacter } from './PixelCharacter';
 import { Icon } from './Icon';
-import { won } from '../domain/game';
+import { won, actionsLeft } from '../domain/game';
 export function StoryPlayer({
   preview,
 }: {
-  preview?: { game: Game; act: Act; skip: () => void; close: () => void };
+  preview?: {
+    game: Game;
+    act: Act;
+    skip: () => void;
+    close: () => void;
+    error?: string;
+  };
 } = {}) {
   const titleId = useId();
   const liveGame = useGameStore((s) => s.game);
@@ -217,6 +223,9 @@ export function StoryPlayer({
               {storyChoices(game).map((choice, index) => (
                 <button
                   key={choice.id}
+                  disabled={
+                    !!choice.actions && actionsLeft(game) < choice.actions
+                  }
                   data-story-primary={index === 0 ? true : undefined}
                   onClick={() =>
                     void act({ type: 'storyChoice', choice: choice.id })
@@ -228,6 +237,7 @@ export function StoryPlayer({
                   {choice.actions && (
                     <span className="story-action">
                       <Icon name="activity" size={16} />
+                      {choice.actions > 1 && choice.actions}
                     </span>
                   )}
                 </button>
@@ -236,6 +246,11 @@ export function StoryPlayer({
           )}
         </div>
       </section>
+      {preview?.error && (
+        <div className="toast error" role="alert">
+          {preview.error}
+        </div>
+      )}
       {!preview && notice && !ok && (
         <Toast
           key={noticeId}

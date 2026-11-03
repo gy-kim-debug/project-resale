@@ -1,17 +1,38 @@
 import {
+  deepLines,
+  depthChoices,
+  type SceneOutcome,
+  type StoryFollowup,
+} from './eventDepth';
+import type { EventQuestion } from '../content/eventScenes';
+import { traderById } from '../content/traders';
+import {
   EVENT_KINDS,
   STORY_RULES,
   type SceneKind,
   type StoryLine,
   type EventKind,
 } from '../content/story';
-import { ACTION_TICK, won, type Game, type Command } from './game';
+import {
+  ACTION_TICK,
+  won,
+  type Game,
+  type Command,
+  type MarketId,
+} from './game';
 import { moneyRatio } from './money';
 import { RULES } from '../content/rules';
 export interface StoryScene {
   kind: SceneKind;
   step: number;
   explained?: boolean;
+  variant?: 0 | 1 | 2;
+  branch?: EventQuestion;
+  asked?: EventQuestion[];
+  outcome?: SceneOutcome;
+  decision?: string;
+  traderId?: string;
+  marketId?: MarketId;
   target?: string;
   targets?: string[];
   extra?: string;
@@ -26,6 +47,7 @@ export interface StoryState {
   contacts: string[];
   requests: string[];
   endingDone: boolean;
+  pending?: StoryFollowup[];
 }
 export function enableStory(game: Game, intro = false): Game {
   const g = structuredClone(game);
@@ -46,6 +68,8 @@ function hash(text: string) {
 }
 export function storyLines(g: Game): StoryLine[] {
   const s = g.story!.active!;
+  const enriched = deepLines(g);
+  if (enriched) return enriched;
   const line = (
     speaker: string,
     text: string,
@@ -166,15 +190,35 @@ export function storyLines(g: Game): StoryLine[] {
         line('채권 담당자', '이번 정산은 확인했습니다.'),
         line('채권 담당자', '다음 정산도 잊지 마세요.', 'leave'),
       ];
+    default:
+      return [line('거래 상대', '조건을 확인하고 결정해 주세요.')];
   }
 }
 export interface StoryChoice {
-  id: 'continue' | 'deal' | 'decline' | 'cancel' | 'request' | 'explain';
+  id: string;
   label: string;
   actions?: number;
 }
-export function storyChoices(g: Game): StoryChoice[] {
+function baseChoices(g: Game): StoryChoice[] {
   const s = g.story!.active!;
+  const extra = depthChoices(g);
+  if (s.outcome) return extra!;
+  if (
+    extra &&
+    [
+      'rush',
+      'appointment',
+      'scam',
+      'inspection',
+      'reservation',
+      'collector',
+      'referral',
+      'reunion',
+      'returnBuyer',
+      'marketTip',
+    ].includes(s.kind)
+  )
+    return extra;
   switch (s.kind) {
     case 'missing':
       return [
@@ -237,6 +281,40 @@ export function storyChoices(g: Game): StoryChoice[] {
       ];
   }
 }
+export function storyChoices(g: Game): StoryChoice[] {
+  const base = baseChoices(g);
+  const s = g.story!.active!;
+  if (
+    s.outcome ||
+    [
+      'rush',
+      'appointment',
+      'scam',
+      'inspection',
+      'reservation',
+      'collector',
+      'referral',
+      'reunion',
+      'returnBuyer',
+      'marketTip',
+    ].includes(s.kind)
+  )
+    return base;
+  return [
+    ...(depthChoices(g) ?? []),
+    ...(s.variant !== undefined && s.kind === 'model'
+      ? base.filter((c) => c.id !== 'explain')
+      : base),
+  ];
+}
+export function enrichScene(g: Game, scene: StoryScene): StoryScene {
+  return {
+    ...scene,
+    variant: (hash(
+      `${g.seed}:${scene.kind}:${scene.target ?? g.minute}:variant`,
+    ) % 3) as 0 | 1 | 2,
+  };
+}
 /** Separate stable roll; dialogue and economic RNG cannot reroll each other. */
 export function beforeTrade(g: Game, c: Command): StoryScene | null {
   const st = g.story;
@@ -251,14 +329,24 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
   if (c.type === 'accept') {
     const q = g.inquiries.find((x) => x.id === c.id);
     if (!q) return null;
-    return {
-      kind: 'rehaggle',
+    const style = traderById(q.traderId)?.style;
+    const kinds: EventKind[] =
+      style === 'lowball'
+        ? ['rehaggle', 'rehaggle', 'inspection', 'reservation']
+        : style === 'patient'
+          ? ['inspection', 'inspection', 'reservation', 'rehaggle']
+          : ['rehaggle', 'inspection', 'reservation'];
+    const kind = kinds[hash(signature + ':buyer') % kinds.length];
+    return enrichScene(g, {
+      kind,
       step: 0,
       target: q.id,
       name: q.name,
-      price: Math.max(100, moneyRatio(q.price, 90)),
+      price:
+        kind === 'rehaggle' ? Math.max(100, moneyRatio(q.price, 90)) : q.price,
+      traderId: q.traderId,
       resume: { type: 'accept', id: q.id },
-    };
+    });
   }
   if (c.type !== 'buy') return null;
   const i = g.board.find((x) => x.id === c.id);
@@ -269,7 +357,21 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
     i.purchaseBargain?.walked
   )
     return null;
-  const kinds: EventKind[] = ['model', 'memory'];
+  const kinds: EventKind[] = ['model', 'memory', 'appointment'];
+  const style = traderById(i.traderId)?.style;
+  if (
+    style === 'quick' ||
+    i.listing?.tags.includes('urgent') ||
+    i.listing?.tags.includes('moving')
+  )
+    kinds.push('rush');
+  if (
+    i.marketId !== 'property' &&
+    i.listing?.tags.some((t) =>
+      ['limited', 'authentic', 'vintage', 'negotiable'].includes(t),
+    )
+  )
+    kinds.push('scam');
   if (i.kind !== '부동산') kinds.push('missing');
   const extra = g.board.find(
     (x) =>
@@ -291,16 +393,20 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
             (extra!.negotiatedPrice ?? extra!.price),
           95,
         )
-      : Math.max(100, moneyRatio(i.negotiatedPrice ?? i.price, 90));
-  return {
+      : Math.max(
+          100,
+          moneyRatio(i.negotiatedPrice ?? i.price, kind === 'rush' ? 95 : 90),
+        );
+  return enrichScene(g, {
     kind,
     step: 0,
+    traderId: i.traderId,
     target: i.id,
     name: i.seller,
-    price,
+    ...(['missing', 'rush', 'bundle'].includes(kind) ? { price } : {}),
     ...(kind === 'bundle' ? { extra: extra!.id } : {}),
     resume: { type: 'buy', id: i.id },
-  };
+  });
 }
 export function afterAction(g: Game, c: Command, before: Game) {
   const st = g.story;
@@ -328,14 +434,97 @@ export function afterAction(g: Game, c: Command, before: Game) {
     (g.interestWeek ?? 0) > (before.interestWeek ?? 0) &&
     !st.history.includes('creditor')
   ) {
-    st.active = { kind: 'creditor', step: 0 };
+    st.active = enrichScene(g, { kind: 'creditor', step: 0 });
     return;
+  }
+  st.pending = (st.pending ?? []).filter(
+    (p) =>
+      p.expiresAt > g.minute &&
+      (!p.target || g.inventory.some((i) => i.id === p.target)),
+  );
+  if ((g.weekActions ?? 0) < 20) {
+    const ready = st.pending.find(
+      (p) =>
+        p.dueAt <= g.minute &&
+        g.inventory.some(
+          (i) =>
+            (p.target ? i.id === p.target : i.kind === p.itemKind) &&
+            (p.kind === 'returnBuyer' ||
+              (i.value >= 100 && !g.sales.some((s) => s.itemId === i.id))),
+        ),
+    );
+    if (ready) {
+      const item = g.inventory.find(
+        (i) =>
+          (ready.target ? i.id === ready.target : i.kind === ready.itemKind) &&
+          (ready.kind === 'returnBuyer' ||
+            (i.value >= 100 && !g.sales.some((s) => s.itemId === i.id))),
+      );
+      if (item) {
+        st.active = {
+          kind: ready.kind,
+          step: 0,
+          variant: ready.variant,
+          target: item.id,
+          name: ready.kind === 'referral' ? `${ready.name}의 지인` : ready.name,
+          price:
+            ready.price ??
+            Math.max(
+              100,
+              moneyRatio(item.value, ready.kind === 'reunion' ? 80 : 85),
+            ),
+        };
+        st.pending = st.pending.filter((p) => p.id !== ready.id);
+        return;
+      }
+    }
   }
   if (
     !['wait', 'refresh', 'job', 'scavenge'].includes(c.type) ||
     g.minute === before.minute
   )
     return;
+  if (
+    (g.weekActions ?? 0) < 20 &&
+    g.stats.sales >= 2 &&
+    hash(`${g.seed}:${g.minute}:tip`) % 100 < 6
+  ) {
+    const markets: MarketId[] = [
+      'street',
+      'computers',
+      'instruments',
+      'cars',
+      'property',
+    ];
+    st.active = enrichScene(g, {
+      kind: 'marketTip',
+      step: 0,
+      marketId: markets[hash(`${g.seed}:tip-market`) % markets.length],
+      name: '거래 지인',
+    });
+    return;
+  }
+  const collectible = g.inventory.find(
+    (i) =>
+      i.kind === '수집품' &&
+      i.value >= 100 &&
+      i.checked &&
+      !g.sales.some((s) => s.itemId === i.id),
+  );
+  if (
+    collectible &&
+    (g.weekActions ?? 0) < 20 &&
+    hash(`${g.seed}:${g.minute}:collector`) % 100 < 12
+  ) {
+    st.active = enrichScene(g, {
+      kind: 'collector',
+      step: 0,
+      target: collectible.id,
+      name: '수집가',
+      price: Math.max(100, moneyRatio(collectible.value, 90)),
+    });
+    return;
+  }
   const item = g.inventory.find(
     (x) => x.value >= 100 && !g.sales.some((s) => s.itemId === x.id),
   );
@@ -345,18 +534,19 @@ export function afterAction(g: Game, c: Command, before: Game) {
     !st.requests.includes(item.kind) &&
     hash(`${g.seed}:${g.minute}:regular`) % 100 < 18
   ) {
-    st.active = {
+    st.active = enrichScene(g, {
       kind: 'regular',
       step: 0,
       target: item.id,
       name: item.seller,
-    };
+      traderId: item.traderId,
+    });
     return;
   }
   const requested = st.requests.includes(item.kind);
   const chance = requested ? 35 : 12;
   if (hash(`${g.seed}:${g.minute}:competitor`) % 100 >= chance) return;
-  st.active = {
+  st.active = enrichScene(g, {
     kind: 'competitor',
     step: 0,
     target: item.id,
@@ -379,7 +569,7 @@ export function afterAction(g: Game, c: Command, before: Game) {
         ),
     ),
     name: requested ? '단골 거래자' : '거래상',
-  };
+  });
 }
 export const isSceneKind = (v: unknown): v is SceneKind =>
   typeof v === 'string' &&

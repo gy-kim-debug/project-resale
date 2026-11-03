@@ -7,9 +7,11 @@ import { EndingPreview } from './EndingPreview';
 export function EventPreviewMenu({
   player,
   close,
+  initialVariant = 0,
 }: {
   player?: PlayerProfile;
   close: () => void;
+  initialVariant?: 0 | 1 | 2;
 }) {
   useLayoutEffect(() => {
     const before = document.activeElement as HTMLElement | null;
@@ -20,9 +22,10 @@ export function EventPreviewMenu({
       before?.focus({ preventScroll: true });
     };
   }, []);
+  const [variant, setVariant] = useState<0 | 1 | 2>(initialVariant);
   const [game, setGame] = useState<Game | null>(null);
   function choose(kind: EventKind) {
-    setGame(createEventPreview(kind, player));
+    setGame(createEventPreview(kind, player, variant));
   }
   if (game)
     return (
@@ -66,12 +69,25 @@ export function EventPreviewMenu({
             닫기
           </button>
         </header>
-        <div className="story-dialogue story-choices">
-          {EVENT_KINDS.map((kind) => (
-            <button key={kind} onClick={() => choose(kind)}>
-              {STORY_TITLES[kind]}
-            </button>
-          ))}
+        <div className="story-dialogue">
+          <div className="filters" aria-label="이벤트 상황">
+            {([0, 1, 2] as const).map((n) => (
+              <button
+                key={n}
+                aria-pressed={variant === n}
+                onClick={() => setVariant(n)}
+              >
+                상황 {n + 1}
+              </button>
+            ))}
+          </div>
+          <div className="story-choices">
+            {EVENT_KINDS.map((kind) => (
+              <button key={kind} onClick={() => choose(kind)}>
+                {STORY_TITLES[kind]}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
     </div>

@@ -85,11 +85,14 @@ test('trade events are deterministic, diverse, cooldown-limited and never consum
     if (s) found.add(s.kind);
   }
   assert.deepEqual([...found].sort(), [
+    'appointment',
     'bundle',
     'memory',
     'missing',
     'model',
     'regular',
+    'rush',
+    'scam',
   ]);
   g.story!.lastAt = g.minute;
   assert.equal(beforeTrade(g, { type: 'buy', id: item.id }), null);

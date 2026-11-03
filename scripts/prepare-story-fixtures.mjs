@@ -70,7 +70,9 @@ for (const kind of ['missing', 'model', 'memory', 'regular', 'bundle']) {
   });
   for (let seed = 1; seed < 10000; seed++) {
     g.seed = seed;
-    if (beforeTrade(g, { type: 'accept', id: 'story-buyer' })) {
+    if (
+      beforeTrade(g, { type: 'accept', id: 'story-buyer' })?.kind === 'rehaggle'
+    ) {
       const r = execute(g, { type: 'accept', id: 'story-buyer' });
       if (!r.ok) throw Error(r.message);
       data.rehaggle = save(r.game);
@@ -118,6 +120,14 @@ for (const kind of ['missing', 'model', 'memory', 'regular', 'bundle']) {
   const poor = globalThis.structuredClone(data.bundle);
   poor.game.cash = 0;
   data.poorBundle = poor;
+}
+// These snapshots deliberately exercise pre-depth saved scenes. New variants are tested separately.
+for (const d of Object.values(data)) {
+  if (d.game.story.active) {
+    delete d.game.story.active.variant;
+    delete d.game.story.active.branch;
+    delete d.game.story.active.asked;
+  }
 }
 for (const [key, d] of Object.entries(data)) {
   if (!isGame(d.game)) throw Error('Invalid fixture ' + key);

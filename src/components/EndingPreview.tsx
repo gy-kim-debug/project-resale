@@ -12,11 +12,16 @@ export function EndingPreview({
   close: () => void;
 }) {
   const snapshot = useRef(initialGame);
+  const [error, setError] = useState('');
   const [game, setGame] = useState(initialGame);
   async function act(command: Command) {
     if (!['storyNext', 'storyChoice'].includes(command.type)) return false;
     const result = execute(snapshot.current, command);
-    if (!result.ok) return false;
+    if (!result.ok) {
+      setError(result.message);
+      return false;
+    }
+    setError('');
     snapshot.current = result.game;
     if (!result.game.story?.active) close();
     else setGame(result.game);
@@ -35,5 +40,5 @@ export function EndingPreview({
     snapshot.current = next;
     setGame(next);
   }
-  return <StoryPlayer preview={{ game, act, skip, close }} />;
+  return <StoryPlayer preview={{ game, act, skip, close, error }} />;
 }

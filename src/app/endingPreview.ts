@@ -12,7 +12,7 @@ export type EndingKind = 'success' | 'failure';
 declare global {
   interface Window {
     previewEnding: (kind?: EndingKind) => boolean;
-    previewEvent: (kind?: string) => boolean;
+    previewEvent: (kind?: string, variant?: number) => boolean;
   }
 }
 let showing = false;
@@ -33,7 +33,9 @@ export function installEndingPreview() {
     game.story!.endingDone = false;
     return openPreview(game, 'ending');
   };
-  window.previewEvent = (name) => {
+  window.previewEvent = (name, variant = 0) => {
+    if (!Number.isInteger(variant) || variant < 0 || variant > 2)
+      throw Error('상황 번호는 0, 1, 2입니다.');
     const state = useGameStore.getState();
     if (showing || state.action || state.slotBusy) return false;
     const kind =
@@ -43,12 +45,19 @@ export function installEndingPreview() {
     if (name !== undefined && !kind)
       throw Error(`이벤트: ${EVENT_KINDS.join(', ')}`);
     return openPreview(
-      kind ? createEventPreview(kind, state.game?.player) : null,
+      kind
+        ? createEventPreview(kind, state.game?.player, variant as 0 | 1 | 2)
+        : null,
       'event',
+      variant as 0 | 1 | 2,
     );
   };
 }
-function openPreview(game: Game | null, mode: 'ending' | 'event') {
+function openPreview(
+  game: Game | null,
+  mode: 'ending' | 'event',
+  variant: 0 | 1 | 2 = 0,
+) {
   const host = document.createElement('div');
   host.dataset.scenePreview = 'true';
   if (mode === 'ending') host.dataset.endingPreview = 'true';
@@ -73,6 +82,7 @@ function openPreview(game: Game | null, mode: 'ending' | 'event') {
       ? createElement(EndingPreview, { initialGame: game, close })
       : createElement(EventPreviewMenu, {
           player: useGameStore.getState().game?.player,
+          initialVariant: variant,
           close,
         }),
   );

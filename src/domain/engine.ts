@@ -1,3 +1,10 @@
+import {
+  finishWithReaction,
+  queueFollowup,
+  sceneItem,
+  PRIVATE_SALE_EVENTS,
+} from './eventDepth';
+import { EVENT_QUESTIONS, type EventQuestion } from '../content/eventScenes';
 import { beforeTrade, afterAction, storyLines, storyChoices } from './story';
 import { STORY_RULES } from '../content/story';
 import type { PlayerProfile } from '../content/player';
@@ -346,8 +353,7 @@ function daily(g: Game) {
     log(g, `시장 변화: ${g.trend} 수요가 높습니다.`, 'market');
   }
 }
-function endDay(g: Game, before: number) {
-  g.minute = (Math.floor(before / 1440) + 1) * 1440;
+function endDay(g: Game) {
   daily(g);
   board(g);
 }
@@ -442,7 +448,7 @@ function advance(g: Game, actions: number, generate = true) {
   g.weekActions = (g.weekActions ?? 0) + actions;
   const before = g.minute;
   g.minute += actions * ACTION_TICK;
-  if (dayOf(g) > Math.floor(before / 1440) + 1) endDay(g, before);
+  if (dayOf(g) > Math.floor(before / 1440) + 1) endDay(g);
   else daily(g);
   expire(g);
   settleWeekly(g);
@@ -549,6 +555,7 @@ export function execute(
   command: Command,
   sceneResolved = false,
   bundleId?: string,
+  tradeActions = 1,
 ): Result {
   // Copy first; any rejected/invalid command leaves all state and RNG unchanged.
   const g = structuredClone(toWeeklyActions(original));
@@ -569,6 +576,22 @@ export function execute(
         !storyChoices(g).some((c) => c.id === command.choice)
       )
         throw Error('선택할 수 없는 답변입니다.');
+      if (scene.outcome) {
+        st.active = null;
+        return { game: g, ok: true, message: '' };
+      }
+      if (command.choice.startsWith('ask:')) {
+        const question = command.choice.slice(4) as EventQuestion;
+        if (
+          !EVENT_QUESTIONS.includes(question) ||
+          scene.asked?.includes(question)
+        )
+          throw Error('이미 물었거나 선택할 수 없는 질문입니다.');
+        scene.asked = [...(scene.asked ?? []), question];
+        scene.branch = question;
+        scene.step = 0;
+        return { game: g, ok: true, message: '' };
+      }
       if (command.choice === 'explain') {
         // An explanation is a separate persisted dialogue beat, not a hidden-value inspection.
         if (scene.explained) throw Error('이미 설명을 들었습니다.');
@@ -585,16 +608,64 @@ export function execute(
         if (scene.kind === 'success' || scene.kind === 'failure')
           state.endingDone = true;
       };
+      const relatedItem = sceneItem(g, scene);
       finish(g);
       if (['cancel', 'decline'].includes(command.choice)) {
         if (scene.resume?.type === 'accept') endInquiry(g, scene.resume.id);
         return {
-          game: g,
+          game: finishWithReaction(
+            g,
+            scene,
+            command.choice === 'cancel' ? 'cancelled' : 'declined',
+            command.choice,
+          ),
           ok: true,
           message:
             command.choice === 'cancel'
               ? '거래를 취소했습니다.'
               : '제안을 거절했습니다.',
+        };
+      }
+      if (scene.kind === 'scam' && command.choice === 'report') {
+        g.board = g.board.filter((i) => i.id !== scene.target);
+        log(g, '수상한 선입금 요구를 신고하고 거래를 종료했습니다.');
+        return {
+          game: finishWithReaction(g, scene, 'reported', command.choice),
+          ok: true,
+          message: '',
+        };
+      }
+      if (scene.kind === 'reservation' && command.choice === 'hold') {
+        const q = g.inquiries.find((q) => q.id === scene.resume?.id);
+        const sale = g.sales.find((s) => s.id === q?.saleId);
+        if (!q || !sale || !relatedItem) throw Error('종료된 문의입니다.');
+        queueFollowup(
+          g,
+          'returnBuyer',
+          q.name,
+          relatedItem.kind,
+          relatedItem.id,
+          q.price,
+        );
+        sale.nextCheck = g.minute + 5 * ACTION_TICK;
+        sale.expires = Math.max(sale.expires, g.minute + 6 * ACTION_TICK);
+        g.inquiries = g.inquiries.filter((x) => x.saleId !== sale.id);
+        log(g, `${relatedItem.title}의 예약 문의를 받았습니다.`);
+        return {
+          game: finishWithReaction(g, scene, 'promised', command.choice),
+          ok: true,
+          message: '',
+        };
+      }
+      if (scene.kind === 'marketTip' && command.choice === 'look') {
+        const beforeDay = dayOf(g);
+        advance(g, 1);
+        if (beforeDay === dayOf(g)) board(g, scene.marketId ?? 'street');
+        afterAction(g, command, original);
+        return {
+          game: finishWithReaction(g, scene, 'discovered', command.choice),
+          ok: true,
+          message: '새 매물을 확인했습니다.',
         };
       }
       if (scene.kind === 'regular' && command.choice === 'request') {
@@ -603,13 +674,23 @@ export function execute(
           g.inventory.find((i) => i.id === scene.target);
         if (!item) throw Error('판매가 끝난 매물입니다.');
         st.requests = [...new Set([...st.requests, item.kind])];
+        if (scene.variant !== undefined)
+          queueFollowup(g, 'referral', scene.name ?? item.seller, item.kind);
       }
-      if (scene.kind === 'competitor' && command.choice === 'deal') {
+      if (
+        PRIVATE_SALE_EVENTS.includes(scene.kind as never) &&
+        command.choice === 'deal'
+      ) {
         const targets = scene.targets ?? [scene.target!];
         const items = targets.map((id) => owned(g, id));
-        for (const item of items) unlisted(g, item.id);
+        if (scene.kind !== 'returnBuyer')
+          for (const item of items) unlisted(g, item.id);
         money(g, scene.price!);
-        for (const item of items) unlockItem(g, item);
+        for (const item of items) {
+          unlockItem(g, item);
+          const sale = g.sales.find((s) => s.itemId === item.id);
+          if (sale) finishSale(g, sale.id);
+        }
         g.inventory = g.inventory.filter((i) => !targets.includes(i.id));
         g.stats.sales += items.length;
         log(
@@ -619,10 +700,17 @@ export function execute(
         );
         advance(g, 1, false);
         afterAction(g, command, original);
-        return { game: g, ok: true, message: '특별 거래를 마쳤습니다.' };
+        return {
+          game: finishWithReaction(g, scene, 'sold', command.choice),
+          ok: true,
+          message: '특별 거래를 마쳤습니다.',
+        };
       }
       if (scene.resume) {
-        if (command.choice === 'deal' && scene.kind === 'missing') {
+        if (
+          command.choice === 'deal' &&
+          ['missing', 'rush'].includes(scene.kind)
+        ) {
           const item = preItem(g, scene.resume.id);
           item.negotiatedPrice = scene.price!;
         }
@@ -638,11 +726,47 @@ export function execute(
           scene.kind === 'bundle' && command.choice === 'deal'
             ? scene.extra
             : undefined,
+          command.choice === 'wait' ? 2 : 1,
         );
         if (!result.ok) throw Error(result.message);
+        if (scene.variant !== undefined && relatedItem) {
+          if (scene.kind === 'memory' && scene.resume.type === 'buy')
+            queueFollowup(
+              result.game,
+              'reunion',
+              relatedItem.seller,
+              relatedItem.kind,
+              relatedItem.id,
+              Math.max(
+                100,
+                Math.min(
+                  relatedItem.negotiatedPrice ?? relatedItem.price,
+                  moneyRatio(relatedItem.value, 80),
+                ),
+              ),
+            );
+          if (command.choice === 'wait')
+            queueFollowup(
+              result.game,
+              'referral',
+              scene.name ?? relatedItem.seller,
+              relatedItem.kind,
+            );
+        }
+        result.game = finishWithReaction(
+          result.game,
+          scene,
+          scene.resume.type === 'buy' ? 'purchased' : 'sold',
+          command.choice,
+        );
         return result;
       }
-      return { game: g, ok: true, message: '' };
+      if (scene.kind === 'creditor') return { game: g, ok: true, message: '' };
+      return {
+        game: finishWithReaction(g, scene, 'promised', command.choice),
+        ok: true,
+        message: '',
+      };
     }
     if (g.story?.active) throw Error('진행 중인 대화를 마쳐 주세요.');
     if (g.status !== 'playing') throw Error('종료된 게임입니다.');
@@ -853,7 +977,7 @@ export function execute(
         }
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
         log(g, message);
-        advance(g, 1);
+        advance(g, tradeActions);
         break;
       }
       case 'check': {
@@ -948,7 +1072,7 @@ export function execute(
         g.stats.sales++;
         message = `${i.title} 판매 완료. ${won(q.price)}을 받았습니다. 물품·대금 교환을 한 번에 마쳤습니다.`;
         log(g, message);
-        advance(g, 1, false);
+        advance(g, tradeActions, false);
         break;
       }
       case 'counter':

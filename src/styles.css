@@ -2519,6 +2519,9 @@ html {
   gap: 8px;
 }
 .story-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
   color: #91e0bc;
 }

@@ -304,9 +304,17 @@ export const useGameStore = create<State>((set, get) => ({
     const presentationCommand: Command =
       command.type === 'storyChoice' && pendingScene
         ? (pendingScene.resume ??
-          (pendingScene.kind === 'competitor'
+          ([
+            'competitor',
+            'collector',
+            'referral',
+            'reunion',
+            'returnBuyer',
+          ].includes(pendingScene.kind)
             ? { type: 'outletSell', id: pendingScene.target! }
-            : command))
+            : pendingScene.kind === 'marketTip'
+              ? { type: 'refresh', marketId: pendingScene.marketId }
+              : command))
         : command;
     // Commit and save once before presentation: reload cannot lose or replay an action.
     set({
