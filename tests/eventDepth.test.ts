@@ -269,3 +269,60 @@ test('two-action waits retain exact ticks across day boundaries and remain loada
   assert.equal(g.minute, 20 * ACTION_TICK);
   assert.equal(isGame(g), true);
 });
+
+test('every event question uses spoken protagonist dialogue rather than its action label', () => {
+  for (const kind of EVENT_KINDS)
+    for (const variant of [0, 1, 2] as const) {
+      const g = endLines(createEventPreview(kind, undefined, variant));
+      for (const choice of storyChoices(g).filter((c) =>
+        c.id.startsWith('ask:'),
+      )) {
+        const result = choose(g, choice.id);
+        const lines = storyLines(result);
+        assert.equal(lines[0].speaker, '주인공');
+        assert.notEqual(lines[0].text, choice.label);
+        assert.ok(/[?.!]$/.test(lines[0].text), lines[0].text);
+        assert.equal(result.cash, g.cash);
+        assert.equal(result.minute, g.minute);
+        assert.equal(result.seed, g.seed);
+        assert.deepEqual(storyLines(save(result)), lines);
+      }
+    }
+});
+test('each completed decision starts with the protagonist response, then the counterpart reaction, without replaying the transaction', () => {
+  for (const kind of EVENT_KINDS) {
+    const g = endLines(createEventPreview(kind));
+    for (const choice of storyChoices(g).filter(
+      (c) => !c.id.startsWith('ask:'),
+    )) {
+      const result = choose(g, choice.id);
+      if (!result.story?.active?.outcome) continue;
+      const lines = storyLines(result);
+      assert.equal(lines.length, 2);
+      assert.equal(lines[0].speaker, '주인공');
+      assert.notEqual(lines[0].text, choice.label);
+      assert.ok(lines[0].text.endsWith('.') || lines[0].text.endsWith('?'));
+      const restored = save(result);
+      assert.deepEqual(storyLines(restored), lines);
+      const done = finishOutcome(restored);
+      assert.equal(done.cash, result.cash);
+      assert.equal(done.weekActions, result.weekActions);
+    }
+  }
+});
+
+test('question replies answer in the counterpart voice for payment concerns and settlement confirmation', () => {
+  for (const variant of [0, 1, 2] as const) {
+    const g = endLines(createEventPreview('scam', undefined, variant));
+    const proof = choose(g, 'ask:proof');
+    const reply = storyLines(proof)[1];
+    assert.ok(!reply.text.includes('말만 돌아왔다'));
+    assert.ok(reply.text.includes('입금') || reply.text.includes('계좌'));
+    assert.notEqual(reply.speaker, '주인공');
+  }
+  const confirmed = choose(
+    endLines(createEventPreview('creditor')),
+    'ask:terms',
+  );
+  assert.ok(storyLines(confirmed)[1].text.includes('납부는 정상적으로 반영'));
+});

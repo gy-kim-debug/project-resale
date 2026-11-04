@@ -637,3 +637,12 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - `node scripts/prepare-event-depth-fixtures.mjs` 및 `scripts/verify-event-followups.py`: 320×568 / 390×844에서 실제 IndexedDB 진행으로 질문 중 재접속, 예약 반응 중 재접속, 3행동 뒤 예약자 재연락·확정가 1회 판매·글 정리, 기다리기 번개 2와 실제 소모, 선입금 요구 신고의 현금/시간 무소모 및 대상만 제거를 확인했다.
 - 기존 엔딩 미리보기도 3개 화면 크기에서 통과. `scripts/prepare-story-fixtures.mjs`는 이전 형식 호환용 저장을 명시적으로 만들도록 갱신했고 `scripts/verify-story.py`로 320/375/390/430px의 도입·이전 8종·두 엔딩·동작 줄이기까지 통과했다.
 - 로그 `work/event-depth-{tests,lint,build,mobile,followups,endings,legacy,format-check}.txt`. 실제 iOS/Android 기기에서의 검증은 포함하지 않는다.
+
+## 선택지와 실제 발화 분리·다음 글자 깜빡임 (2026-11-04)
+
+- 질문 버튼 이름을 그대로 주인공 대사로 넣던 코드를 사건/질문별 자연스러운 발화로 교체했다. 최종 결정도 주인공 발화→상대 반응 순서로 구분하며 반응 대사 2개와 저장 필드는 유지한다. 일부 선입금/납부 확인 답변도 상대가 직접 답하는 문장으로 보완했다.
+- ‘다음’은 글자 span만 1.6초 주기로 opacity 1↔0.45를 반복한다. 투명 버튼/48px 터치 영역/고정 도트 영역은 유지한다. OS 동작 줄이기는 기존 전역 애니메이션 해제 규칙을 따른다.
+- `npm test` **192개 통과**. 18종×3상황의 질문 발화가 선택지 이름과 다르고 실제 주인공 문장으로 저장/복원되는지, 모든 최종 결정의 주인공→상대 순서·UI 문구 미복사·중복 자산 처리 없음, 의심 거래/납부 확인 답변의 화법을 추가 검증했다. TypeScript·ESLint·프로덕션 빌드·포맷·diff 검사 통과.
+- `scripts/verify-event-speech.py`: Chromium 320×568 / 390×844 / 1024×768에서 예약 조건 질문·예약 수락·거래 취소의 실제 문장/화자 순서, 글자만 실제 opacity 변화·부모 불투명도 1·테두리 0, 도트 영역 고정과 저장 전후 동일함을 확인했다. reduced-motion 컨텍스트에서 animation none·opacity 1과 다음 클릭을 별도 검증했다.
+- 실제 저장 후속 연락 검증도 320×568 / 390×844에서 통과했다. 질문·반응 도중 재접속, 예약자 확정가 1회 판매, 기다리기 2행동, 신고 무소모가 유지된다.
+- 로그 `work/event-speech-{tests,lint,build,mobile,followups,format-check}.txt`. `work/event-question-speech-390.png` 시각 확인. 실제 기기 테스트는 포함하지 않는다.

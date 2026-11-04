@@ -1,3 +1,8 @@
+import {
+  eventQuestionSpeech,
+  eventDecisionSpeech,
+  eventQuestionReply,
+} from '../content/eventSpeech';
 import { EVENT_KINDS, type EventKind, type StoryLine } from '../content/story';
 import {
   EVENT_VARIANTS,
@@ -71,17 +76,11 @@ export function deepLines(g: Game): StoryLine[] | null {
         '알려 준 시장에서 새 매물을 확인했다. 좋은 거래인지는 직접 판단해야 한다.',
     };
     return [
+      line(me, eventDecisionSpeech(kind, s.decision), 'look'),
       line(
         s.outcome === 'reported' || s.outcome === 'discovered' ? '' : name,
         text[s.outcome],
         'exchange',
-      ),
-      line(
-        me,
-        s.outcome === 'promised'
-          ? '다른 거래도 살펴보면서 연락을 기다려 보자.'
-          : '……다음 일을 보자.',
-        'leave',
       ),
     ];
   }
@@ -111,8 +110,12 @@ export function deepLines(g: Game): StoryLine[] | null {
           : '이전 거래에서 약속을 지켜 주셨다는 이야기를 들었습니다. 이번에도 서로 조건을 확인하고 결정하면 좋겠어요.',
     };
     return [
-      line(me, QUESTION_LABELS[s.branch], 'look'),
-      line(name, answers[s.branch], 'listen'),
+      line(me, eventQuestionSpeech(kind, s.branch), 'look'),
+      line(
+        name,
+        eventQuestionReply(kind, s.branch, s.variant) ?? answers[s.branch],
+        'listen',
+      ),
     ];
   }
   const [first, second] = EVENT_VARIANTS[kind][s.variant];
