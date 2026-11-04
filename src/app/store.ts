@@ -337,7 +337,7 @@ export const useGameStore = create<State>((set, get) => ({
       setTimeout(() => {
         set({
           action: null,
-          notice: result.message,
+          notice: command.type === 'check' ? '' : result.message,
           noticeId: get().noticeId + 1,
           changes: changesBetween(g, result.game),
         });

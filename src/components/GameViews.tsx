@@ -1,3 +1,4 @@
+import { AppraisalResult } from './AppraisalResult';
 import {
   selectableAmounts,
   repaymentPresets,
@@ -30,7 +31,7 @@ import { ItemComparison } from './ItemComparison';
 import { conditionLabel } from '../domain/itemProfiles';
 import { acquisitionCost } from '../domain/inventory';
 import { TradeChat } from './TradeChat';
-import { ItemTags, ItemFindings } from './ItemTags';
+import { ItemTags } from './ItemTags';
 import { mailboxLogs, unreadCount } from '../app/notifications';
 import { useGameStore, type Act } from '../app/store';
 import type { Game, Item, MarketId } from '../domain/game';
@@ -749,6 +750,7 @@ export function OwnedView({
 }) {
   const sale = g.sales.find((s) => s.itemId === item.id);
   const [discard, setDiscard] = useState(false);
+  const [checkResult, setCheckResult] = useState<{ fee: number } | null>(null);
   return (
     <>
       <ItemArt item={item} large />
@@ -757,23 +759,30 @@ export function OwnedView({
       <p>
         {item.kind} · {sale ? '판매 등록 중' : '보관 중'}
       </p>
-      <ItemComparison g={g} item={item} />
-      <ItemFindings item={item} />
-      <Details>
-        <p>상태: {conditionLabel(item.kind, item.condition)}</p>
-        {item.checked ? (
-          <>
-            <p>실제 가치 {won(item.value)}</p>
-            <p>{item.defect}</p>
-          </>
-        ) : (
-          <p>가치 미확인</p>
-        )}
-      </Details>
+      {item.checked ? (
+        <AppraisalResult
+          g={g}
+          item={item}
+          fresh={!!checkResult}
+          fee={checkResult?.fee}
+        />
+      ) : (
+        <>
+          <ItemComparison g={g} item={item} />
+          <Details>
+            <p>상태: {conditionLabel(item.kind, item.condition)}</p>
+            <p>가치 미확인</p>
+          </Details>
+        </>
+      )}
       {!item.checked && (
         <Button
           disabled={g.cash < checkCost(g, item)}
-          onClick={() => act({ type: 'check', id: item.id })}
+          onClick={async () => {
+            const fee = checkCost(g, item);
+            if (await act({ type: 'check', id: item.id }))
+              setCheckResult({ fee });
+          }}
         >
           가치 확인 · {won(checkCost(g, item))}
         </Button>

@@ -2634,3 +2634,181 @@ html {
     height: 96px;
   }
 }
+
+.appraisal-result {
+  position: relative;
+  overflow: hidden;
+  margin: 18px 0;
+  padding: 22px 18px;
+  border: 1px solid #698c83;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #1d3731, #14232c);
+  scroll-margin-top: 14px;
+}
+.appraisal-result:focus {
+  outline: none;
+}
+.appraisal-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.appraisal-heading > div {
+  min-width: 0;
+}
+.appraisal-heading p {
+  margin-bottom: 4px;
+  color: #9dc0b3;
+  font-size: 12px;
+}
+.appraisal-heading h3 {
+  font-size: 18px;
+  line-height: 1.45;
+}
+.appraisal-heading .item-art {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+.appraisal-heading .item-art svg {
+  width: 48px;
+  height: 48px;
+}
+.appraisal-value > span {
+  display: block;
+  color: #b3c8bf;
+  font-size: 13px;
+}
+.appraisal-value strong {
+  display: block;
+  margin: 6px 0 16px;
+  font-size: clamp(25px, 6.6vw, 38px);
+  font-weight: 850;
+  line-height: 1.25;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  color: #91e0bc;
+}
+.appraisal-loss {
+  background: linear-gradient(145deg, #392d2b, #17212c);
+  border-color: #956c60;
+}
+.appraisal-loss .appraisal-value strong,
+.appraisal-loss .appraisal-difference strong {
+  color: #ffb29a;
+}
+.appraisal-even .appraisal-value strong,
+.appraisal-even .appraisal-difference strong {
+  color: #b8cce5;
+}
+.appraisal-difference {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ffffff1a;
+  color: #b4c5c2;
+  font-size: 13px;
+}
+.appraisal-difference strong {
+  color: #91e0bc;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.appraisal-prices {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+  font-size: 13px;
+}
+.appraisal-prices > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.appraisal-prices dt {
+  color: #a6b9bb;
+}
+.appraisal-prices dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.appraisal-findings {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+}
+.appraisal-findings > span {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #ffffff0c;
+  color: #bfd1cf;
+  font-size: 12px;
+}
+.appraisal-findings .appraisal-condition {
+  background: #8ce5c01c;
+  color: #a7e3c8;
+  font-weight: 700;
+}
+.appraisal-findings .appraisal-warning {
+  background: #ffac8f1a;
+  color: #ffb29a;
+}
+.appraisal-defect {
+  margin-top: 14px;
+  color: #d0d9dc;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.appraisal-fresh {
+  animation: appraisal-reveal 0.5s ease-out both;
+}
+.appraisal-fresh::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    #b7ffdf24 45%,
+    transparent 65%
+  );
+  animation: appraisal-shine 0.9s ease-out both;
+}
+@keyframes appraisal-reveal {
+  from {
+    opacity: 0.65;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes appraisal-shine {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(110%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .appraisal-fresh,
+  .appraisal-fresh::after {
+    animation: none;
+  }
+  .appraisal-fresh::after {
+    display: none;
+  }
+}

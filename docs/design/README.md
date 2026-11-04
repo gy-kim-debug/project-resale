@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [물품 등급 도입 검토 — 미확정](items/CONDITION_GRADES_PROPOSAL.md)
+
 - [시작·엔딩 스토리와 도트 대화 연출](story/INTRO_AND_ENDINGS.md)
 - [개발자 콘솔 엔딩·이벤트 미리보기](story/DEBUG_PREVIEW.md)
 - [거래 도트 대화 이벤트 초기 8종](events/TRADE_SCENES.md)
