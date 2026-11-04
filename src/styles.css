@@ -2261,6 +2261,9 @@ html {
   color: var(--muted);
 }
 .create-preview {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 8px);
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2308,8 +2311,10 @@ html {
   height: 1px;
 }
 .appearance-options span {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 44px;
   padding: 10px 8px;
   border: 1px solid var(--border);
@@ -2609,4 +2614,23 @@ html {
 .story-targets ul {
   margin: 4px 0;
   padding-left: 18px;
+}
+
+.appearance-swatch {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid #ffffff55;
+}
+@media (max-height: 680px) {
+  .create-preview {
+    min-height: 144px;
+    gap: 6px;
+    padding: 12px;
+  }
+  .create-preview .pixel-character {
+    width: 72px;
+    height: 96px;
+  }
 }

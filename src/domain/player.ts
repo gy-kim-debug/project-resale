@@ -1,5 +1,7 @@
 import {
   DEFAULT_PLAYER,
+  AVATARS,
+  CLOTHING,
   HAIRSTYLES,
   OUTFITS,
   SKINS,
@@ -23,6 +25,14 @@ export function isPlayer(value: unknown): value is PlayerProfile {
   return (
     !!appearance &&
     typeof appearance === 'object' &&
+    (!('avatar' in appearance) ||
+      appearance.avatar === undefined ||
+      (typeof appearance.avatar === 'string' &&
+        Object.hasOwn(AVATARS, appearance.avatar))) &&
+    (!('clothing' in appearance) ||
+      appearance.clothing === undefined ||
+      (typeof appearance.clothing === 'string' &&
+        Object.hasOwn(CLOTHING, appearance.clothing))) &&
     'hair' in appearance &&
     typeof appearance.hair === 'string' &&
     Object.hasOwn(HAIRSTYLES, appearance.hair) &&
