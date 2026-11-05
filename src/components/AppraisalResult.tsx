@@ -51,6 +51,15 @@ export function AppraisalResult({
           <h3>{item.title}</h3>
         </div>
       </header>
+      {item.stateGrade && (
+        <div
+          className={`grade-result grade-${item.stateGrade}`}
+          aria-label={`상태 ${item.stateGrade}등급`}
+        >
+          <strong>{item.stateGrade}</strong>
+          <span>상태 등급</span>
+        </div>
+      )}
       <div className="appraisal-value">
         <span>실제 가치</span>
         <strong data-appraisal="value">{won(item.value)}</strong>
@@ -82,7 +91,9 @@ export function AppraisalResult({
         <span
           className={`appraisal-condition${item.condition === '고장' ? ' appraisal-warning' : ''}`}
         >
-          {conditionLabel(item.kind, item.condition)}
+          {item.stateGrade
+            ? `${item.stateGrade}등급`
+            : conditionLabel(item.kind, item.condition)}
         </span>
         {listingFindings(item).map((text) => (
           <span

@@ -1,3 +1,4 @@
+import { canRepair } from '../src/domain/conditionGrades';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import legacySave from './fixtures/legacy-catalog-v2.json';
@@ -118,7 +119,7 @@ test('buy, appraise, save/reload and repair never redraw or bypass the new refer
   const loaded = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
   assert.deepEqual(loaded, g);
   assert.ok(isGame(g));
-  if (g.inventory[0].condition !== '양호') {
+  if (canRepair(g.inventory[0])) {
     r = execute(g, { type: 'repair', id: i.id });
     assert.ok(r.ok);
     assert.equal(r.game.inventory[0].valuationReference, ref);

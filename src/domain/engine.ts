@@ -1,4 +1,13 @@
 import {
+  assignGrade,
+  canRepair,
+  repairChance,
+  gradeRepairCost,
+  finishGradeRepair,
+  gainMarketExperience,
+  marketSkillLevel,
+} from './conditionGrades';
+import {
   finishWithReaction,
   queueFollowup,
   sceneItem,
@@ -114,6 +123,7 @@ export function checkCost(g: Game, item: Item) {
   );
 }
 export function repairCost(item: Item) {
+  if (item.stateGrade) return gradeRepairCost(item);
   return Math.max(
     300,
     moneyRatio(item.base, ITEM_PROFILES[item.kind].repairPercent),
@@ -264,6 +274,16 @@ function makeItem(
     negotiation: 'none',
     negotiatedPrice: null,
   };
+  if (!marketItem) item.marketId = 'street';
+  assignGrade(
+    item,
+    roll(g),
+    roll(g),
+    roll(g),
+    ['untested', 'bare', 'highMileage', 'oldInterior'].includes(caseId)
+      ? 'risk'
+      : 'normal',
+  );
   const trader = chooseTrader(
     `${g.seed}:${item.id}`,
     listing?.facts.seller ?? 'ordinary',
@@ -685,9 +705,12 @@ export function execute(
         const items = targets.map((id) => owned(g, id));
         if (scene.kind !== 'returnBuyer')
           for (const item of items) unlisted(g, item.id);
+        if (items.some((i) => i.stateGrade === 'F'))
+          throw Error('폐기 대상 물품은 판매할 수 없습니다.');
         money(g, scene.price!);
         for (const item of items) {
           unlockItem(g, item);
+          gainMarketExperience(g, item, 2);
           const sale = g.sales.find((s) => s.itemId === item.id);
           if (sale) finishSale(g, sale.id);
         }
@@ -793,6 +816,7 @@ export function execute(
         return { game: g, ok: true, message: '' };
       }
     }
+    const beforeMarketLevels = MARKETS.map((m) => marketSkillLevel(g, m.id));
     const beforeLevels = ABILITIES.map((ability) => level(g, ability.stat));
     let message = '';
     switch (command.type) {
@@ -965,6 +989,7 @@ export function execute(
         unlockItem(g, received);
         g.board = g.board.filter((i) => i.id !== item.id);
         g.stats.purchases++;
+        if (cost > 0) gainMarketExperience(g, received, 2);
         if (extra) {
           g.inventory.push({
             ...extra,
@@ -974,6 +999,7 @@ export function execute(
           unlockItem(g, extra);
           g.board = g.board.filter((i) => i.id !== extra.id);
           g.stats.purchases++;
+          if (extraCost > 0) gainMarketExperience(g, extra, 2);
         }
         message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
         log(g, message);
@@ -988,6 +1014,7 @@ export function execute(
         money(g, -cost);
         i.checked = true;
         g.stats.checks++;
+        gainMarketExperience(g, i, 2);
         message = `가치 확인: ${i.title}, 실제 가치 ${won(i.value)}. ${i.defect}${i.listing ? ` ${listingFindings(i).join(' · ')}.` : ''}`;
         log(g, message);
         break;
@@ -996,20 +1023,21 @@ export function execute(
         const i = owned(g, command.id);
         unlisted(g, i.id);
         if (!i.checked) throw Error('미확인 물품입니다.');
-        if (i.repaired || i.condition === '양호')
-          throw Error('수리할 수 없는 물품입니다.');
+        if (!canRepair(i)) throw Error('수리할 수 없는 물품입니다.');
         const cost = repairCost(i);
         affordable(g, cost);
         money(g, -cost);
         i.repaired = true;
-        const success =
-          roll(g) < Math.min(0.95, 0.7 + level(g, 'repairs') * 0.05);
+        const success = roll(g) * 100 < repairChance(g, i);
         g.stats.repairs++;
-        if (success) {
+        if (i.stateGrade) {
+          finishGradeRepair(i, success, success ? 1 : roll(g));
+        } else if (success) {
           i.condition = '양호';
           i.value = i.base;
           i.defect = ITEM_PROFILES[i.kind].repairedDescription;
         }
+        gainMarketExperience(g, i, success ? 4 : 2);
         message = success
           ? `수리 성공. 실제 가치 ${won(i.value)}.`
           : `수리 실패. ${won(cost)} 사용.`;
@@ -1028,6 +1056,8 @@ export function execute(
       case 'post': {
         const item = owned(g, command.id);
         unlisted(g, command.id);
+        if (item.stateGrade === 'F')
+          throw Error('폐기 대상 물품은 판매할 수 없습니다.');
         const price = isMoney(command.price) ? roundMoney(command.price) : NaN;
         if (!isMoney(price) || price < MONEY_UNIT || price > RULES.maxMoney)
           throw Error('판매 가격은 100원 이상 1,000조 원 이하여야 합니다.');
@@ -1065,11 +1095,14 @@ export function execute(
         const sale = g.sales.find((s) => s.id === q.saleId);
         if (!sale) throw Error('판매 글이 없습니다.');
         const i = owned(g, sale.itemId);
+        if (i.stateGrade === 'F')
+          throw Error('폐기 대상 물품은 판매할 수 없습니다.');
         money(g, q.price);
         unlockItem(g, i);
         g.inventory = g.inventory.filter((i) => i.id !== sale.itemId);
         finishSale(g, sale.id);
         g.stats.sales++;
+        gainMarketExperience(g, i, 2);
         message = `${i.title} 판매 완료. ${won(q.price)}을 받았습니다. 물품·대금 교환을 한 번에 마쳤습니다.`;
         log(g, message);
         advance(g, tradeActions, false);
@@ -1131,6 +1164,8 @@ export function execute(
       }
       case 'outletSell': {
         const i = owned(g, command.id);
+        if (i.stateGrade === 'F')
+          throw Error('폐기 대상 물품은 판매할 수 없습니다.');
         unlisted(g, i.id);
         // Old persisted quotes cannot override the unified rate or sell stale value.
         const price = instantSalePrice(i);
@@ -1245,9 +1280,16 @@ export function execute(
       default:
         throw Error('지원하지 않는 행동입니다.');
     }
+    const marketUpgrades = MARKETS.filter(
+      (m, index) => marketSkillLevel(g, m.id) > beforeMarketLevels[index],
+    ).map((m) => `${m.name} Lv.${marketSkillLevel(g, m.id)}`);
     const upgrades = ABILITIES.filter(
-      (ability, index) => level(g, ability.stat) > beforeLevels[index],
-    ).map((ability) => `${ability.name} Lv.${level(g, ability.stat)}`);
+      (ability, index) =>
+        ability.stat !== 'repairs' &&
+        level(g, ability.stat) > beforeLevels[index],
+    )
+      .map((ability) => `${ability.name} Lv.${level(g, ability.stat)}`)
+      .concat(marketUpgrades);
     if (upgrades.length) {
       const notice = upgrades.join(' · ');
       message += ` ${notice}`;

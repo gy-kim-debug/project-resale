@@ -2812,3 +2812,42 @@ html {
     display: none;
   }
 }
+
+.grade-result {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--accent, #87e2c0);
+}
+.grade-result strong {
+  font-size: clamp(36px, 12vw, 58px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+.grade-result span {
+  font-size: 13px;
+  color: #a8b4c4;
+}
+.grade-SSS {
+  color: #f3d284;
+}
+.grade-S {
+  color: #c6adff;
+}
+.grade-C,
+.grade-F {
+  color: #ff9c87;
+}
+.toast-undo {
+  pointer-events: auto;
+  margin-left: 12px;
+  padding: 8px 12px;
+  min-height: 44px;
+  color: #10281f;
+  background: #87e2c0;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}

@@ -20,6 +20,9 @@ for (const kind of ['gain', 'loss', 'zero', 'large']) {
   g.cash = 1000000;
   g.stats.peakCash = g.cash;
   const item = g.board.shift();
+  delete item.stateGrade;
+  delete item.repairDifficulty;
+  delete item.repairCeiling;
   item.acquiredFor = 10000;
   item.base = 30000;
   item.valuationReference = 10000;

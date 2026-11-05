@@ -13,7 +13,7 @@
 
 ## 현재 구현 원칙
 
-- [물품 등급 도입 검토 — 미확정](items/CONDITION_GRADES_PROPOSAL.md)
+- [물품 상태 등급·수리 — 확정 규칙과 구현 정책](items/CONDITION_GRADES_PROPOSAL.md)
 
 - [시작·엔딩 스토리와 도트 대화 연출](story/INTRO_AND_ENDINGS.md)
 - [개발자 콘솔 엔딩·이벤트 미리보기](story/DEBUG_PREVIEW.md)

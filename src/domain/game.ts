@@ -69,6 +69,10 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
+  /** Absent on legacy items: preserve their original economics and repair behavior. */
+  stateGrade?: import('../content/conditionGrades').Grade;
+  repairDifficulty?: import('../content/conditionGrades').RepairDifficulty;
+  repairCeiling?: 'A' | 'B';
   /** Fixed generation reference for capped new valuations; absent in legacy saves. */
   valuationReference?: number;
   dialogue?: { topics: DialogueTopic[]; rapport: number };
@@ -142,6 +146,7 @@ export interface Event {
   expires: number;
 }
 export interface Game {
+  marketExperience?: Partial<Record<MarketId, number>>;
   story?: StoryState;
   player?: PlayerProfile;
   discoveredItems?: string[];

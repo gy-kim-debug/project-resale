@@ -1,3 +1,4 @@
+import { gradedValue, canRepair } from '../src/domain/conditionGrades';
 import {
   generatedCondition,
   conditionValuePercent,
@@ -454,7 +455,8 @@ for (const seed of [1, 42, 210])
           } else step({ type: 'job', id: 'shop' });
           continue;
         }
-        step({ type: 'post', id: i.id, price: marketValue(g, i) });
+        if (i.stateGrade === 'F') step({ type: 'discard', id: i.id });
+        else step({ type: 'post', id: i.id, price: marketValue(g, i) });
         continue;
       }
       const affordable = g.board
@@ -1512,7 +1514,7 @@ test('tags, actual facts and findings survive purchase, appraisal, repair and ba
     JSON.parse(JSON.stringify({ version: 2, game: g, favoriteIds: [] })),
   ).game;
   assert.deepEqual(restored, JSON.parse(JSON.stringify(g)));
-  if (restored.inventory[0].condition !== '양호') {
+  if (canRepair(restored.inventory[0])) {
     const repaired = run(restored, { type: 'repair', id: item.id });
     assert.deepEqual(repaired.inventory[0].listing, original);
   }
@@ -1580,7 +1582,9 @@ test('every market supports purchase, zero-action verification, source-specific 
     let g = newGame(31);
     g.cash = 100000000000;
     g.stats.peakCash = g.cash;
-    const item = g.board.find((i) => i.marketId === market.id)!;
+    const item = g.board.find(
+      (i) => i.marketId === market.id && i.stateGrade !== 'F',
+    )!;
     if (item.auction) {
       while (g.board.find((i) => i.id === item.id)!.auction!.status !== 'won') {
         const live = g.board.find((i) => i.id === item.id)!;
@@ -2350,7 +2354,10 @@ test('new games and mixed trade/weekly payment sequences keep every ledger field
     const item = g.board.find((i) => i.price > 0 && i.marketId === 'street')!;
     g = run(g, { type: 'buy', id: item.id });
     g = run(g, { type: 'check', id: item.id });
-    g = run(g, { type: 'outletSell', id: item.id });
+    g = run(g, {
+      type: g.inventory[0].stateGrade === 'F' ? 'discard' : 'outletSell',
+      id: item.id,
+    });
     for (let week = 0; week < 4; week++) {
       g = run(g, { type: 'startSettlement' });
       g = run(g, { type: 'repay', amount: mandatoryPrincipal(g) });
@@ -2506,15 +2513,16 @@ test('special discounts preserve hidden facts, collectors are not guaranteed gen
   const real = structuredClone(item);
   real.listing!.facts.authentic = true;
   const rare = applySpecialListing(real, 'collector', 10000);
-  assert.equal(rare.value, real.value * 2);
+  assert.equal(rare.value, gradedValue(rare));
+  assert.ok(rare.base >= real.base);
   real.listing!.facts.authentic = false;
-  assert.equal(applySpecialListing(real, 'collector', 10000).value, real.value);
+  assert.equal(applySpecialListing(real, 'collector', 10000).base, real.base);
   assert.throws(() => applySpecialListing(clearance, 'collector', 10000));
   assert.equal(item.value, original.value);
   g.board = g.board.map((i) => (i.id === item.id ? clearance : i));
   g = run(g, { type: 'buy', id: item.id });
   assert.equal(g.inventory[0].special, 'clearance');
-  assert.equal(g.inventory[0].value, item.value);
+  assert.equal(g.inventory[0].value, clearance.value);
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
 });
 
@@ -2891,6 +2899,9 @@ test('category personalities distinguish demand, condition loss and repair or ap
     ['부동산', 2000, 20000],
   ] as const) {
     const copy = { ...item, kind };
+    delete copy.stateGrade;
+    delete copy.repairDifficulty;
+    delete copy.repairCeiling;
     assert.equal(checkCost(g, copy), check);
     assert.equal(repairCost(copy), repair);
   }
@@ -2933,10 +2944,7 @@ test('new stock applies category value rules while retaining price bands, hidden
       const market = MARKETS.find((m) => m.id === item.marketId)!;
       assert.ok(item.price >= market.min && item.price <= market.max);
       assert.equal(item.checked, false);
-      assert.equal(
-        item.value,
-        moneyRatio(item.base, conditionValuePercent(item.kind, item.condition)),
-      );
+      assert.equal(item.value, gradedValue(item));
       const product = market.products.find((p) => p.title === item.title)!;
       assert.ok(item.price >= product.min! && item.price <= product.max!);
       assert.ok(item.valuationReference! >= moneyRatio(item.price, 80));
@@ -2953,6 +2961,9 @@ test('old owned values and acquisition prices survive imports and inspection wit
   const item = g.board.find((i) => i.marketId === 'computers')!;
   g.board = g.board.filter((i) => i.id !== item.id);
   g.inventory = [item];
+  delete item.stateGrade;
+  delete item.repairDifficulty;
+  delete item.repairCeiling;
   item.base = 100000;
   item.value = 75000;
   item.condition = '사용감';

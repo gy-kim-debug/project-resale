@@ -25,6 +25,8 @@ import {
 export type Act = (command: Command) => Promise<boolean>;
 export type Tab = '내 정보' | '채무' | '활동' | '보관함' | '사업';
 interface State {
+  discarded: { before: Game; after: Game; slot: SlotId } | null;
+  undoDiscard(): void;
   screen: 'menu' | 'game';
   unsaved: boolean;
   activeSlot: SlotId;
@@ -68,6 +70,28 @@ let actionFinished: Promise<boolean> = Promise.resolve(false);
 let hydration: Promise<void> | null = null;
 const seed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 export const useGameStore = create<State>((set, get) => ({
+  discarded: null,
+  undoDiscard() {
+    const current = get(),
+      discarded = current.discarded;
+    if (
+      !discarded ||
+      current.action ||
+      current.slotBusy ||
+      current.screen !== 'game' ||
+      current.activeSlot !== discarded.slot ||
+      current.game !== discarded.after
+    )
+      return;
+    set({
+      game: discarded.before,
+      discarded: null,
+      notice: '폐기를 취소했습니다.',
+      noticeId: current.noticeId + 1,
+      changes: {},
+    });
+    get().save();
+  },
   screen: 'menu',
   unsaved: false,
   activeSlot: 1,
@@ -258,6 +282,12 @@ export const useGameStore = create<State>((set, get) => ({
       set({ notice: result.message, noticeId: get().noticeId + 1, ok: false });
       return false;
     }
+    set({
+      discarded:
+        command.type === 'discard'
+          ? { before: g, after: result.game, slot: current.activeSlot }
+          : null,
+    });
     clearTimeout(highlightTimer);
     // Navigation and chat replies update immediately, without action presentation.
     if (

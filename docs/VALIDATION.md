@@ -664,3 +664,13 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - `node scripts/prepare-appraisal-fixtures.mjs` 및 `scripts/verify-appraisal.py`: Chromium 320×568 / 390×844 / 430×932 / 1024×768에서 이득/손실/0원/900조 원 표시, 25px 이상 주요 금액·차이·가품/결함, 실제 지불 비용과 표시 비용 일치·시간/행동 무소모, 결과 포커스·별도 확인 없이 판매 등록 이동, 재접속 후 재과금 없음·가로 넘침/오류 없음을 확인했다. reduced-motion의 정적 결과도 별도 통과.
 - `work/appraisal-result-390.png`를 시각 확인했다. 로그 `work/appraisal-{tests,lint,build,mobile,format-check}.txt`. 실제 기기 테스트는 포함하지 않는다.
 - SSS~F 기준/계수/확률은 구현하지 않았다. `docs/design/items/CONDITION_GRADES_PROPOSAL.md`에 사용자 아이디어·상태/희귀도 분리 추천·미확정 평가 요소와 다음 결정 사항을 구분했다. 기존 가격 엔진·수리·저장 스키마는 변경하지 않는다.
+
+## 2026-11-05 — 6등급·시장별 수리 능력치
+
+- 사용자 일괄 선택 A1/B1/C1/D2/E1/F1/G1/H2/I1/J1/K1/L2/M2/N1/O2/P1을 반영했다. 확정 규칙과 개발자 초기 조정값은 `docs/design/items/CONDITION_GRADES_PROPOSAL.md`에 구분했다.
+- `npm test`: 213개 통과, 실패 0. 새 13개 테스트는 일반/위험/특별 등급 분포, 상태 배율·가치 상한, 고정된 숨은 메타데이터, 시장별 성장·성공률·비용, 성공·실패·하락·재시도 금지, F의 판매 차단·폐기, 등록 중 수리 차단, 경험치 지급·제외·중복 방지, 기존 물품 호환, 잘못된 저장 거부를 검증한다.
+- TypeScript 검사(`npm run build` 포함), ESLint, Prettier 전체 검사, 프로덕션 빌드, `git diff --check` 통과.
+- `node scripts/prepare-grade-fixtures.mjs`와 `python scripts/verify-grades.py`: Chromium 320×568, 390×844, 430×932, 1024×768에서 모두 통과. 합성 저장 슬롯만 사용하고 실제 플레이 저장은 변경하지 않았다.
+- 실제 UI로 가치 확인 전 비공개 → C등급·견적 공개 → 수리 성공/A·비용/무행동/경험 지급 → 재접속 후 재시도 불가를 확인했다. 실패 후 F 전환·판매 차단·폐기·실행 취소·저장 복구도 검증했다.
+- F/SSS 수리 금지, 기존 물품의 73,100원 가치·수리 이력 보존, 생활 수리 Lv.10/전자 수리 Lv.2/악기 정비 Lv.1의 독립 표시와 성공률 적용, 가로 넘침 없음·브라우저 오류 0을 확인했다. `work/grade-check-390.png`를 시각 검토했다.
+- 발견한 실행 취소 토스트의 클릭 차단을 수정했다. 저장 확인은 비동기 저장 완료를 기다리도록 QA를 보완했다. 수정 후 네 화면 크기 전체 검증을 다시 통과했다.

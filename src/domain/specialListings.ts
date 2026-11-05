@@ -1,3 +1,4 @@
+import { assignGrade } from './conditionGrades';
 import { boostedBase } from './valuation';
 import { conditionValuePercent } from './itemProfiles';
 import { chooseTrader } from '../content/traders';
@@ -58,6 +59,22 @@ export function applySpecialListing(
       item.seller = trader.name;
     }
     item.listing!.tags = [...item.listing!.tags.slice(0, 2), 'urgent'];
+  }
+  if (item.stateGrade) {
+    let hash = 2166136261;
+    for (const c of `${item.id}:${item.title}:${id}:${item.price}`)
+      hash = Math.imul(hash ^ c.charCodeAt(0), 16777619);
+    const draw = () => {
+      hash = (Math.imul(1664525, hash) + 1013904223) >>> 0;
+      return hash / 4294967296;
+    };
+    assignGrade(
+      item,
+      draw(),
+      draw(),
+      draw(),
+      id === 'unverified' ? 'risk' : 'special',
+    );
   }
   item.offers = openingPurchaseOffers(item.price, item.marketId);
   return item;

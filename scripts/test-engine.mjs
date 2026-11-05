@@ -17,6 +17,7 @@ await build({
     'tests/eventDepth.test.ts',
     'tests/avatars.test.ts',
     'tests/appraisal.test.ts',
+    'tests/conditionGrades.test.ts',
   ],
   bundle: true,
   external: ['react', 'react-dom/server'],
@@ -42,6 +43,7 @@ const result = spawnSync(
     'work/test-bundles/eventDepth.test.mjs',
     'work/test-bundles/avatars.test.mjs',
     'work/test-bundles/appraisal.test.mjs',
+    'work/test-bundles/conditionGrades.test.mjs',
   ],
   { stdio: 'inherit' },
 );

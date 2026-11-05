@@ -12,8 +12,7 @@ import { PRODUCT_CATEGORIES } from '../src/content/productCategories';
 import { ITEM_CASES, caseApplies, itemCase } from '../src/content/itemCases';
 import { chooseItemCase, caseQuality } from '../src/domain/itemCases';
 import { newGame, execute } from '../src/domain/engine';
-import { conditionValuePercent } from '../src/domain/itemProfiles';
-import { moneyRatio } from '../src/domain/money';
+import { gradedValue } from '../src/domain/conditionGrades';
 import { parseSave } from '../src/storage/saveRepository';
 import { isGame } from '../src/storage/validation';
 import { ITEM_CODEX, codexKey } from '../src/content/collection';
@@ -74,10 +73,7 @@ test('100 seeds generate diverse nonduplicate 12-item boards within each product
         assert.ok(i.price >= p.min! && i.price <= p.max!);
         assert.equal(i.price % 100, 0);
         assert.equal(i.base % 100, 0);
-        assert.equal(
-          i.value,
-          moneyRatio(i.base, conditionValuePercent(i.kind, i.condition)),
-        );
+        assert.equal(i.value, gradedValue(i));
         assert.ok(i.caseId && caseApplies(i.caseId, i.kind, i.marketId));
         seen.add(i.title);
         cases.add(i.caseId!);

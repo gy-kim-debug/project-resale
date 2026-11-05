@@ -582,6 +582,11 @@ function GameApp() {
           message={state.notice}
           ok={state.ok}
           dismiss={state.dismiss}
+          undo={
+            state.discarded?.after === state.game
+              ? state.undoDiscard
+              : undefined
+          }
         />
       )}
       {state.action && (

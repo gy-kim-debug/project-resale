@@ -1,3 +1,11 @@
+import { MARKET_SKILLS, REPAIR_RULES } from '../content/conditionGrades';
+import {
+  canRepair,
+  repairChance,
+  repairName,
+  marketProgress,
+  gradedValue,
+} from '../domain/conditionGrades';
 import { AppraisalResult } from './AppraisalResult';
 import {
   selectableAmounts,
@@ -43,7 +51,7 @@ import {
   checkCost,
   repairCost,
 } from '../domain/engine';
-import { marketDefinition, marketOf } from '../content/markets';
+import { MARKETS, marketDefinition, marketOf } from '../content/markets';
 import { SALE_BARGAINING } from '../content/bargaining';
 import { auctionBidOptions } from '../domain/auction';
 import { instantSalePrice } from '../domain/instantSale';
@@ -237,7 +245,7 @@ export function InfoView({ g }: { g: Game }) {
         </div>
       </section>
       <div className="abilities">
-        {ABILITIES.map((a) => (
+        {ABILITIES.filter((a) => a.stat !== 'repairs').map((a) => (
           <section className="card" key={a.stat}>
             <h2>
               {a.name} <span>Lv.{level(g, a.stat)}</span>
@@ -247,9 +255,7 @@ export function InfoView({ g }: { g: Game }) {
                 ? `협상력 +${level(g, a.stat)}%`
                 : a.stat === 'sales'
                   ? `동시 판매 글 ${listingLimit(g)}개`
-                  : a.stat === 'checks'
-                    ? `가치 확인비 ${level(g, a.stat) * 5}% 절감`
-                    : `수리 성공률 ${Math.min(95, 70 + level(g, a.stat) * 5)}%`}
+                  : `가치 확인비 ${level(g, a.stat) * 5}% 절감`}
             </p>
             <progress
               value={level(g, a.stat) >= 10 ? a.each : g.stats[a.stat] % a.each}
@@ -258,6 +264,30 @@ export function InfoView({ g }: { g: Game }) {
             <small>경험 {g.stats[a.stat]}</small>
           </section>
         ))}
+      </div>
+      <h2>시장별 전문 능력</h2>
+      <div className="abilities">
+        {MARKETS.map((market) => {
+          const p = marketProgress(g, market.id);
+          return (
+            <section className="card" key={market.id}>
+              <h2>
+                {MARKET_SKILLS[market.id]} <span>Lv.{p.level}</span>
+              </h2>
+              <p>
+                {market.name} · 수리 성공률 +{p.level * 2}%p
+              </p>
+              <progress
+                aria-label={`${market.name} 경험치`}
+                value={p.level === 10 ? p.next : p.current}
+                max={p.next}
+              />
+              <small>
+                {p.level === 10 ? '최대 레벨' : `경험 ${p.current} / ${p.next}`}
+              </small>
+            </section>
+          );
+        })}
       </div>
     </>
   );
@@ -770,7 +800,9 @@ export function OwnedView({
         <>
           <ItemComparison g={g} item={item} />
           <Details>
-            <p>상태: {conditionLabel(item.kind, item.condition)}</p>
+            {!item.stateGrade && (
+              <p>상태: {conditionLabel(item.kind, item.condition)}</p>
+            )}
             <p>가치 미확인</p>
           </Details>
         </>
@@ -787,17 +819,35 @@ export function OwnedView({
           가치 확인 · {won(checkCost(g, item))}
         </Button>
       )}
-      {item.checked && item.condition !== '양호' && !item.repaired && (
+      {canRepair(item) && (
         <section className="card">
-          <h3>수리</h3>
+          <h3>{repairName(item)}</h3>
+          {item.stateGrade && (
+            <>
+              <p>
+                난이도 {REPAIR_RULES[item.repairDifficulty!].name} · 성공률{' '}
+                {repairChance(g, item)}%
+              </p>
+              <p>
+                성공 시 {item.repairCeiling}등급 · 실제 가치{' '}
+                {won(gradedValue(item, item.repairCeiling))}
+              </p>
+            </>
+          )}
           <p>비용 {won(repairCost(item))}</p>
           <Button
             disabled={!!sale || g.cash < repairCost(item)}
             onClick={() => act({ type: 'repair', id: item.id })}
           >
-            수리하기
+            {repairName(item)}하기
           </Button>
         </section>
+      )}
+      {item.checked && item.repaired && item.stateGrade && (
+        <p className="muted">수리 시도 완료 · 추가 시도 불가</p>
+      )}
+      {item.checked && item.stateGrade === 'F' && (
+        <p className="warning">폐기 대상 · 판매 및 수리 불가</p>
       )}
       {sale ? (
         <section className="card">
@@ -818,6 +868,7 @@ export function OwnedView({
       ) : (
         <Button
           primary
+          disabled={item.checked && item.stateGrade === 'F'}
           onClick={() => open({ kind: '판매 등록', id: item.id })}
         >
           {item.marketId === 'auction'
@@ -825,10 +876,23 @@ export function OwnedView({
             : `${marketDefinition(marketOf(item)).name}에 판매 등록`}
         </Button>
       )}
-      <Button onClick={() => open({ kind: '즉시 판매' })}>즉시 판매</Button>
-      {!discard ? (
+      <Button
+        disabled={item.checked && item.stateGrade === 'F'}
+        onClick={() => open({ kind: '즉시 판매' })}
+      >
+        즉시 판매
+      </Button>
+      {item.checked && item.stateGrade === 'F' ? (
+        <Button
+          danger
+          disabled={!!sale}
+          onClick={() => act({ type: 'discard', id: item.id })}
+        >
+          폐기
+        </Button>
+      ) : !discard ? (
         <Button danger disabled={!!sale} onClick={() => setDiscard(true)}>
-          물품 버리기
+          {item.checked && item.stateGrade === 'F' ? '폐기' : '물품 버리기'}
         </Button>
       ) : (
         <section className="card">

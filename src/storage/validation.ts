@@ -1,3 +1,5 @@
+import { GRADES, DIFFICULTIES } from '../content/conditionGrades';
+import { gradeCondition } from '../domain/conditionGrades';
 import { EVENT_QUESTIONS, QUESTIONS_FOR } from '../content/eventScenes';
 import {
   isEventKind,
@@ -83,6 +85,18 @@ function listing(v: unknown, itemKind: unknown): boolean {
 function item(v: unknown): v is Item {
   return (
     record(v) &&
+    (v.stateGrade === undefined
+      ? v.repairDifficulty === undefined && v.repairCeiling === undefined
+      : GRADES.includes(v.stateGrade as (typeof GRADES)[number]) &&
+        DIFFICULTIES.includes(
+          v.repairDifficulty as (typeof DIFFICULTIES)[number],
+        ) &&
+        ['A', 'B'].includes(String(v.repairCeiling)) &&
+        integer(v.valuationReference, RULES.maxMoney) &&
+        Number(v.valuationReference) >= 100 &&
+        v.condition ===
+          gradeCondition(v.stateGrade as (typeof GRADES)[number]) &&
+        (v.stateGrade !== 'F' || v.value === 0)) &&
     (v.valuationReference === undefined ||
       (integer(v.valuationReference, RULES.maxMoney) &&
         v.valuationReference >= 100 &&
@@ -450,6 +464,19 @@ export function isGame(v: unknown): v is Game {
     !record(v) ||
     v.version !== 2 ||
     (v.player !== undefined && !isPlayer(v.player)) ||
+    (v.marketExperience !== undefined &&
+      (!record(v.marketExperience) ||
+        Object.entries(v.marketExperience).some(
+          ([id, xp]) =>
+            ![
+              'street',
+              'computers',
+              'instruments',
+              'cars',
+              'property',
+              'auction',
+            ].includes(id) || !integer(xp, 650),
+        ))) ||
     !validStory(v) ||
     (v.timeMode !== undefined &&
       !['daily-actions', 'weekly-actions'].includes(String(v.timeMode))) ||
