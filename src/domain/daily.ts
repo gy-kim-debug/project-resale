@@ -1,4 +1,10 @@
 import {
+  autoLottoNumbers,
+  drawLottoNumbers,
+  lottoRank,
+  validLottoNumbers,
+} from './lottery';
+import {
   DAILY_RULES,
   LOTTERY_PRIZES,
   STOCKS,
@@ -12,6 +18,9 @@ import { weekOf, won, type Game } from './game';
 import { isHundredWon, moneyRatio } from './money';
 import type { StoryLine } from '../content/story';
 export interface LotteryResult {
+  numbers?: number[];
+  winning?: number[];
+  bonus?: number;
   week: number;
   ranks: number[];
   payout: number;
@@ -29,7 +38,7 @@ export interface DailyState {
     cost: number;
     history: { week: number; price: number }[];
   }[];
-  tickets: { week: number; count: number };
+  tickets: { week: number; count: number; numbers?: number[] };
   draws: LotteryResult[];
   pending: DailyScene[];
   lastWalk?: WalkKind;
@@ -57,6 +66,7 @@ function roll(d: DailyState, max: number) {
   d.seed = (Math.imul(d.seed, 1664525) + 1013904223) >>> 0;
   return Math.floor((d.seed / 4294967296) * max);
 }
+/** Former rank-only lottery; used solely for tickets already purchased in older saves. */
 export const lotteryRank = (roll: number) =>
   roll < 1 ? 1 : roll < 10 ? 2 : roll < 100 ? 3 : roll < 1000 ? 4 : 0;
 export const sharePrice = (s: DailyState['stocks'][number]) =>
@@ -84,13 +94,14 @@ export function buyLottery(g: Game, count: number) {
   const d = (g.daily ??= dailyState(g));
   if (
     !Number.isSafeInteger(count) ||
-    count < 1 ||
+    count !== 1 ||
     d.tickets.week !== weekOf(g) ||
     d.tickets.count + count > DAILY_RULES.lotteryLimit
   )
     throw Error('이번 주에 구매할 수 없는 수량입니다.');
   changeDailyCash(g, -count * DAILY_RULES.lotteryCost);
-  d.tickets.count += count;
+  d.tickets.count = 1;
+  d.tickets.numbers = autoLottoNumbers((max) => roll(d, max));
 }
 export function tradeStock(
   g: Game,
@@ -135,15 +146,25 @@ export function finishDailyWeek(g: Game, paidWeek: number) {
   const d = (g.daily ??= dailyState(g));
   if (d.quoteWeek > paidWeek) return;
   if (d.tickets.week === paidWeek && d.tickets.count > 0) {
-    const ranks = Array.from({ length: d.tickets.count }, () =>
-      lotteryRank(roll(d, 10000)),
-    );
+    // Number-less tickets were already bought under the previous rules: honor them once.
+    const numbers = d.tickets.numbers;
+    const draw = numbers ? drawLottoNumbers((max) => roll(d, max)) : undefined;
+    const ranks = draw
+      ? [lottoRank(numbers!, draw.winning, draw.bonus)]
+      : Array.from({ length: d.tickets.count }, () =>
+          lotteryRank(roll(d, 10000)),
+        );
     const payout = Math.min(
       ranks.reduce<number>((n, rank) => n + LOTTERY_PRIZES[rank], 0),
       RULES.maxMoney - g.cash,
     );
     changeDailyCash(g, payout);
-    const result = { week: paidWeek, ranks, payout };
+    const result: LotteryResult = {
+      week: paidWeek,
+      ranks,
+      payout,
+      ...(draw ? { numbers: [...numbers!], ...draw } : {}),
+    };
     d.draws = [...d.draws, result].slice(-12);
     if (g.story) d.pending.push({ kind: 'lottery', result });
   }
@@ -197,6 +218,33 @@ export function startDailyScene(g: Game) {
 export function dailyLines(g: Game): StoryLine[] {
   const scene = g.story!.active!.leisure!,
     me = g.player?.nickname ?? '주인공';
+  if (scene.kind === 'lottery' && scene.result.winning) {
+    const result = scene.result;
+    return [
+      {
+        speaker: '추첨 방송',
+        text: `${result.week}주차 추첨을 시작합니다. 내 복권을 펼쳐 봅니다.`,
+        motion: 'phone',
+      },
+      ...result.winning!.map((n, i): StoryLine => ({
+        speaker: '추첨 방송',
+        text: `${i + 1}번째 당첨 번호는… ${n}번입니다!`,
+        motion: 'look',
+      })),
+      {
+        speaker: '추첨 방송',
+        text: `보너스 번호는 ${result.bonus}번입니다.`,
+        motion: 'look',
+      },
+      {
+        speaker: me,
+        text: result.ranks[0]
+          ? `${result.ranks[0]}등이다! ${won(result.payout)}이 들어왔네.`
+          : '아쉽네. 이번 주는 낙첨이야.',
+        motion: 'listen',
+      },
+    ];
+  }
   if (scene.kind === 'lottery')
     return [
       {
@@ -251,17 +299,33 @@ const integer = (v: unknown, max: number): v is number =>
 const amount = (v: unknown) =>
   typeof v === 'number' && isHundredWon(v) && v <= RULES.maxMoney;
 export function isLotteryResult(v: unknown, week: number): v is LotteryResult {
+  if (
+    !record(v) ||
+    !integer(v.week, week) ||
+    v.week < 1 ||
+    !Array.isArray(v.ranks) ||
+    !v.ranks.length ||
+    v.ranks.length > 5 ||
+    !amount(v.payout)
+  )
+    return false;
+  const numbered =
+    v.numbers !== undefined || v.winning !== undefined || v.bonus !== undefined;
+  if (numbered) {
+    if (
+      !validLottoNumbers(v.numbers) ||
+      !validLottoNumbers(v.winning) ||
+      !integer(v.bonus, 45) ||
+      v.bonus < 1 ||
+      v.winning.includes(v.bonus) ||
+      v.ranks.length !== 1 ||
+      v.ranks[0] !== lottoRank(v.numbers, v.winning, v.bonus)
+    )
+      return false;
+  } else if (!v.ranks.every((r) => integer(r, 4))) return false;
   return (
-    record(v) &&
-    integer(v.week, week) &&
-    v.week > 0 &&
-    Array.isArray(v.ranks) &&
-    v.ranks.length > 0 &&
-    v.ranks.length <= DAILY_RULES.lotteryLimit &&
-    v.ranks.every((r) => integer(r, 4)) &&
-    amount(v.payout) &&
     Number(v.payout) <=
-      v.ranks.reduce((n: number, r) => n + LOTTERY_PRIZES[r as number], 0)
+    v.ranks.reduce((n: number, r) => n + LOTTERY_PRIZES[r as number], 0)
   );
 }
 export function isDailyScene(v: unknown, week: number): v is DailyScene {
@@ -285,7 +349,9 @@ export function isDailyState(v: unknown, week: number) {
     v.quoteWeek !== week ||
     !record(v.tickets) ||
     v.tickets.week !== week ||
-    !integer(v.tickets.count, DAILY_RULES.lotteryLimit) ||
+    !integer(v.tickets.count, 5) ||
+    (v.tickets.numbers !== undefined &&
+      (v.tickets.count !== 1 || !validLottoNumbers(v.tickets.numbers))) ||
     !Array.isArray(v.draws) ||
     v.draws.length > 12 ||
     !v.draws.every((d) => isLotteryResult(d, week - 1)) ||

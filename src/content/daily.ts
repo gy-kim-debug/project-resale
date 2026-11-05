@@ -1,7 +1,7 @@
 /** Initial tuning for the side activities. These are fictional, offline markets. */
 export const DAILY_RULES = {
   lotteryCost: 5000,
-  lotteryLimit: 5,
+  lotteryLimit: 1,
   workPay: 20000,
   stockLimit: 10000,
   historyLimit: 24,
@@ -10,29 +10,29 @@ export const DAILY_RULES = {
 export const STOCKS = [
   {
     id: 'local',
-    name: '동네유통',
-    sector: '유통',
+    name: '반도체',
+    sector: '테마주',
     initial: 20000,
     volatility: 8,
   },
   {
     id: 'tech',
-    name: '새봄테크',
-    sector: '전자',
+    name: '바이오',
+    sector: '테마주',
     initial: 50000,
     volatility: 16,
   },
   {
     id: 'motion',
-    name: '도약모터스',
-    sector: '자동차',
+    name: '2차전지',
+    sector: '테마주',
     initial: 100000,
     volatility: 28,
   },
 ] as const;
 export type StockId = (typeof STOCKS)[number]['id'];
 export const stockDefinition = (id: string) => STOCKS.find((s) => s.id === id);
-export const LOTTERY_PRIZES = [0, 1000000, 200000, 50000, 10000] as const;
+export const LOTTERY_PRIZES = [0, 1000000, 200000, 50000, 10000, 5000] as const;
 export const WALK_EVENTS = {
   quiet: {
     name: '조용한 골목',

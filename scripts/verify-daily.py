@@ -1,4 +1,4 @@
-"""Real mobile flows for the daily tab, slot persistence and weekly lottery sequence."""
+"""Mobile list, native confirmation, one-ticket lotto and theme portfolio regression."""
 import json,time,re
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
@@ -16,7 +16,15 @@ def wait_saved(page,predicate):
  raise AssertionError('Expected slot update missing')
 def idle(page):expect(page.locator('.action-layer')).to_have_count(0)
 def nav(page,label):page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name=label,exact=True).click()
-def enter(page,label):page.locator('.daily-card').filter(has_text=label).click()
+def row(page,label):return page.locator('.daily-row').filter(has_text=label)
+def confirm(page,button,text,accept=True):
+ seen=[]
+ def answer(dialog):
+  assert dialog.type=='confirm' and text in dialog.message
+  seen.append(dialog.message)
+  dialog.accept() if accept else dialog.dismiss()
+ page.once('dialog',answer);button.click();assert len(seen)==1
+
 def skip(page):
  expect(page.locator('.story-layer')).to_be_visible()
  b=page.get_by_role('button',name='스킵',exact=True)
@@ -26,23 +34,38 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
  for w,h in [(320,568),(390,844),(430,932),(1024,768)]:
   c=browser.new_context(viewport={'width':w,'height':h},reduced_motion='reduce');page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.goto('http://127.0.0.1:4182')
-  page.get_by_role('button',name='새로 시작',exact=True).click();page.get_by_label('닉네임',exact=True).fill('일상거래');page.get_by_role('button',name='이 캐릭터로 시작',exact=True).click();skip(page);page.get_by_role('button',name='시작하기',exact=True).click();wait_saved(page,lambda g:g['story']['active'] is None)
-  page.evaluate(WRITE,FIXTURE);page.reload();expect(page.get_by_role('heading',name='일상',exact=True)).to_be_visible();expect(page.locator('.daily-card')).to_have_count(4);expect(page.get_by_role('button',name='사업 관리',exact=True)).to_have_count(0);expect(page.locator('.status-header')).to_contain_text('5,100,000 원');no_overflow(page)
+  page.get_by_role('button',name='새로 시작',exact=True).click();page.get_by_label('닉네임',exact=True).fill('번호거래');page.get_by_role('button',name='이 캐릭터로 시작',exact=True).click();skip(page);page.get_by_role('button',name='시작하기',exact=True).click();wait_saved(page,lambda g:g['story']['active'] is None)
+  page.evaluate(WRITE,FIXTURE);page.reload();expect(page.get_by_role('heading',name='일상',exact=True)).to_be_visible();expect(page.locator('.daily-row')).to_have_count(4);expect(page.locator('.status-header')).to_contain_text('5,100,000 원')
+  boxes=[b.bounding_box() for b in page.locator('.daily-row').all()];assert all(abs(b['x']-boxes[0]['x'])<1 for b in boxes) and all(boxes[i]['y']>=boxes[i-1]['y']+boxes[i-1]['height'] for i in range(1,4));no_overflow(page)
   assert page.locator('input:not([type=hidden]),textarea').count()==0
-  if w==390:page.screenshot(path='work/daily-home-390.png')
-  enter(page,'아르바이트');expect(page.get_by_role('button',name='일하러 가기',exact=True).locator('.action-cost')).to_have_count(1);page.get_by_role('button',name='일하러 가기',exact=True).click();g=wait_saved(page,lambda g:g['weekActions']==1);idle(page);assert g['cash']==5120000 and g['businesses']==[] and g['businessIncomeAmount']==0
-  nav(page,'일상');enter(page,'산책');page.get_by_role('button',name='산책하기',exact=True).click();g=wait_saved(page,lambda g:g['weekActions']==2);idle(page);expect(page.locator('.daily-stage-walk')).to_be_visible();assert g['cash']==5130000 and g['daily']['lastWalk']=='wallet';stage=page.locator('.daily-stage').bounding_box();skip(page);end=page.locator('.daily-stage').bounding_box();assert stage==end
-  page.get_by_role('button',name='돌아가기',exact=True).click();wait_saved(page,lambda g:g['story']['active'] is None)
-  nav(page,'일상');enter(page,'주식');expect(page.get_by_role('img',name=re.compile('가격 그래프'))).to_be_visible();page.get_by_role('button',name='5주',exact=True).click();page.get_by_role('button',name='5주 매수하기',exact=True).click();g=wait_saved(page,lambda g:g.get('daily',{}).get('stocks',[{}])[0].get('quantity')==5);idle(page);assert g['cash']==5030000 and g['weekActions']==2
-  page.get_by_role('button',name='매도',exact=True).click();page.get_by_role('button',name='1주 매도하기',exact=True).click();g=wait_saved(page,lambda g:g['daily']['stocks'][0]['quantity']==4);idle(page);assert g['cash']==5049800 and g['daily']['stocks'][0]['cost']==80000 and g['weekActions']==2;no_overflow(page)
-  nav(page,'일상');enter(page,'복권');page.get_by_role('button',name='5장 구매 · 25,000 원',exact=True).click();g=wait_saved(page,lambda g:g['daily']['tickets']['count']==5);idle(page);assert g['cash']==5024800 and g['weekActions']==2;expect(page.get_by_text('이번 주 복권을 모두 구매했어요.',exact=True)).to_be_visible()
-  nav(page,'활동');page.get_by_role('button',name='이번 주 마무리하기',exact=True).click();page.get_by_role('button',name='이번 주 마무리 · 정산 시작',exact=True).click();wait_saved(page,lambda g:g['settling']);idle(page)
-  page.get_by_role('button',name=re.compile('^의무 원금 납부 ·')).click();wait_saved(page,lambda g:g['principalRepaidThisWeek']==50000);idle(page)
-  page.get_by_role('button',name=re.compile('^이자 납부 후 다음 주 시작 ·')).click();g=wait_saved(page,lambda g:g['interestWeek']==1);idle(page);expect(page.locator('.story-layer')).to_be_visible();assert g['story']['active']['kind']=='weekly' and len(g['daily']['draws'])==1 and g['daily']['quoteWeek']==2
-  skip(page);page.get_by_role('button',name='다음 주 납부액을 묻는다',exact=True).click();skip(page);page.get_by_role('button',name='다음 주 시작',exact=True).click();g=wait_saved(page,lambda g:g['story']['active']['kind']=='lottery');expect(page.locator('.daily-stage-lottery')).to_be_visible();cash=g['cash'];draw=g['daily']['draws'][0];skip(page);wait_saved(page,lambda g:g['story']['active']['step']==2);page.reload();expect(page.locator('.daily-stage-lottery')).to_be_visible();expect(page.locator('.daily-scene-result')).to_contain_text('1주차 추첨 결과');expect(page.locator('.daily-scene-result .lottery-ranks span')).to_have_count(5);g=read(page);assert g['cash']==cash and g['story']['active']['step']==2 and g['daily']['draws'][0]==draw
-  if w==390:page.screenshot(path='work/lottery-result-390.png')
-  page.get_by_role('button',name='돌아가기',exact=True).click();wait_saved(page,lambda g:g['story']['active'] is None);nav(page,'일상');enter(page,'복권');expect(page.get_by_role('heading',name='지난 추첨',exact=True)).to_be_visible();assert read(page)['cash']==cash;no_overflow(page)
-  page.evaluate(WRITE,CHART);page.reload();enter(page,'주식');expect(page.get_by_role('img',name=re.compile('최근 6주'))).to_be_visible();page.get_by_text('주별 가격 보기',exact=True).click();page.get_by_role('button',name=re.compile('^2주 ·')).click();expect(page.locator('.stock-chart p')).to_contain_text('2주차');page.get_by_role('button',name='새봄테크',exact=True).click();expect(page.locator('.stock-summary h2')).to_have_text('새봄테크');no_overflow(page)
-  if w==390:page.screenshot(path='work/stocks-chart-390.png',full_page=True)
-  assert not errors,errors;c.close();print(f'{w}x{h}: daily navigation, work/walk action costs, wallet scene stable, stock buy/sell+fee, lottery limit, legacy principal refund once+early settlement without business income, weekly scene then draw, reload without duplicate rewards, six-week chart selection, no typing/overflow/errors PASS',flush=True)
+  if w==390:page.screenshot(path='work/daily-list-390.png')
+  unchanged=read(page)
+  for label,text in [('아르바이트','아르바이트를 할까요'),('산책','산책할까요'),('복권','복권 1장')]:
+   confirm(page,row(page,label),text,False);assert read(page)==unchanged;expect(page.locator('.sheet-layer')).to_have_count(0)
+  expect(row(page,'아르바이트').locator('.action-cost')).to_have_count(1);confirm(page,row(page,'아르바이트'),'아르바이트를 할까요');g=wait_saved(page,lambda g:g['weekActions']==1);idle(page);assert g['cash']==5120000 and g['businesses']==[];expect(page.get_by_role('heading',name='일상',exact=True)).to_be_visible()
+  confirm(page,row(page,'산책'),'산책할까요');g=wait_saved(page,lambda g:g['weekActions']==2);idle(page);expect(page.locator('.daily-stage-walk')).to_be_visible();assert g['cash']==5130000 and g['daily']['lastWalk']=='wallet';stage=page.locator('.daily-stage').bounding_box();skip(page);assert stage==page.locator('.daily-stage').bounding_box();page.get_by_role('button',name='돌아가기',exact=True).click();wait_saved(page,lambda g:g['story']['active'] is None)
+  confirm(page,row(page,'복권'),'복권 1장');g=wait_saved(page,lambda g:g['daily']['tickets']['count']==1);idle(page);numbers=g['daily']['tickets']['numbers'];assert len(numbers)==len(set(numbers))==6 and all(1<=n<=45 for n in numbers) and g['cash']==5125000 and g['weekActions']==2;expect(page.get_by_role('heading',name='일상',exact=True)).to_be_visible()
+  row(page,'복권').click();expect(page.get_by_role('heading',name='내 복권',exact=True)).to_be_visible();expect(page.locator('.lottery-ticket .lotto-ball')).to_have_count(6);expect(page.get_by_role('button',name=re.compile('복권 구매'))).to_have_count(0);assert read(page)['daily']['tickets']['numbers']==numbers
+  page.reload();expect(page.get_by_role('heading',name='일상',exact=True)).to_be_visible();row(page,'주식').click();expect(page.get_by_role('button',name='반도체',exact=True)).to_be_visible();expect(page.get_by_role('button',name='바이오',exact=True)).to_be_visible();expect(page.get_by_role('button',name='2차전지',exact=True)).to_be_visible()
+  page.get_by_role('button',name='5주',exact=True).click();before=read(page);confirm(page,page.get_by_role('button',name='5주 매수하기',exact=True),'반도체 5주',False);assert read(page)==before
+  confirm(page,page.get_by_role('button',name='5주 매수하기',exact=True),'반도체 5주');g=wait_saved(page,lambda g:g['daily']['stocks'][0]['quantity']==5);idle(page);assert g['cash']==5025000 and g['weekActions']==2
+  page.get_by_role('button',name='매도',exact=True).click();confirm(page,page.get_by_role('button',name='1주 매도하기',exact=True),'반도체 1주');g=wait_saved(page,lambda g:g['daily']['stocks'][0]['quantity']==4);idle(page);assert g['cash']==5044800 and g['daily']['stocks'][0]['cost']==80000;no_overflow(page)
+  nav(page,'활동');page.get_by_role('button',name='이번 주 마무리하기',exact=True).click();page.get_by_role('button',name='이번 주 마무리 · 정산 시작',exact=True).click();wait_saved(page,lambda g:g['settling']);idle(page);page.get_by_role('button',name=re.compile('^의무 원금 납부 ·')).click();wait_saved(page,lambda g:g['principalRepaidThisWeek']==50000);idle(page)
+  page.get_by_role('button',name=re.compile('^이자 납부 후 다음 주 시작 ·')).click();g=wait_saved(page,lambda g:g['interestWeek']==1);idle(page);skip(page);page.get_by_role('button',name='다음 주 납부액을 묻는다',exact=True).click();skip(page);page.get_by_role('button',name='다음 주 시작',exact=True).click();g=wait_saved(page,lambda g:g['story']['active']['kind']=='lottery');expect(page.locator('.daily-stage-lottery')).to_be_visible();cash=g['cash'];draw=g['daily']['draws'][0];assert draw['numbers']==numbers and len(set(draw['winning']+[draw['bonus']]))==7
+  stage=page.locator('.daily-stage').bounding_box();expect(page.locator('.lotto-result .ball-hidden')).to_have_count(7)
+  for step in [1,2,3]:
+   page.get_by_role('button',name='다음',exact=True).click();wait_saved(page,lambda g:g['story']['active']['step']==step);expect(page.locator('.lotto-result .ball-hidden')).to_have_count(7-step);assert page.locator('.daily-stage').bounding_box()==stage
+  page.reload();expect(page.locator('.lotto-result .ball-hidden')).to_have_count(4);assert read(page)['story']['active']['step']==3 and read(page)['cash']==cash
+  for step in [4,5,6,7,8]:
+   page.get_by_role('button',name='다음',exact=True).click();wait_saved(page,lambda g:g['story']['active']['step']==step);assert page.locator('.daily-stage').bounding_box()==stage
+  expect(page.locator('.lotto-verdict')).to_be_visible();expect(page.locator('.lotto-result .ball-hidden')).to_have_count(0);no_overflow(page)
+  if w==390:page.screenshot(path='work/lotto-draw-390.png')
+  page.get_by_role('button',name='돌아가기',exact=True).click();wait_saved(page,lambda g:g['story']['active'] is None);assert read(page)['cash']==cash and len(read(page)['daily']['draws'])==1
+  nav(page,'일상')
+  # Next week is a new purchase; its prompt can be cancelled without a navigation detour.
+  before=read(page);confirm(page,row(page,'복권'),'복권 1장',False);assert read(page)==before
+  page.get_by_role('button',name='지난 추첨 보기',exact=True).click();expect(page.get_by_role('heading',name='지난 추첨',exact=True)).to_be_visible();expect(page.locator('.lotto-verdict')).to_be_visible()
+  page.evaluate(WRITE,CHART);page.reload();row(page,'주식').click();expect(page.get_by_role('img',name=re.compile('최근 6주'))).to_be_visible();page.get_by_text('주별 가격 보기',exact=True).click();page.get_by_role('button',name=re.compile('^2주 ·')).click();expect(page.locator('.stock-chart p')).to_contain_text('2주차');page.get_by_role('button',name='바이오',exact=True).click();expect(page.locator('.stock-summary h2')).to_have_text('바이오');no_overflow(page)
+  if w==390:page.screenshot(path='work/theme-stocks-390.png',full_page=True)
+  assert not errors,errors;c.close();print(f'{w}x{h}: vertical list, native confirm accept/cancel without side effects or detours, 1-ticket persisted numbers/limit, theme stock buy/sell+fee, sequential 6+bonus reveal and step reload, fixed stage+single payout, history/graph, no overflow/errors PASS',flush=True)
  browser.close()

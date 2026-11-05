@@ -1,3 +1,4 @@
+import { LottoResult } from './LottoResult';
 import { DailyStage } from './DailyStage';
 import { SettlementStage } from './SettlementStage';
 import { SETTLEMENT_EVENTS } from '../content/settlementEvents';
@@ -129,6 +130,7 @@ export function StoryPlayer({
         </header>
         {scene.leisure ? (
           <DailyStage
+            step={scene.step}
             scene={scene.leisure}
             appearance={playerOf(game).appearance}
           />
@@ -222,22 +224,27 @@ export function StoryPlayer({
           </div>
         )}
         <div className="story-dialogue">
-          {scene.leisure?.kind === 'lottery' && (
-            <div
-              className="daily-scene-result"
-              style={{ visibility: scene.step > 0 ? 'visible' : 'hidden' }}
-            >
-              <strong>{scene.leisure.result.week}주차 추첨 결과</strong>
-              <div className="lottery-ranks">
-                {scene.leisure.result.ranks.map((rank, index) => (
-                  <span key={index} className={rank ? 'rank-won' : ''}>
-                    {index + 1}번 · {rank ? `${rank}등` : '낙첨'}
-                  </span>
-                ))}
+          {scene.leisure?.kind === 'lottery' &&
+            scene.leisure.result.numbers && (
+              <LottoResult result={scene.leisure.result} step={scene.step} />
+            )}
+          {scene.leisure?.kind === 'lottery' &&
+            !scene.leisure.result.numbers && (
+              <div
+                className="daily-scene-result"
+                style={{ visibility: scene.step > 0 ? 'visible' : 'hidden' }}
+              >
+                <strong>{scene.leisure.result.week}주차 추첨 결과</strong>
+                <div className="lottery-ranks">
+                  {scene.leisure.result.ranks.map((rank, index) => (
+                    <span key={index} className={rank ? 'rank-won' : ''}>
+                      {index + 1}번 · {rank ? `${rank}등` : '낙첨'}
+                    </span>
+                  ))}
+                </div>
+                <p>당첨금 {won(scene.leisure.result.payout)}</p>
               </div>
-              <p>당첨금 {won(scene.leisure.result.payout)}</p>
-            </div>
-          )}
+            )}
 
           {shot && (
             <button

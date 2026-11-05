@@ -1,4 +1,4 @@
-import { LotteryView, StocksView, WorkView, WalkView } from './DailyViews';
+import { LotteryView, StocksView } from './DailyViews';
 import { WELCOME_LETTER } from '../content/welcomeLetter';
 import { MARKET_SKILLS, REPAIR_RULES } from '../content/conditionGrades';
 import {
@@ -66,8 +66,6 @@ export type Route = {
   kind:
     | '복권'
     | '주식'
-    | '아르바이트'
-    | '산책'
     | '장터'
     | '즉시 판매'
     | '매물'
@@ -1049,10 +1047,6 @@ export function RouteView({
       return <LotteryView g={g} act={act} />;
     case '주식':
       return <StocksView g={g} act={act} />;
-    case '아르바이트':
-      return <WorkView g={g} act={act} />;
-    case '산책':
-      return <WalkView g={g} act={act} />;
     case '아이템 도감':
       return <ItemCodex g={g} />;
     case '장터':

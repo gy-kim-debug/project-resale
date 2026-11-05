@@ -453,7 +453,7 @@ function GameApp() {
             ) : state.tab === '보관함' ? (
               <InventoryView g={g} open={open} />
             ) : (
-              <DailyTabView g={g} open={open} />
+              <DailyTabView g={g} open={open} act={act} />
             )}
           </main>
         </div>

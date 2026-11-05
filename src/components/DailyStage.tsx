@@ -5,8 +5,10 @@ import { PixelCharacter } from './PixelCharacter';
 export function DailyStage({
   scene,
   appearance,
+  step = 0,
 }: {
   scene: DailyScene;
+  step?: number;
   appearance: PlayerProfile['appearance'];
 }) {
   const lottery = scene.kind === 'lottery';
@@ -21,14 +23,51 @@ export function DailyStage({
         <path d="M0 99H240" stroke="#53675b" strokeWidth="2" />
         {lottery ? (
           <>
-            <rect x="142" y="20" width="76" height="68" fill="#263d45" />
-            <rect x="148" y="26" width="64" height="49" fill="#0e1a22" />
-            {[154, 173, 192].map((x) => (
-              <g key={x}>
-                <rect x={x} y="40" width="14" height="20" fill="#38564e" />
-                <rect x={x + 5} y="46" width="4" height="8" fill="#a3d4af" />
+            <rect x="136" y="17" width="88" height="79" fill="#263d45" />
+            <circle
+              cx="180"
+              cy="48"
+              r="24"
+              fill="#0e1a22"
+              stroke="#5d877b"
+              strokeWidth="2"
+            />
+            <g
+              className={step < 7 ? 'lotto-machine-spinning' : ''}
+              style={{ transformOrigin: '180px 48px' }}
+            >
+              {[
+                [-12, -5],
+                [3, -12],
+                [11, 6],
+                [-5, 12],
+              ].map(([x, y], i) => (
+                <circle
+                  key={i}
+                  cx={180 + x}
+                  cy={48 + y}
+                  r="5"
+                  fill={['#d6b95d', '#6aaccb', '#c47782', '#83b99c'][i]}
+                />
+              ))}
+            </g>
+            <rect x="166" y="76" width="28" height="12" fill="#0e1a22" />
+            {step > 0 && scene.kind === 'lottery' && scene.result.winning && (
+              <g key={step} className="lotto-machine-ball">
+                <circle cx="180" cy="82" r="8" fill="#d5c481" />
+                <text
+                  x="180"
+                  y="85"
+                  fill="#15232b"
+                  fontSize="8"
+                  textAnchor="middle"
+                >
+                  {step >= 7
+                    ? scene.result.bonus
+                    : scene.result.winning[step - 1]}
+                </text>
               </g>
-            ))}
+            )}
             <g className="daily-ticket-float">
               <rect x="83" y="42" width="28" height="42" fill="#e1d5b4" />
               <path

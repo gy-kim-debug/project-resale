@@ -1,3 +1,9 @@
+import {
+  drawLottoNumbers,
+  lottoRank,
+  validLottoNumbers,
+  autoLottoNumbers,
+} from '../src/domain/lottery';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execute, newGame } from '../src/domain/engine';
@@ -8,7 +14,12 @@ import {
   sharePrice,
   stockFee,
 } from '../src/domain/daily';
-import { DAILY_RULES, STOCKS, WALK_EVENTS } from '../src/content/daily';
+import {
+  LOTTERY_PRIZES,
+  DAILY_RULES,
+  STOCKS,
+  WALK_EVENTS,
+} from '../src/content/daily';
 import { mandatoryPrincipal, settlementAmount } from '../src/domain/debt';
 import { actionsLeft, type Command, type Game } from '../src/domain/game';
 import { enableStory, storyLines, storyChoices } from '../src/domain/story';
@@ -90,11 +101,10 @@ test('lottery purchase is cash-only, capped per week, cannot execute malformed o
   let g = newGame(5);
   const board = structuredClone(g.board),
     seed = g.seed;
-  g = run(g, { type: 'buyLottery', count: 3 });
-  g = run(g, { type: 'buyLottery', count: 2 });
-  assert.equal(g.cash, 475000);
+  g = run(g, { type: 'buyLottery', count: 1 });
+  assert.equal(g.cash, 495000);
   assert.equal(g.weekActions, 0);
-  assert.equal(g.daily!.tickets.count, 5);
+  assert.equal(g.daily!.tickets.count, 1);
   assert.deepEqual(g.board, board);
   assert.equal(g.seed, seed);
   for (const count of [1, 0, -1, 0.5, NaN, Infinity, 100]) {
@@ -106,7 +116,7 @@ test('lottery purchase is cash-only, capped per week, cannot execute malformed o
   empty.cash = 0;
   assert.equal(execute(empty, { type: 'buyLottery', count: 1 }).ok, false);
 });
-test('lottery probability thresholds include losses and all four exact tiers', () => {
+test('legacy number-less ticket probabilities retain losses and their four original tiers', () => {
   const counts = [0, 0, 0, 0, 0];
   for (let n = 0; n < 10000; n++) counts[lotteryRank(n)]++;
   assert.deepEqual(counts, [9000, 1, 9, 90, 900]);
@@ -146,7 +156,7 @@ test('stock round trip charges a fee, costs no actions, saves cost basis and rej
 });
 test('quote and draw advance once only on successful payment, with result scene after repayment scene', () => {
   let g = enableStory(newGame(5));
-  g = run(g, { type: 'buyLottery', count: 5 });
+  g = run(g, { type: 'buyLottery', count: 1 });
   const before = structuredClone(g.daily);
   g = run(g, { type: 'startSettlement' });
   assert.deepEqual(g.daily, before);
@@ -169,7 +179,7 @@ test('quote and draw advance once only on successful payment, with result scene 
         : { type: 'storyChoice', choice: storyChoices(g)[0].id },
     );
   assert.equal(g.story!.active!.kind, 'lottery');
-  assert.match(storyLines(g)[1].text, /1番|1번 복권/);
+  assert.match(storyLines(g)[1].text, /1번째 당첨 번호/);
   g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
   g = finish(g);
   assert.equal(g.cash, cash);
@@ -266,7 +276,7 @@ test('daily save validation rejects corrupt prices, duplicate draw weeks, invali
       g.daily!.draws.push(g.daily!.draws[0]);
     },
     (g) => {
-      g.daily!.draws[0].ranks[0] = 5;
+      g.daily!.draws[0].ranks[0] = 6;
     },
     (g) => {
       g.daily!.tickets.count = 6;
@@ -327,29 +337,38 @@ test('work, lottery and stocks respect mandatory inquiry and settlement locks', 
     assert.equal(execute(g, c).ok, false);
 });
 
-test('every lottery tier pays its exact prize once after actual debt settlement', () => {
-  for (const target of [0, 1, 2, 3, 4]) {
+test('every numbered lottery tier pays once after actual debt settlement', () => {
+  let seed = 1;
+  const expected = drawLottoNumbers((max) => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return Math.floor((seed / 4294967296) * max);
+  });
+  const others = Array.from({ length: 45 }, (_, i) => i + 1).filter(
+    (n) => !expected.winning.includes(n) && n !== expected.bonus,
+  );
+  for (const target of [0, 1, 2, 3, 4, 5]) {
     let g = run(newGame(5), { type: 'buyLottery', count: 1 });
-    for (let seed = 0; ; seed++) {
-      const next = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-      if (lotteryRank(Math.floor((next / 4294967296) * 10000)) === target) {
-        g.daily!.seed = seed;
-        break;
-      }
-    }
-    const expected = [0, 1000000, 200000, 50000, 10000][target];
+    const matches = [0, 6, 5, 5, 4, 3][target];
+    const numbers = [
+      ...expected.winning.slice(0, matches),
+      ...(target === 2 ? [expected.bonus] : []),
+    ];
+    numbers.push(...others.slice(0, 6 - numbers.length));
+    g.daily!.tickets.numbers = numbers;
+    g.daily!.seed = 1;
     g = run(g, { type: 'startSettlement' });
     g = run(g, { type: 'repay', amount: mandatoryPrincipal(g) });
     const cash = g.cash;
-    const result = execute(g, { type: 'payInterest' });
-    assert.ok(result.ok);
-    assert.ok(isGame(result.game));
-    assert.equal(result.game.daily!.draws[0].ranks[0], target);
-    assert.equal(result.game.daily!.draws[0].payout, expected);
+    const r = execute(g, { type: 'payInterest' });
+    assert.ok(r.ok);
+    assert.ok(isGame(r.game));
+    assert.equal(r.game.daily!.draws[0].ranks[0], target);
+    assert.equal(r.game.daily!.draws[0].payout, LOTTERY_PRIZES[target]);
     assert.equal(
-      result.game.cash,
-      cash - (result.game.stats.repaid - g.stats.repaid) + expected,
+      r.game.cash,
+      cash - (r.game.stats.repaid - g.stats.repaid) + LOTTERY_PRIZES[target],
     );
+    assert.deepEqual(r.game.daily!.draws[0].winning, expected.winning);
   }
 });
 test('stock holding cap and cash ceiling reject orders without removing shares or money', () => {
@@ -373,4 +392,82 @@ test('stock holding cap and cash ceiling reject orders without removing shares o
   assert.equal(result.ok, false);
   assert.strictEqual(result.game, g);
   assert.deepEqual(g, before);
+});
+
+test('automatic tickets and draws contain six distinct valid numbers and an exclusive bonus', () => {
+  for (let seed = 1; seed <= 300; seed++) {
+    let n = seed;
+    const next = (max: number) => {
+      n = (Math.imul(n, 1664525) + 1013904223) >>> 0;
+      return Math.floor((n / 4294967296) * max);
+    };
+    const numbers = autoLottoNumbers(next),
+      draw = drawLottoNumbers(next);
+    assert.ok(validLottoNumbers(numbers));
+    assert.ok(validLottoNumbers(draw.winning));
+    assert.ok(!draw.winning.includes(draw.bonus));
+    assert.deepEqual(
+      numbers,
+      [...numbers].sort((a, b) => a - b),
+    );
+  }
+  for (const v of [
+    [1, 1, 2, 3, 4, 5],
+    [0, 1, 2, 3, 4, 5],
+    [1, 2, 3, 4, 5, 46],
+    [1, 2, 3],
+    null,
+  ])
+    assert.equal(validLottoNumbers(v), false);
+  const winning = [1, 2, 3, 4, 5, 6];
+  for (const [numbers, rank] of [
+    [[1, 2, 3, 4, 5, 6], 1],
+    [[1, 2, 3, 4, 5, 7], 2],
+    [[1, 2, 3, 4, 5, 8], 3],
+    [[1, 2, 3, 4, 8, 9], 4],
+    [[1, 2, 3, 8, 9, 10], 5],
+    [[1, 2, 8, 9, 10, 11], 0],
+  ] as const)
+    assert.equal(lottoRank([...numbers], winning, 7), rank);
+});
+test('legacy multi-ticket purchases and active results remain valid, with no additional purchases', () => {
+  let g = enableStory(newGame(5));
+  g.daily = dailyState(g);
+  g.daily.tickets.count = 5;
+  g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.equal(execute(g, { type: 'buyLottery', count: 1 }).ok, false);
+  g = paid(g);
+  assert.equal(g.daily!.draws[0].ranks.length, 5);
+  assert.equal(g.daily!.draws[0].numbers, undefined);
+  g = finish(g);
+  const cash = g.cash;
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  g = run(g, { type: 'buyLottery', count: 1 });
+  assert.ok(validLottoNumbers(g.daily!.tickets.numbers));
+  assert.equal(g.cash, cash - DAILY_RULES.lotteryCost);
+});
+test('numbered result and ticket corruption is rejected without modifying the save', () => {
+  let g = run(newGame(5), { type: 'buyLottery', count: 1 });
+  const badTicket = structuredClone(g);
+  badTicket.daily!.tickets.numbers = [1, 1, 2, 3, 4, 5];
+  assert.equal(isGame(badTicket), false);
+  g = paid(g);
+  for (const edit of [
+    (g: Game) => {
+      g.daily!.draws[0].winning = [1, 1, 2, 3, 4, 5];
+    },
+    (g: Game) => {
+      g.daily!.draws[0].bonus = g.daily!.draws[0].winning![0];
+    },
+    (g: Game) => {
+      g.daily!.draws[0].ranks[0] = g.daily!.draws[0].ranks[0] === 0 ? 1 : 0;
+    },
+    (g: Game) => {
+      delete g.daily!.draws[0].bonus;
+    },
+  ]) {
+    const copy = structuredClone(g);
+    edit(copy);
+    assert.throws(() => parseSave({ version: 2, game: copy, favoriteIds: [] }));
+  }
 });

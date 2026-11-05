@@ -1,24 +1,47 @@
+import { LottoBalls, LottoResult } from './LottoResult';
+import { confirmDailyAction } from '../app/dailyActions';
 import { useState } from 'react';
-import {
-  DAILY_RULES,
-  STOCKS,
-  stockDefinition,
-  WALK_EVENTS,
-} from '../content/daily';
+import { DAILY_RULES, STOCKS, stockDefinition } from '../content/daily';
 import { dailyState, sharePrice, stockFee } from '../domain/daily';
 import { actionsLeft, weekOf, won, type Game } from '../domain/game';
 import { Button, type Open } from './GameViews';
 import type { Act } from '../app/store';
 import { Icon, type IconName } from './Icon';
 
-const dailyCards = [
-  { title: '복권', icon: 'ticket', text: '이번 주의 작은 기대' },
-  { title: '주식', icon: 'chart', text: '주간 시세와 보유 종목' },
-  { title: '아르바이트', icon: 'wallet', text: '20,000 원', cost: true },
-  { title: '산책', icon: 'walk', text: '잠깐 바람 쐬기', cost: true },
-] as const;
-export function DailyTabView({ g, open }: { g: Game; open: Open }) {
-  const d = dailyState(g);
+export function DailyTabView({
+  g,
+  open,
+  act,
+}: {
+  g: Game;
+  open: Open;
+  act: Act;
+}) {
+  const d = dailyState(g),
+    bought = d.tickets.count > 0;
+  const rows = [
+    {
+      title: '복권',
+      icon: 'ticket',
+      text: bought
+        ? '구매 완료 · 추첨 대기'
+        : `${won(DAILY_RULES.lotteryCost)} · 주당 1장`,
+      cost: false,
+    },
+    {
+      title: '주식',
+      icon: 'chart',
+      text: '반도체 · 바이오 · 2차전지',
+      cost: false,
+    },
+    {
+      title: '아르바이트',
+      icon: 'wallet',
+      text: won(DAILY_RULES.workPay),
+      cost: true,
+    },
+    { title: '산책', icon: 'walk', text: '동네 한 바퀴', cost: true },
+  ] as const;
   return (
     <>
       <div className="page-heading">
@@ -26,83 +49,121 @@ export function DailyTabView({ g, open }: { g: Game; open: Open }) {
       </div>
       <div className="daily-overview">
         <span>{weekOf(g)}주차</span>
-        <span>
-          복권 {d.tickets.count}/{DAILY_RULES.lotteryLimit}장
-        </span>
+        <span>복권 {bought ? '구매 완료' : '미구매'}</span>
       </div>
-      <div className="daily-grid">
-        {dailyCards.map((c) => (
-          <button
-            className="daily-card"
-            key={c.title}
-            onClick={() => open({ kind: c.title })}
-          >
-            <span className={`daily-symbol daily-symbol-${c.icon}`}>
-              <Icon name={c.icon as IconName} size={27} />
-            </span>
-            <strong>
-              {c.title}
-              {'cost' in c && (
-                <span className="action-cost" aria-label="행동 1회">
-                  <Icon name="activity" size={16} />
-                </span>
-              )}
-            </strong>
-            <small>{c.text}</small>
-            <span className="daily-arrow" aria-hidden="true">
-              ↗
-            </span>
-          </button>
+      <ul className="daily-list">
+        {rows.map((row) => (
+          <li key={row.title}>
+            <button
+              className="daily-row"
+              disabled={
+                (row.cost && !actionsLeft(g)) ||
+                (row.title === '복권' &&
+                  !bought &&
+                  g.cash < DAILY_RULES.lotteryCost)
+              }
+              onClick={() => {
+                if (row.title === '주식') open({ kind: '주식' });
+                else if (row.title === '복권' && bought) open({ kind: '복권' });
+                else
+                  void confirmDailyAction(
+                    act,
+                    row.title === '복권'
+                      ? { type: 'buyLottery', count: 1 }
+                      : {
+                          type:
+                            row.title === '아르바이트' ? 'dailyWork' : 'walk',
+                        },
+                  );
+              }}
+            >
+              <span className={`daily-symbol daily-symbol-${row.icon}`}>
+                <Icon name={row.icon as IconName} size={24} />
+              </span>
+              <span className="daily-row-text">
+                <strong>
+                  {row.title}
+                  {row.cost && (
+                    <span className="action-cost" aria-label="행동 1회">
+                      <Icon name="activity" size={16} />
+                    </span>
+                  )}
+                </strong>
+                <small>{row.text}</small>
+              </span>
+              <span className="daily-row-end" aria-hidden="true">
+                {row.title === '주식' || (row.title === '복권' && bought)
+                  ? '›'
+                  : row.title === '복권'
+                    ? '구매'
+                    : '실행'}
+              </span>
+            </button>
+            {row.title === '복권' && d.draws.length > 0 && (
+              <button
+                className="daily-history-link"
+                onClick={() => open({ kind: '복권' })}
+              >
+                지난 추첨 보기
+              </button>
+            )}
+          </li>
         ))}
-      </div>
+      </ul>
     </>
   );
 }
 export function LotteryView({ g, act }: { g: Game; act: Act }) {
   const d = dailyState(g),
-    left = DAILY_RULES.lotteryLimit - d.tickets.count;
+    bought = d.tickets.count > 0;
   return (
     <>
       <section className="card lottery-ticket">
         <span className="eyebrow">{weekOf(g)}주차 복권</span>
-        <Icon name="ticket" size={42} />
-        <h2>한 장의 기대</h2>
-        <strong className="daily-big-number">
-          {d.tickets.count}
-          <small> / {DAILY_RULES.lotteryLimit}장</small>
-        </strong>
-        <p>장당 {won(DAILY_RULES.lotteryCost)}</p>
-        <p>이번 주 정산 후 추첨</p>
+        <h2>{bought ? '내 복권' : '자동 번호 복권'}</h2>
+        {d.tickets.numbers ? (
+          <LottoBalls numbers={d.tickets.numbers} />
+        ) : (
+          <p>
+            {bought
+              ? `기존 복권 ${d.tickets.count}장 · 추첨 대기`
+              : '1~45 중 번호 6개'}
+          </p>
+        )}
+        <p>
+          {bought
+            ? '이번 주 정산 후 추첨'
+            : `1장 ${won(DAILY_RULES.lotteryCost)}`}
+        </p>
+        {!bought && (
+          <Button
+            disabled={g.cash < DAILY_RULES.lotteryCost}
+            onClick={() =>
+              confirmDailyAction(act, { type: 'buyLottery', count: 1 })
+            }
+          >
+            복권 구매 · {won(DAILY_RULES.lotteryCost)}
+          </Button>
+        )}
       </section>
-      <div className="daily-orders">
-        {[1, 3, 5]
-          .filter((n) => n <= left)
-          .map((count) => (
-            <Button
-              key={count}
-              disabled={g.cash < count * DAILY_RULES.lotteryCost}
-              onClick={() => act({ type: 'buyLottery', count })}
-            >
-              {count}장 구매 · {won(count * DAILY_RULES.lotteryCost)}
-            </Button>
-          ))}
-      </div>
-      {!left && <p className="daily-empty">이번 주 복권을 모두 구매했어요.</p>}
       {!!d.draws.length && (
         <section className="card">
           <h2>지난 추첨</h2>
           {[...d.draws].reverse().map((draw) => (
             <div className="draw-result" key={draw.week}>
-              <strong>
-                {draw.week}주차 · {won(draw.payout)}
-              </strong>
-              <div className="lottery-ranks">
-                {draw.ranks.map((r, i) => (
-                  <span className={r ? 'rank-won' : ''} key={i}>
-                    {r ? `${r}등` : '낙첨'}
-                  </span>
-                ))}
-              </div>
+              <strong>{draw.week}주차 추첨</strong>
+              {draw.numbers ? (
+                <LottoResult result={draw} />
+              ) : (
+                <div className="lottery-ranks">
+                  {draw.ranks.map((r, i) => (
+                    <span className={r ? 'rank-won' : ''} key={i}>
+                      {r ? `${r}등` : '낙첨'}
+                    </span>
+                  ))}
+                  <p>당첨금 {won(draw.payout)}</p>
+                </div>
+              )}
             </div>
           ))}
         </section>
@@ -110,6 +171,7 @@ export function LotteryView({ g, act }: { g: Game; act: Act }) {
     </>
   );
 }
+
 function PriceChart({
   history,
   name,
@@ -301,7 +363,11 @@ export function StocksView({ g, act }: { g: Game; act: Act }) {
           primary
           disabled={!amount}
           onClick={() =>
-            act({ type: 'tradeStock', id, side, quantity: amount })
+            confirmDailyAction(
+              act,
+              { type: 'tradeStock', id, side, quantity: amount },
+              gross - fee,
+            )
           }
         >
           {amount}주 {side === 'buy' ? '매수하기' : '매도하기'}
@@ -314,52 +380,6 @@ export function StocksView({ g, act }: { g: Game; act: Act }) {
           </p>
         )}
       </section>
-    </>
-  );
-}
-export function WorkView({ g, act }: { g: Game; act: Act }) {
-  return (
-    <section className="card daily-action-detail">
-      <span className="daily-symbol">
-        <Icon name="wallet" size={32} />
-      </span>
-      <h2>동네 가게 일손 돕기</h2>
-      <strong className="daily-big-number">{won(DAILY_RULES.workPay)}</strong>
-      <Button
-        primary
-        actionCost={1}
-        disabled={!actionsLeft(g)}
-        onClick={() => act({ type: 'dailyWork' })}
-      >
-        일하러 가기
-      </Button>
-    </section>
-  );
-}
-export function WalkView({ g, act }: { g: Game; act: Act }) {
-  const last = dailyState(g).lastWalk;
-  return (
-    <>
-      <section className="card daily-action-detail">
-        <span className="daily-symbol">
-          <Icon name="walk" size={32} />
-        </span>
-        <h2>동네 한 바퀴</h2>
-        <Button
-          primary
-          actionCost={1}
-          disabled={!actionsLeft(g)}
-          onClick={() => act({ type: 'walk' })}
-        >
-          산책하기
-        </Button>
-      </section>
-      {last && (
-        <section className="card">
-          <h2>{WALK_EVENTS[last].name}</h2>
-          <p>{WALK_EVENTS[last].text}</p>
-        </section>
-      )}
     </>
   );
 }
