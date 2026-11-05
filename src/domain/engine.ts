@@ -600,6 +600,15 @@ export function execute(
         !storyChoices(g).some((c) => c.id === command.choice)
       )
         throw Error('선택할 수 없는 답변입니다.');
+      if (
+        scene.kind === 'weekly' &&
+        !scene.weeklyReply &&
+        (command.choice === 'ask' || command.choice === 'end')
+      ) {
+        scene.weeklyReply = command.choice;
+        scene.step = 0;
+        return { game: g, ok: true, message: '' };
+      }
       if (scene.outcome) {
         st.active = null;
         return { game: g, ok: true, message: '' };
@@ -634,6 +643,7 @@ export function execute(
       };
       const relatedItem = sceneItem(g, scene);
       finish(g);
+      if (scene.kind === 'weekly') return { game: g, ok: true, message: '' };
       if (['cancel', 'decline'].includes(command.choice)) {
         if (scene.resume?.type === 'accept') endInquiry(g, scene.resume.id);
         return {

@@ -1,3 +1,8 @@
+import {
+  settlementLines,
+  type SettlementReceipt,
+} from '../content/settlementEvents';
+import { settlementReceipt } from './settlementEvents';
 import { INTRO_BEATS } from '../content/intro';
 import {
   deepLines,
@@ -24,6 +29,8 @@ import {
 import { moneyRatio } from './money';
 import { RULES } from '../content/rules';
 export interface StoryScene {
+  settlement?: SettlementReceipt;
+  weeklyReply?: 'ask' | 'end';
   introVersion?: 2;
   kind: SceneKind;
   step: number;
@@ -43,6 +50,7 @@ export interface StoryScene {
   resume?: { type: 'buy' | 'accept'; id: string };
 }
 export interface StoryState {
+  lastSettlementWeek?: number;
   active: StoryScene | null;
   history: string[];
   lastAt: number;
@@ -80,6 +88,8 @@ export function storyLines(g: Game): StoryLine[] {
   const me = g.player?.nickname ?? '주인공';
   const other = s.name ?? '판매자';
   switch (s.kind) {
+    case 'weekly':
+      return settlementLines(s.settlement!, me, s.weeklyReply);
     case 'intro':
       if (s.introVersion === 2)
         return INTRO_BEATS.map((beat) => ({
@@ -208,6 +218,13 @@ export interface StoryChoice {
 }
 function baseChoices(g: Game): StoryChoice[] {
   const s = g.story!.active!;
+  if (s.kind === 'weekly')
+    return s.weeklyReply
+      ? [{ id: 'continue', label: '다음 주 시작' }]
+      : [
+          { id: 'ask', label: '다음 주 납부액을 묻는다' },
+          { id: 'end', label: '통화를 마친다' },
+        ];
   const extra = depthChoices(g);
   if (s.outcome) return extra!;
   if (
@@ -425,6 +442,20 @@ export function afterAction(g: Game, c: Command, before: Game) {
     };
     return;
   }
+  if (
+    c.type === 'payInterest' &&
+    before.settling &&
+    (g.interestWeek ?? 0) > (before.interestWeek ?? 0) &&
+    (st.lastSettlementWeek ?? 0) < g.interestWeek!
+  ) {
+    st.lastSettlementWeek = g.interestWeek;
+    st.active = {
+      kind: 'weekly',
+      step: 0,
+      settlement: settlementReceipt(g, before),
+    };
+    return;
+  }
   if (c.type === 'buy') {
     const i = g.inventory.find((x) => x.id === c.id);
     if (i) st.contacts = [...new Set([...st.contacts, i.seller])].slice(-100);
@@ -436,14 +467,6 @@ export function afterAction(g: Game, c: Command, before: Game) {
     g.minute - st.lastAt < STORY_RULES.cooldownActions * ACTION_TICK
   )
     return;
-  if (
-    c.type === 'payInterest' &&
-    (g.interestWeek ?? 0) > (before.interestWeek ?? 0) &&
-    !st.history.includes('creditor')
-  ) {
-    st.active = enrichScene(g, { kind: 'creditor', step: 0 });
-    return;
-  }
   st.pending = (st.pending ?? []).filter(
     (p) =>
       p.expiresAt > g.minute &&
@@ -580,4 +603,4 @@ export function afterAction(g: Game, c: Command, before: Game) {
 }
 export const isSceneKind = (v: unknown): v is SceneKind =>
   typeof v === 'string' &&
-  ['intro', 'success', 'failure', ...EVENT_KINDS].includes(v);
+  ['intro', 'success', 'failure', 'weekly', ...EVENT_KINDS].includes(v);

@@ -48,3 +48,7 @@ previewEvent('예약 문의', 2); // 세 번째 상황 (0~2)
 ## 새 오프닝 미리보기
 
 콘솔에서 `previewIntro()`를 실행한다. 현재 캐릭터 외형을 사용하는 신규 게임 복사본으로 12컷 오프닝을 보여준다. 실제 슬롯·현금·시간·난수·진행 기록은 바꾸지 않는다. 이미 미리보기가 열렸거나 행동 연출·슬롯 작업 중이면 false를 반환한다. 스킵 후 시작하기 또는 Escape로 닫는다.
+
+## 매주 상환 완료 이벤트
+
+`previewSettlement()`로 첫 납부 장면을 안전하게 미리 본다. `previewSettlement('rain', 4)`처럼 상황과 주차를 지정할 수 있다. 상황은 first/tight/business/halfway/near/rain/envelope/quiet, 주차는 1~12다. 실제 납부를 실행한 독립 게임 복사본을 사용하고 실제 슬롯·현금·난수·이벤트 이력을 바꾸지 않는다. 스킵·선택·Escape를 지원한다. [발생·저장·분기 규칙](WEEKLY_SETTLEMENT_EVENTS.md)을 따른다.

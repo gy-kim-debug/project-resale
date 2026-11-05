@@ -161,3 +161,5 @@
 - [직접 플레이 피드백에 따른 판매 유동성 조정](economy/LIQUIDITY_TUNING.md)
 
 - [카테고리별 물품 거래 성격과 초기 측정](items/TRADE_PERSONALITIES.md)
+
+- [매주 상환 완료 이벤트](story/WEEKLY_SETTLEMENT_EVENTS.md)

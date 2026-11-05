@@ -1,3 +1,5 @@
+import { createSettlementPreview } from './settlementPreview';
+import type { SettlementEventId } from '../content/settlementEvents';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EventPreviewMenu } from '../components/EventPreviewMenu';
@@ -11,6 +13,7 @@ import { useGameStore } from './store';
 export type EndingKind = 'success' | 'failure';
 declare global {
   interface Window {
+    previewSettlement: (theme?: SettlementEventId, week?: number) => boolean;
     previewIntro: () => boolean;
     previewEnding: (kind?: EndingKind) => boolean;
     previewEvent: (kind?: string, variant?: number) => boolean;
@@ -19,6 +22,14 @@ declare global {
 let showing = false;
 /** Explicit production console helper; no live state mutations or repository writes. */
 export function installEndingPreview() {
+  window.previewSettlement = (theme, week = 1) => {
+    const state = useGameStore.getState();
+    if (showing || state.action || state.slotBusy) return false;
+    return openPreview(
+      createSettlementPreview(state.game?.player, theme, week),
+      'weekly',
+    );
+  };
   window.previewIntro = () => {
     const state = useGameStore.getState();
     if (showing || state.action || state.slotBusy) return false;
@@ -64,13 +75,14 @@ export function installEndingPreview() {
 }
 function openPreview(
   game: Game | null,
-  mode: 'ending' | 'event' | 'intro',
+  mode: 'ending' | 'event' | 'intro' | 'weekly',
   variant: 0 | 1 | 2 = 0,
 ) {
   const host = document.createElement('div');
   host.dataset.scenePreview = 'true';
   if (mode === 'ending') host.dataset.endingPreview = 'true';
   else if (mode === 'intro') host.dataset.introPreview = 'true';
+  else if (mode === 'weekly') host.dataset.settlementPreview = 'true';
   else host.dataset.eventPreview = 'true';
   document.body.append(host);
   const app = document.getElementById('root');

@@ -1,3 +1,5 @@
+import { SettlementStage } from './SettlementStage';
+import { SETTLEMENT_EVENTS } from '../content/settlementEvents';
 import { IntroStage } from './IntroStage';
 import { INTRO_SHOTS } from '../content/intro';
 import { useIntroSound } from './useIntroSound';
@@ -116,11 +118,22 @@ export function StoryPlayer({
       >
         <header className="story-toolbar">
           <h1 id={titleId}>
-            {shot ? INTRO_SHOTS[shot] : STORY_TITLES[scene.kind]}
+            {shot
+              ? INTRO_SHOTS[shot]
+              : scene.kind === 'weekly'
+                ? SETTLEMENT_EVENTS[scene.settlement!.theme].title
+                : STORY_TITLES[scene.kind]}
           </h1>
           {!last && <button onClick={() => void skip()}>스킵</button>}
         </header>
-        {shot ? (
+        {scene.kind === 'weekly' ? (
+          <SettlementStage
+            receipt={scene.settlement!}
+            appearance={playerOf(game).appearance}
+            step={scene.step}
+            replying={!!scene.weeklyReply}
+          />
+        ) : shot ? (
           <IntroStage shot={shot} appearance={playerOf(game).appearance} />
         ) : (
           <div

@@ -263,14 +263,16 @@ test('competitor pays exact proposal once, without altering hidden item valuatio
   assert.equal(r.game.weekActions, g.weekActions! + 1);
   assert.equal(isGame(r.game), true);
 });
-test('post-action creditor and terminal stories are condition-based and only end once', () => {
+test('post-payment weekly and terminal stories are condition-based and only end once', () => {
   const g = prepared(),
     before = structuredClone(g);
+  before.settling = true;
   g.interestWeek = 1;
   g.minute += 20 * ACTION_TICK;
   g.weekActions = 0;
   afterAction(g, { type: 'payInterest' }, before);
-  assert.equal(g.story!.active!.kind, 'creditor');
+  assert.equal(g.story!.active!.kind, 'weekly');
+  g.story!.active!.weeklyReply = 'end';
   g.story!.active!.step = storyLines(g).length - 1;
   let r = execute(g, { type: 'storyChoice', choice: 'continue' });
   assert.equal(r.ok, true);

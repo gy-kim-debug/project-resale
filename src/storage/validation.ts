@@ -1,3 +1,4 @@
+import { SETTLEMENT_EVENTS } from '../content/settlementEvents';
 import { INTRO_BEATS } from '../content/intro';
 import { GRADES, DIFFICULTIES } from '../content/conditionGrades';
 import { gradeCondition } from '../domain/conditionGrades';
@@ -206,6 +207,8 @@ function validStory(g: Record<string, unknown>): boolean {
     !record(v) ||
     typeof v.endingDone !== 'boolean' ||
     !integer(v.lastAt, Number(g.minute)) ||
+    (v.lastSettlementWeek !== undefined &&
+      !integer(v.lastSettlementWeek, Number(g.interestWeek ?? 0))) ||
     !Array.isArray(v.history) ||
     v.history.length > STORY_RULES.historyLimit ||
     !v.history.every(isSceneKind) ||
@@ -266,6 +269,46 @@ function validStory(g: Record<string, unknown>): boolean {
     (scene.explained !== undefined &&
       (scene.kind !== 'model' || typeof scene.explained !== 'boolean'))
   )
+    return false;
+  if (scene.kind === 'weekly') {
+    const r = scene.settlement;
+    if (
+      !record(r) ||
+      !integer(r.week, Number(g.interestWeek ?? 0)) ||
+      r.week < 1 ||
+      r.week !== g.interestWeek ||
+      r.week !== v.lastSettlementWeek ||
+      ![
+        'principalPaid',
+        'interestPaid',
+        'remainingPrincipal',
+        'cash',
+        'businessIncome',
+        'nextPrincipal',
+        'nextInterest',
+      ].every(
+        (key) => integer(r[key], RULES.maxMoney) && Number(r[key]) % 100 === 0,
+      ) ||
+      r.remainingPrincipal !== g.principal ||
+      r.cash !== g.cash ||
+      Number(r.nextPrincipal) > Number(r.remainingPrincipal) ||
+      typeof r.theme !== 'string' ||
+      !Object.hasOwn(SETTLEMENT_EVENTS, r.theme) ||
+      (scene.weeklyReply !== undefined &&
+        !['ask', 'end'].includes(String(scene.weeklyReply))) ||
+      [
+        'resume',
+        'target',
+        'targets',
+        'extra',
+        'outcome',
+        'branch',
+        'asked',
+        'variant',
+      ].some((key) => scene[key] !== undefined)
+    )
+      return false;
+  } else if (scene.settlement !== undefined || scene.weeklyReply !== undefined)
     return false;
   if (
     scene.asked !== undefined &&
@@ -384,6 +427,7 @@ function validStory(g: Record<string, unknown>): boolean {
         : ['bankrupt', 'dead'].includes(String(g.status)))
     );
   if (g.status !== 'playing') return false;
+  if (scene.kind === 'weekly') return true;
   if (scene.outcome) return true;
   const board = Array.isArray(g.board) ? g.board.filter(record) : [];
   const inventory = Array.isArray(g.inventory)

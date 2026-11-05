@@ -3209,3 +3209,40 @@ html {
   font-size: 12px;
   color: var(--muted);
 }
+
+.settlement-stage {
+  position: relative;
+  height: clamp(180px, 36dvh, 320px);
+  background: #111d25;
+}
+.settlement-stage > svg {
+  height: 100%;
+  width: 100%;
+  max-height: none;
+  animation: intro-reveal 0.35s ease-out both;
+}
+.settlement-week {
+  position: absolute;
+  left: 14px;
+  bottom: 8px;
+  font-size: 11px;
+  color: #c3d7ce;
+  letter-spacing: 0.04em;
+}
+.settlement-actor {
+  animation: story-breathe 2s steps(2) infinite;
+}
+.settlement-receipt {
+  animation: intro-message 0.4s ease-out both;
+}
+@media (max-height: 650px) {
+  .settlement-stage {
+    height: 28dvh;
+    min-height: 140px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settlement-stage > svg {
+    animation: none !important;
+  }
+}
