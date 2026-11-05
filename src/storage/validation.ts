@@ -1,3 +1,4 @@
+import { isDailyState, isDailyScene } from '../domain/daily';
 import { SETTLEMENT_EVENTS } from '../content/settlementEvents';
 import { INTRO_BEATS } from '../content/intro';
 import { GRADES, DIFFICULTIES } from '../content/conditionGrades';
@@ -270,6 +271,16 @@ function validStory(g: Record<string, unknown>): boolean {
       (scene.kind !== 'model' || typeof scene.explained !== 'boolean'))
   )
     return false;
+  if (['lottery', 'stroll'].includes(scene.kind)) {
+    if (
+      !isDailyScene(scene.leisure, Number(g.interestWeek ?? 0)) ||
+      scene.leisure.kind !== scene.kind ||
+      ['resume', 'target', 'outcome', 'branch', 'settlement'].some(
+        (key) => scene[key] !== undefined,
+      )
+    )
+      return false;
+  } else if (scene.leisure !== undefined) return false;
   if (scene.kind === 'weekly') {
     const r = scene.settlement;
     if (
@@ -427,7 +438,7 @@ function validStory(g: Record<string, unknown>): boolean {
         : ['bankrupt', 'dead'].includes(String(g.status)))
     );
   if (g.status !== 'playing') return false;
-  if (scene.kind === 'weekly') return true;
+  if (['weekly', 'lottery', 'stroll'].includes(scene.kind)) return true;
   if (scene.outcome) return true;
   const board = Array.isArray(g.board) ? g.board.filter(record) : [];
   const inventory = Array.isArray(g.inventory)
@@ -610,6 +621,12 @@ export function isGame(v: unknown): v is Game {
     v.businessIncomeWeek !== Number(v.interestWeek ?? 0) + 1
   )
     return false;
+  if (
+    v.businessRefund !== undefined &&
+    (!integer(v.businessRefund, RULES.maxMoney) || v.businessRefund % 100 !== 0)
+  )
+    return false;
+  if (!isDailyState(v.daily, Number(v.interestWeek ?? 0) + 1)) return false;
   if (!integer(v.marketFactor, 200) || !kind(v.trend)) return false;
   if (
     !record(v.stats) ||

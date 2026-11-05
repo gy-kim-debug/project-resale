@@ -1,3 +1,4 @@
+import { DailyTabView } from './components/DailyViews';
 import { StoryPlayer } from './components/StoryPlayer';
 import { StartMenu } from './components/StartMenu';
 import { usePageNavigation } from './app/navigation';
@@ -17,7 +18,6 @@ import {
   InfoView,
   InventoryView,
   RouteView,
-  BusinessTabView,
   StorageView,
   type Route,
 } from './components/GameViews';
@@ -45,7 +45,7 @@ const nav: { tab: Tab; icon: IconName }[] = [
   { tab: '내 정보', icon: 'user' },
   { tab: '활동', icon: 'activity' },
   { tab: '보관함', icon: 'bag' },
-  { tab: '사업', icon: 'market' },
+  { tab: '일상', icon: 'moon' },
 ];
 const groups: {
   title: string;
@@ -60,10 +60,7 @@ const groups: {
   },
   {
     title: '자산',
-    activities: [
-      { label: '즉시 판매', route: { kind: '즉시 판매' } },
-      { label: '사업', route: { kind: '사업' } },
-    ],
+    activities: [{ label: '즉시 판매', route: { kind: '즉시 판매' } }],
   },
 ];
 function Header({
@@ -310,9 +307,7 @@ function ActivityHome({
                       aircraft: 'market',
                     } as const
                   )[market.id]
-                : activity.label === '사업'
-                  ? 'building'
-                  : 'bag';
+                : 'bag';
               return (
                 <button
                   className={market?.id === 'street' ? 'market-featured' : ''}
@@ -458,7 +453,7 @@ function GameApp() {
             ) : state.tab === '보관함' ? (
               <InventoryView g={g} open={open} />
             ) : (
-              <BusinessTabView g={g} act={act} />
+              <DailyTabView g={g} open={open} />
             )}
           </main>
         </div>

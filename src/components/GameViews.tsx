@@ -1,3 +1,4 @@
+import { LotteryView, StocksView, WorkView, WalkView } from './DailyViews';
 import { WELCOME_LETTER } from '../content/welcomeLetter';
 import { MARKET_SKILLS, REPAIR_RULES } from '../content/conditionGrades';
 import {
@@ -26,12 +27,6 @@ import {
 import { TraderProfile } from './TraderProfile';
 import { ItemCodex } from './ItemCodex';
 import { ABILITIES } from '../content/abilities';
-import { BUSINESS_LIMIT_PER_TYPE, BUSINESSES } from '../content/businesses';
-import {
-  businessCount,
-  weeklyBusinessIncome,
-  pendingBusinessIncome,
-} from '../domain/business';
 import { MONEY_UNIT, moneyRatio } from '../domain/money';
 import { useId, useState, type ReactNode, type ReactElement } from 'react';
 import { ItemArt } from './ItemArt';
@@ -69,6 +64,10 @@ import {
 
 export type Route = {
   kind:
+    | '복권'
+    | '주식'
+    | '아르바이트'
+    | '산책'
     | '장터'
     | '즉시 판매'
     | '매물'
@@ -78,7 +77,6 @@ export type Route = {
     | '이자 납부'
     | '주간 정산'
     | '특별 제안'
-    | '사업'
     | '기록'
     | '저장 관리'
     | '우편함'
@@ -371,20 +369,6 @@ export function DebtView({
         <summary>채무 상세 내역</summary>
         <dl>
           <div>
-            <dt>
-              {g.businessIncomeWeek === paymentWeek(g)
-                ? '이번 주 수령한 사업 수입'
-                : '정산 시 사업 수입'}
-            </dt>
-            <dd>
-              {won(
-                g.businessIncomeWeek === paymentWeek(g)
-                  ? (g.businessIncomeAmount ?? 0)
-                  : pendingBusinessIncome(g),
-              )}
-            </dd>
-          </div>
-          <div>
             <dt>원금</dt>
             <dd>{won(g.principal)}</dd>
           </div>
@@ -473,70 +457,7 @@ export function DebtView({
     </>
   );
 }
-export function BusinessView({ g, act }: { g: Game; act: Act }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  return (
-    <>
-      <div className="card">
-        <h2>주간 사업 수입</h2>
-        <strong>{won(weeklyBusinessIncome(g))}</strong>
-      </div>
-      {BUSINESSES.map((business) => {
-        const count = businessCount(g, business.id);
-        const full = count >= BUSINESS_LIMIT_PER_TYPE;
-        return (
-          <section className="card" key={business.id}>
-            <h2>{business.name}</h2>
-            <p>구매 금액 {won(business.cost)}</p>
-            <p>
-              개당 주간 수입 {won(business.income)} ·{' '}
-              {(business.income / business.cost) * 100}%
-            </p>
-            <p className={count ? 'owned-business' : undefined}>
-              보유 {count}/{BUSINESS_LIMIT_PER_TYPE} · 주간 수입{' '}
-              {won(count * business.income)}
-            </p>
-            {full ? (
-              <p>최대 보유</p>
-            ) : (
-              <>
-                {selected === business.id ? (
-                  <>
-                    <Button
-                      disabled={g.cash < business.cost}
-                      onClick={async () => {
-                        if (await act({ type: 'buyBusiness', id: business.id }))
-                          setSelected(null);
-                      }}
-                    >
-                      사업 구매 확정
-                    </Button>
-                    <Button onClick={() => setSelected(null)}>취소</Button>
-                  </>
-                ) : (
-                  <Button
-                    disabled={g.cash < business.cost}
-                    onClick={() => setSelected(business.id)}
-                  >
-                    구매
-                  </Button>
-                )}
-              </>
-            )}
-          </section>
-        );
-      })}
-    </>
-  );
-}
-export function BusinessTabView({ g, act }: { g: Game; act: Act }) {
-  return (
-    <>
-      <h1>사업</h1>
-      <BusinessView g={g} act={act} />
-    </>
-  );
-}
+
 export function MarketView({
   g,
   open,
@@ -1124,6 +1045,14 @@ export function RouteView({
   const currentValue = item?.checked ? marketValue(g, item) : null;
   const purchaseCost = item ? acquisitionCost(item) : 0;
   switch (route.kind) {
+    case '복권':
+      return <LotteryView g={g} act={act} />;
+    case '주식':
+      return <StocksView g={g} act={act} />;
+    case '아르바이트':
+      return <WorkView g={g} act={act} />;
+    case '산책':
+      return <WalkView g={g} act={act} />;
     case '아이템 도감':
       return <ItemCodex g={g} />;
     case '장터':
@@ -1209,8 +1138,6 @@ export function RouteView({
       ) : (
         <p>남은 문의가 없습니다.</p>
       );
-    case '사업':
-      return <BusinessView g={g} act={act} />;
     case '특별 제안':
       return g.event ? (
         <>

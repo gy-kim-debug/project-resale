@@ -1,5 +1,5 @@
 export const BUSINESS_LIMIT_PER_TYPE = 5;
-/** Initial content/balance, not a promised final economy. */
+/** Archived definitions solely for validating and refunding legacy saves. Not purchasable. */
 export const BUSINESSES = [
   { id: 'stand', name: '중고 판매대', cost: 100000, income: 5000 },
   { id: 'vending', name: '자동판매기', cost: 500000, income: 20000 },

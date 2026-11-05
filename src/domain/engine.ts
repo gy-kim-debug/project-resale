@@ -1,3 +1,12 @@
+import { DAILY_RULES, WALK_EVENTS } from '../content/daily';
+import {
+  buyLottery,
+  tradeStock,
+  takeWalk,
+  finishDailyWeek,
+  startDailyScene,
+  changeDailyCash,
+} from './daily';
 import {
   assignGrade,
   canRepair,
@@ -36,11 +45,6 @@ import { SALE_FLOW } from '../content/saleFlow';
 import { saleInquiryChance } from './saleFlow';
 import { ABILITIES } from '../content/abilities';
 import { abilityLevel } from './abilities';
-import {
-  BUSINESS_LIMIT_PER_TYPE,
-  businessDefinition,
-} from '../content/businesses';
-import { businessCount, pendingBusinessIncome } from './business';
 import {
   SPECIAL_RULES,
   SPECIAL_LISTINGS,
@@ -631,7 +635,10 @@ export function execute(
       };
       const relatedItem = sceneItem(g, scene);
       finish(g);
-      if (scene.kind === 'weekly') return { game: g, ok: true, message: '' };
+      if (['weekly', 'lottery', 'stroll'].includes(scene.kind)) {
+        startDailyScene(g);
+        return { game: g, ok: true, message: '' };
+      }
       if (['cancel', 'decline'].includes(command.choice)) {
         if (scene.resume?.type === 'accept') endInquiry(g, scene.resume.id);
         return {
@@ -822,17 +829,33 @@ export function execute(
     const beforeLevels = ABILITIES.map((ability) => level(g, ability.stat));
     let message = '';
     switch (command.type) {
-      case 'buyBusiness': {
-        const business = businessDefinition(command.id);
-        if (!business) throw Error('없는 사업입니다.');
-        if (businessCount(g, business.id) >= BUSINESS_LIMIT_PER_TYPE)
-          throw Error(
-            `이 사업은 최대 ${BUSINESS_LIMIT_PER_TYPE}개까지 보유할 수 있습니다.`,
-          );
-        affordable(g, business.cost);
-        money(g, -business.cost);
-        g.businesses!.push({ id: business.id, purchasedWeek: paymentWeek(g) });
-        message = `${business.name} 구매. 주간 수입 ${won(business.income)}.`;
+      case 'dailyWork': {
+        if (actionsLeft(g) < 1)
+          throw Error('이번 주 행동을 모두 사용했습니다.');
+        const income = Math.min(DAILY_RULES.workPay, RULES.maxMoney - g.cash);
+        changeDailyCash(g, income);
+        advance(g, 1);
+        message = `아르바이트를 마쳤습니다. ${won(income)}을 받았습니다.`;
+        log(g, message);
+        break;
+      }
+      case 'walk': {
+        if (actionsLeft(g) < 1)
+          throw Error('이번 주 행동을 모두 사용했습니다.');
+        const result = takeWalk(g);
+        advance(g, 1);
+        message = WALK_EVENTS[result].text;
+        log(g, message);
+        break;
+      }
+      case 'buyLottery':
+        buyLottery(g, command.count);
+        message = `복권 ${command.count}장을 구매했습니다.`;
+        log(g, message);
+        break;
+      case 'tradeStock': {
+        const delta = tradeStock(g, command.id, command.side, command.quantity);
+        message = `${command.quantity}주 ${command.side === 'buy' ? '매수' : '매도'} · ${won(Math.abs(delta))}`;
         log(g, message);
         break;
       }
@@ -1179,17 +1202,8 @@ export function execute(
       }
       case 'startSettlement': {
         if (g.settling) throw Error('이미 정산 중입니다.');
-        const income = Math.min(
-          pendingBusinessIncome(g),
-          RULES.maxMoney - g.cash,
-        );
-        if ((g.businessIncomeWeek ?? 0) < paymentWeek(g)) {
-          if (income > 0) money(g, income);
-          g.businessIncomeWeek = paymentWeek(g);
-          g.businessIncomeAmount = income;
-        }
         g.settling = true;
-        message = `${income > 0 ? `사업 수입 ${won(income)} 수령. ` : ''}${paymentWeek(g)}주차 정산을 시작합니다.`;
+        message = `${paymentWeek(g)}주차 정산을 시작합니다.`;
         log(g, message);
         break;
       }
@@ -1205,7 +1219,9 @@ export function execute(
         if (due) {
           const remaining = actionsLeft(g);
           g.minute += remaining * ACTION_TICK;
-          g.interestWeek = paymentWeek(g);
+          const paidWeek = paymentWeek(g);
+          finishDailyWeek(g, paidWeek);
+          g.interestWeek = paidWeek;
           g.weekActions = 0;
           g.principalRepaidThisWeek = 0;
           g.settling = false;

@@ -1,3 +1,4 @@
+import { DailyStage } from './DailyStage';
 import { SettlementStage } from './SettlementStage';
 import { SETTLEMENT_EVENTS } from '../content/settlementEvents';
 import { IntroStage } from './IntroStage';
@@ -126,7 +127,12 @@ export function StoryPlayer({
           </h1>
           {!last && <button onClick={() => void skip()}>스킵</button>}
         </header>
-        {scene.kind === 'weekly' ? (
+        {scene.leisure ? (
+          <DailyStage
+            scene={scene.leisure}
+            appearance={playerOf(game).appearance}
+          />
+        ) : scene.kind === 'weekly' ? (
           <SettlementStage
             receipt={scene.settlement!}
             appearance={playerOf(game).appearance}
@@ -216,6 +222,23 @@ export function StoryPlayer({
           </div>
         )}
         <div className="story-dialogue">
+          {scene.leisure?.kind === 'lottery' && (
+            <div
+              className="daily-scene-result"
+              style={{ visibility: scene.step > 0 ? 'visible' : 'hidden' }}
+            >
+              <strong>{scene.leisure.result.week}주차 추첨 결과</strong>
+              <div className="lottery-ranks">
+                {scene.leisure.result.ranks.map((rank, index) => (
+                  <span key={index} className={rank ? 'rank-won' : ''}>
+                    {index + 1}번 · {rank ? `${rank}등` : '낙첨'}
+                  </span>
+                ))}
+              </div>
+              <p>당첨금 {won(scene.leisure.result.payout)}</p>
+            </div>
+          )}
+
           {shot && (
             <button
               className="intro-sound-toggle"

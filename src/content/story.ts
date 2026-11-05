@@ -19,7 +19,8 @@ export const EVENT_KINDS = [
   'marketTip',
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
-export type SceneKind = 'intro' | 'success' | 'failure' | 'weekly' | EventKind;
+export type SceneKind =
+  'intro' | 'success' | 'failure' | 'weekly' | 'lottery' | 'stroll' | EventKind;
 export interface StoryLine {
   shot?: import('./intro').IntroShot;
   speaker: string;
@@ -29,6 +30,8 @@ export interface StoryLine {
 export const STORY_TITLES: Record<SceneKind, string> = {
   intro: '첫 정산까지',
   weekly: '이번 주의 상환',
+  lottery: '이번 주 복권',
+  stroll: '산책길에서',
   success: '남은 채무 0원',
   failure: '끊어진 거래',
   missing: '빠진 구성품',

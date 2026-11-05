@@ -4,7 +4,7 @@ export const SESSION_TABS = [
   '채무',
   '활동',
   '보관함',
-  '사업',
+  '일상',
 ] as const;
 export type ResumeTab = (typeof SESSION_TABS)[number];
 export type ResumeIntent =
@@ -30,9 +30,13 @@ export function parseResumeIntent(
       'slot' in value &&
       isSlotId(value.slot) &&
       'tab' in value &&
-      SESSION_TABS.includes(value.tab as ResumeTab)
+      (value.tab === '사업' || SESSION_TABS.includes(value.tab as ResumeTab))
     )
-      return { screen: 'game', slot: value.slot, tab: value.tab as ResumeTab };
+      return {
+        screen: 'game',
+        slot: value.slot,
+        tab: value.tab === '사업' ? '일상' : (value.tab as ResumeTab),
+      };
   } catch {
     /* Malformed UI state must never select a different game. */
   }

@@ -1,3 +1,4 @@
+import { retireBusinesses } from './business';
 import type { Game, Item } from './game';
 import { auctionStep } from './auction';
 import { isHundredWon, positivePrice, roundMoney } from './money';
@@ -97,11 +98,13 @@ export function normalizeMoney(original: Game): Game {
     g.inquiries = [];
   }
   g.moneyUnit = 100;
+  retireBusinesses(g);
   return g;
 }
 export function allMoneyAligned(g: Game): boolean {
   const amounts = [
     g.businessIncomeAmount ?? 0,
+    g.businessRefund ?? 0,
     g.cash,
     g.principal,
     g.interest,

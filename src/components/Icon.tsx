@@ -1,5 +1,8 @@
 import type { CSSProperties } from 'react';
 export type IconName =
+  | 'ticket'
+  | 'chart'
+  | 'walk'
   | 'user'
   | 'activity'
   | 'home'
@@ -28,6 +31,9 @@ export type IconName =
   | 'gavel'
   | 'gift';
 const paths: Record<IconName, string> = {
+  ticket: 'M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4V5Zm13 0v3m0 3v2m0 3v3',
+  chart: 'M3 3v18h18M6 15l4-5 4 3 7-9M17 4h4v4',
+  walk: 'M14 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM7 21l4-7 3 3v5M7 11l4-3 3 1 2 4h4M11 8l-1 7',
   search: 'M21 21l-5-5M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14Z',
   music:
     'M9 17V5l11-2v12M9 8l11-2M9 17a3 3 0 1 1-3-3c1.7 0 3 1.3 3 3Zm11-2a3 3 0 1 1-3-3c1.7 0 3 1.3 3 3Z',

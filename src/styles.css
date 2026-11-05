@@ -3232,3 +3232,286 @@ html {
     animation: none !important;
   }
 }
+
+/* Side activities share the same dark shell, touch sizes and action indicator. */
+.daily-overview {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted, #99a7b7);
+  margin: 0 0 18px;
+  font-size: 13px;
+}
+.daily-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.daily-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 170px;
+  padding: 20px 16px;
+  border: 1px solid #303944;
+  border-radius: 18px;
+  background: #1a222d;
+  text-align: left;
+}
+.daily-card strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+}
+.daily-card small {
+  color: #a2afbb;
+  line-height: 1.5;
+}
+.daily-symbol {
+  display: inline-flex;
+  padding: 12px;
+  border-radius: 12px;
+  color: #8ce5c5;
+  background: #263c3c;
+}
+.daily-symbol-chart {
+  color: #9fbfee;
+  background: #273447;
+}
+.daily-symbol-wallet {
+  color: #edcc9c;
+  background: #41382f;
+}
+.daily-symbol-walk {
+  color: #b9cba0;
+  background: #303d32;
+}
+.daily-arrow {
+  position: absolute;
+  top: 20px;
+  right: 16px;
+  color: #91a5ad;
+}
+.daily-big-number {
+  display: block;
+  font-size: clamp(24px, 6vw, 34px);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.daily-big-number small {
+  color: #a2afbb;
+  font-size: 16px;
+}
+.lottery-ticket {
+  position: relative;
+  border: 1px solid #63705b;
+  background: linear-gradient(135deg, #263c37, #1a242b);
+}
+.lottery-ticket > svg {
+  position: absolute;
+  right: 20px;
+  top: 30px;
+  color: #c1d8aa;
+}
+.eyebrow {
+  color: #a8b9ba;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.daily-orders {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.draw-result {
+  padding: 16px 0;
+  border-top: 1px solid #323c45;
+}
+.lottery-ranks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.lottery-ranks span {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #252d37;
+  color: #9ca9b8;
+  font-size: 13px;
+}
+.lottery-ranks .rank-won {
+  background: #2b463d;
+  color: #a8ecd3;
+}
+.stock-tabs,
+.order-sides,
+.quantity-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.stock-tabs button,
+.order-sides button,
+.quantity-choices button,
+.price-history button {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #3a4654;
+  border-radius: 9px;
+  background: #1c2530;
+  font-size: 13px;
+}
+.stock-tabs button {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 6px;
+}
+.stock-tabs [aria-pressed='true'],
+.order-sides [aria-pressed='true'],
+.quantity-choices [aria-pressed='true'],
+.price-history [aria-pressed='true'] {
+  color: #aff3d7;
+  border-color: #71c6a7;
+  background: #283e37;
+}
+.stock-up {
+  color: #91e1bf;
+}
+.stock-down {
+  color: #f29d91;
+}
+.stock-summary p > span {
+  color: #9ca9b8;
+  font-size: 12px;
+  margin-left: 5px;
+}
+.stock-chart {
+  margin: 18px -4px 0;
+  color: #91e1bf;
+}
+.stock-chart p {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #9ca9b8;
+}
+.stock-chart p strong {
+  color: #d5e8df;
+  font-size: 14px;
+}
+.stock-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chart-guide {
+  stroke: #34414b;
+  stroke-width: 1;
+}
+.stock-chart text {
+  fill: #94a6b1;
+  font-size: 10px;
+}
+.stock-chart summary {
+  padding: 12px 0;
+  font-size: 13px;
+  color: #abb8c4;
+  cursor: pointer;
+}
+.price-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.daily-ledger {
+  margin: 14px 0 20px;
+  font-size: 13px;
+}
+.daily-ledger > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+}
+.daily-ledger dt {
+  color: #9fadb9;
+}
+.daily-ledger dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.order-sides button {
+  flex: 1;
+}
+.daily-action-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding-block: 28px;
+}
+.daily-action-detail > button {
+  align-self: stretch;
+}
+.daily-empty {
+  color: #a1afbc;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.daily-ticket-float {
+  animation: daily-float 1.6s ease-in-out infinite alternate;
+}
+.daily-cat {
+  animation: daily-cat-tail 2s steps(2, end) infinite;
+}
+.daily-rain {
+  animation: daily-rain-fall 0.6s linear infinite;
+}
+.story-line p {
+  white-space: pre-line;
+}
+@keyframes daily-float {
+  to {
+    transform: translateY(-4px);
+  }
+}
+@keyframes daily-cat-tail {
+  50% {
+    transform: translateX(2px);
+  }
+}
+@keyframes daily-rain-fall {
+  to {
+    transform: translateY(10px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .daily-ticket-float,
+  .daily-cat,
+  .daily-rain {
+    animation: none;
+  }
+}
+
+.daily-scene-result {
+  min-height: 112px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #34434b;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+.daily-scene-result > p {
+  margin: 12px 0 0;
+  color: #a3dec6;
+}
+.activity-assets .activity-grid {
+  grid-template-columns: 1fr;
+}

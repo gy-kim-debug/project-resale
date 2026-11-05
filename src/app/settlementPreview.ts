@@ -6,7 +6,6 @@ import { enableStory } from '../domain/story';
 import { ACTION_TICK, ACTIONS_PER_WEEK } from '../domain/game';
 import { mandatoryPrincipal, settlementAmount } from '../domain/debt';
 import { RULES } from '../content/rules';
-import { BUSINESSES } from '../content/businesses';
 /** Simulate an actual invoice in a fresh detached game. Never load or write a slot. */
 export function createSettlementPreview(
   player?: PlayerProfile,
@@ -23,10 +22,6 @@ export function createSettlementPreview(
   if (theme === 'halfway') g.principal = 4900000000;
   if (theme === 'near') g.principal = 900000000;
   g.stats.repaid = RULES.debt - g.principal;
-  if (theme === 'business') {
-    g.businesses = [{ id: BUSINESSES[0].id, purchasedWeek: 1 }];
-    g.businessIncomeWeek = week - 1;
-  }
   g.cash = settlementAmount(g) + (theme === 'tight' ? 100 : 2000000);
   g.stats.peakCash = g.cash;
   for (const command of [

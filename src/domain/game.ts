@@ -147,6 +147,9 @@ export interface Event {
   expires: number;
 }
 export interface Game {
+  /** Unpaid legacy business principal retained only when the cash ceiling is reached. */
+  businessRefund?: number;
+  daily?: import('./daily').DailyState;
   marketExperience?: Partial<Record<MarketId, number>>;
   story?: StoryState;
   player?: PlayerProfile;
@@ -192,9 +195,12 @@ export interface Game {
   lastEvent: number;
 }
 export type Command =
+  | { type: 'dailyWork' }
+  | { type: 'walk' }
+  | { type: 'buyLottery'; count: number }
+  | { type: 'tradeStock'; id: string; side: 'buy' | 'sell'; quantity: number }
   | { type: 'storyNext' }
   | { type: 'storyChoice'; choice: string }
-  | { type: 'buyBusiness'; id: string }
   | { type: 'refresh'; marketId?: MarketId }
   | { type: 'wait' }
   | { type: 'dialogue'; id: string; topic: DialogueTopic }

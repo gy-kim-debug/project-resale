@@ -17,6 +17,11 @@ export type ActionSceneKind =
   | 'walk';
 export function actionScene(command: Command): ActionSceneKind {
   switch (command.type) {
+    case 'dailyWork':
+      return 'work';
+    case 'buyLottery':
+    case 'tradeStock':
+      return 'finance';
     case 'buy':
       return 'buy';
     case 'accept':
@@ -31,7 +36,6 @@ export function actionScene(command: Command): ActionSceneKind {
       return 'listing';
     case 'repay':
     case 'payInterest':
-    case 'buyBusiness':
       return 'finance';
     default:
       return 'walk';
@@ -57,9 +61,12 @@ export function changesBetween(before: Game, after: Game): Changes {
 }
 export function actionLabel(command: Command): string {
   const labels: Record<Command['type'], string> = {
+    dailyWork: '일하는 중…',
+    walk: '산책하는 중…',
+    buyLottery: '복권을 구매하는 중…',
+    tradeStock: '주식을 거래하는 중…',
     storyNext: '대화 중…',
     storyChoice: '거래하는 중…',
-    buyBusiness: '사업을 구매하는 중…',
     refresh: '새 매물을 찾는 중…',
     wait: '기다리는 중…',
     dialogue: '대화하는 중…',

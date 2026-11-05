@@ -67,8 +67,6 @@ const { auctionBidOptions } =
 const { instantSalePrice } =
   await import('../work/economy-audit/domain/instantSale.js');
 const { MARKETS } = await import('../work/economy-audit/content/markets.js');
-const { BUSINESSES, BUSINESS_LIMIT_PER_TYPE } =
-  await import('../work/economy-audit/content/businesses.js');
 const { RULES } = await import('../work/economy-audit/content/rules.js');
 const { ITEM_PROFILES } =
   await import('../work/economy-audit/content/itemProfiles.js');
@@ -110,14 +108,6 @@ while (debt.status === 'playing' && paymentWeek(debt) <= 30) {
     debt = r.game;
   }
 }
-const horizon = debtCurve.length;
-const businesses = BUSINESSES.map((b) => ({
-  ...b,
-  weeklyPercent: (b.income / b.cost) * 100,
-  breakEvenWeeks: Math.ceil(b.cost / b.income),
-  maximumReceiptsByForcedClear: b.income * horizon,
-  netCashByForcedClear: b.income * horizon - b.cost,
-}));
 const population = Object.fromEntries(MARKETS.map((m) => [m.id, []]));
 // Hidden values are used only for descriptive population statistics, never by the buying policy.
 for (let seed = 1; seed <= 500; seed++) {
@@ -142,13 +132,6 @@ let strategies = [
     counter: true,
   },
   { id: 'instant', name: '흥정 후 즉시 판매', fraction: 0.8, instant: true },
-  {
-    id: 'business',
-    name: '보수적 판매 + 소액 사업',
-    fraction: 0.6,
-    parallel: false,
-    business: true,
-  },
 ];
 const requested = process.env.AUDIT_STRATEGIES?.split(',');
 if (requested?.includes('parallel-80'))
@@ -190,13 +173,6 @@ function choose(g, policy) {
   }
   if (g.cash >= g.principal + g.interest)
     return { type: 'repay', amount: g.principal };
-  // Buy businesses only from cash beyond three bills; the purchase itself is free.
-  if (
-    policy.business &&
-    (g.businesses ?? []).length < BUSINESS_LIMIT_PER_TYPE &&
-    g.cash > settlementAmount(g) * 3 + BUSINESSES[0].cost
-  )
-    return { type: 'buyBusiness', id: 'stand' };
   const loose = g.inventory.find(
     (i) => !g.sales.some((s) => s.itemId === i.id),
   );
@@ -367,11 +343,6 @@ for (const policy of strategies) {
         });
         costs.delete(id);
       }
-      if (command.type === 'buyBusiness') {
-        const cost = BUSINESSES.find((b) => b.id === command.id).cost;
-        row.businessSpend += cost;
-        explained -= cost;
-      }
       if (command.type === 'startSettlement') {
         const income = g.cash - before.cash;
         row.businessIncome += income;
@@ -442,15 +413,10 @@ const summary = {
   populationSeeds: 500,
   rules: { ...RULES, actionsPerWeek: 20 },
   debtCurve,
-  businesses,
-  allBusinessCost: BUSINESSES.reduce(
-    (n, b) => n + b.cost * BUSINESS_LIMIT_PER_TYPE,
-    0,
-  ),
-  allBusinessIncome: BUSINESSES.reduce(
-    (n, b) => n + b.income * BUSINESS_LIMIT_PER_TYPE,
-    0,
-  ),
+  // Legacy report columns remain zero after business retirement.
+  businesses: [],
+  allBusinessCost: 0,
+  allBusinessIncome: 0,
   itemProfiles: ITEM_PROFILES,
   populationByKind: Object.keys(ITEM_PROFILES).map((kind) => {
     const rows = Object.values(population)

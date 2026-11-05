@@ -1,18 +1,21 @@
 import { businessDefinition } from '../content/businesses';
-import { weekOf, type Game } from './game';
-export const weeklyBusinessIncome = (g: Game) =>
-  (g.businesses ?? []).reduce(
-    (sum, owned) =>
-      sum +
-      (owned.purchasedWeek <= weekOf(g)
-        ? (businessDefinition(owned.id)?.income ?? 0)
-        : 0),
-    0,
-  );
-export const pendingBusinessIncome = (g: Game) =>
-  (g.businessIncomeWeek ?? g.interestWeek ?? 0) < weekOf(g)
-    ? weeklyBusinessIncome(g)
-    : 0;
-
-export const businessCount = (g: Game, id: string) =>
-  (g.businesses ?? []).filter((owned) => owned.id === id).length;
+import { RULES } from '../content/rules';
+import type { Game } from './game';
+/** Retired system: return historical purchase principal once, never recurring income. */
+export function retireBusinesses(g: Game) {
+  const owned = g.businesses ?? [];
+  const credit =
+    (g.businessRefund ?? 0) +
+    owned.reduce((n, b) => n + (businessDefinition(b.id)?.cost ?? 0), 0);
+  const paid = Math.min(credit, RULES.maxMoney - g.cash);
+  g.cash += paid;
+  g.stats.peakCash = Math.max(g.stats.peakCash, g.cash);
+  if (credit > paid) g.businessRefund = credit - paid;
+  else delete g.businessRefund;
+  g.businesses = [];
+  g.businessIncomeAmount = 0;
+  g.businessIncomeWeek = 0;
+  // An already-open historical receipt must remain valid after the refund.
+  if (paid && g.story?.active?.kind === 'weekly' && g.story.active.settlement)
+    g.story.active.settlement.cash = g.cash;
+}

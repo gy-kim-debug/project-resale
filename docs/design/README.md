@@ -163,3 +163,10 @@
 - [카테고리별 물품 거래 성격과 초기 측정](items/TRADE_PERSONALITIES.md)
 
 - [매주 상환 완료 이벤트](story/WEEKLY_SETTLEMENT_EVENTS.md)
+
+## 일상 활동
+
+- [일상 탭과 주간 흐름](daily/DAILY_ACTIVITIES.md)
+- [주간 복권](daily/LOTTERY.md)
+- [가상 주식](daily/STOCKS.md)
+- [아르바이트와 산책](daily/WORK_AND_WALK.md)

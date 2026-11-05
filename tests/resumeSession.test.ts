@@ -148,7 +148,7 @@ test('missing or unreadable selected slots never silently continue a different s
   assert.match(useGameStore.getState().saveError, /슬롯/);
   assert.deepEqual(intent, { screen: 'menu' });
   await reset();
-  intent = { screen: 'game', slot: 1, tab: '사업' };
+  intent = { screen: 'game', slot: 1, tab: '일상' };
   const original = saveRepository.listSlots;
   saveRepository.listSlots = async () =>
     [
@@ -186,12 +186,12 @@ test('only successful slot entry and explicit successful menu exit change the re
   await cold();
   assert.equal(await useGameStore.getState().continueSlot(1), true);
   assert.deepEqual(intent, { screen: 'game', slot: 1, tab: '활동' });
-  useGameStore.getState().setTab('사업');
-  assert.deepEqual(intent, { screen: 'game', slot: 1, tab: '사업' });
+  useGameStore.getState().setTab('일상');
+  assert.deepEqual(intent, { screen: 'game', slot: 1, tab: '일상' });
   failSave = true;
   assert.equal(await useGameStore.getState().returnToMenu(), false);
   assert.equal(useGameStore.getState().screen, 'game');
-  assert.deepEqual(intent, { screen: 'game', slot: 1, tab: '사업' });
+  assert.deepEqual(intent, { screen: 'game', slot: 1, tab: '일상' });
   failSave = false;
   assert.equal(await useGameStore.getState().returnToMenu(), true);
   assert.deepEqual(intent, { screen: 'menu' });

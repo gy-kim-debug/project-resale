@@ -1,3 +1,4 @@
+import { dailyLines, startDailyScene, type DailyScene } from './daily';
 import {
   settlementLines,
   type SettlementReceipt,
@@ -29,6 +30,7 @@ import {
 import { moneyRatio } from './money';
 import { RULES } from '../content/rules';
 export interface StoryScene {
+  leisure?: DailyScene;
   settlement?: SettlementReceipt;
   weeklyReply?: 'ask' | 'end';
   introVersion?: 2;
@@ -88,6 +90,9 @@ export function storyLines(g: Game): StoryLine[] {
   const me = g.player?.nickname ?? '주인공';
   const other = s.name ?? '판매자';
   switch (s.kind) {
+    case 'lottery':
+    case 'stroll':
+      return dailyLines(g);
     case 'weekly':
       return settlementLines(s.settlement!, me, s.weeklyReply);
     case 'intro':
@@ -306,6 +311,8 @@ function baseChoices(g: Game): StoryChoice[] {
   }
 }
 export function storyChoices(g: Game): StoryChoice[] {
+  if (['lottery', 'stroll'].includes(g.story!.active!.kind))
+    return [{ id: 'done', label: '돌아가기' }];
   const base = baseChoices(g);
   const s = g.story!.active!;
   if (
@@ -456,6 +463,7 @@ export function afterAction(g: Game, c: Command, before: Game) {
     };
     return;
   }
+  if (startDailyScene(g)) return;
   if (c.type === 'buy') {
     const i = g.inventory.find((x) => x.id === c.id);
     if (i) st.contacts = [...new Set([...st.contacts, i.seller])].slice(-100);
@@ -600,4 +608,12 @@ export function afterAction(g: Game, c: Command, before: Game) {
 }
 export const isSceneKind = (v: unknown): v is SceneKind =>
   typeof v === 'string' &&
-  ['intro', 'success', 'failure', 'weekly', ...EVENT_KINDS].includes(v);
+  [
+    'intro',
+    'success',
+    'failure',
+    'weekly',
+    'lottery',
+    'stroll',
+    ...EVENT_KINDS,
+  ].includes(v);
