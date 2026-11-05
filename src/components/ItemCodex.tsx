@@ -76,7 +76,7 @@ export function ItemCodex({ g }: { g: Game }) {
                           ? entry.markets
                               .map((id) => marketDefinition(id).name)
                               .join(' · ')
-                          : '나눔 · 물건 수집'}
+                          : '기존 획득품'}
                       </dd>
                     </div>
                     <div>

@@ -18,12 +18,6 @@ export const MARKET_PRICING = {
   askMinPercent: 35,
   askMaxPercent: 70,
   priceStep: 1000,
-  giveawayMin: 50_000,
-  giveawayMax: 150_000,
-  scavengeMin: 5_000,
-  scavengeMax: 20_000,
-  scavengeRare: 80_000,
-  scavengeCommonChance: 0.97,
 };
 export const TIERS = [
   { threshold: 0, base: 100_000, name: '동네 생활용품' },

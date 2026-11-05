@@ -29,6 +29,7 @@ await mkdir('work', { recursive: true });
 await build({
   entryPoints: [
     'src/domain/engine.ts',
+    'src/domain/conditionGrades.ts',
     'src/domain/debt.ts',
     'src/domain/game.ts',
     'src/domain/purchaseBargaining.ts',
@@ -55,6 +56,8 @@ const {
   settlementAmount,
   weeklyRateText,
 } = await import('../work/economy-audit/domain/debt.js');
+const { canRepair } =
+  await import('../work/economy-audit/domain/conditionGrades.js');
 const { moneyRatio } = await import('../work/economy-audit/domain/money.js');
 const { actionsLeft } = await import('../work/economy-audit/domain/game.js');
 const { canPurchaseOffer } =
@@ -66,7 +69,7 @@ const { instantSalePrice } =
 const { MARKETS } = await import('../work/economy-audit/content/markets.js');
 const { BUSINESSES, BUSINESS_LIMIT_PER_TYPE } =
   await import('../work/economy-audit/content/businesses.js');
-const { RULES, JOBS } = await import('../work/economy-audit/content/rules.js');
+const { RULES } = await import('../work/economy-audit/content/rules.js');
 const { ITEM_PROFILES } =
   await import('../work/economy-audit/content/itemProfiles.js');
 const seeds = Number(process.env.AUDIT_SEEDS ?? 100);
@@ -130,7 +133,6 @@ for (let seed = 1; seed <= 500; seed++) {
   }
 }
 let strategies = [
-  { id: 'work', name: '창고 분류만', jobOnly: true },
   { id: 'serial', name: '보수적 순차 판매', fraction: 0.6, parallel: false },
   {
     id: 'parallel',
@@ -149,30 +151,15 @@ let strategies = [
   },
 ];
 const requested = process.env.AUDIT_STRATEGIES?.split(',');
-if (requested?.includes('parallel-jobs'))
+if (requested?.includes('parallel-80'))
   strategies.push({
-    id: 'parallel-jobs',
-    name: '병렬 판매 + 대기 중 아르바이트',
+    id: 'parallel-80',
+    name: '80% 등록 병렬 판매',
     fraction: 0.9,
     parallel: true,
     counter: true,
-    workWhileWaiting: true,
+    askPercent: 80,
   });
-for (const id of ['parallel-80', 'parallel-80-jobs']) {
-  if (requested?.includes(id))
-    strategies.push({
-      id,
-      name:
-        id === 'parallel-80'
-          ? '80% 등록 병렬 판매'
-          : '80% 등록 병렬 판매 + 대기 중 아르바이트',
-      fraction: 0.9,
-      parallel: true,
-      counter: true,
-      askPercent: 80,
-      workWhileWaiting: id.endsWith('-jobs'),
-    });
-}
 if (requested) {
   if (requested.some((id) => !strategies.some((policy) => policy.id === id)))
     throw Error('Unknown audit strategy');
@@ -203,7 +190,6 @@ function choose(g, policy) {
   }
   if (g.cash >= g.principal + g.interest)
     return { type: 'repay', amount: g.principal };
-  if (policy.jobOnly) return { type: 'job', id: 'warehouse' };
   // Buy businesses only from cash beyond three bills; the purchase itself is free.
   if (
     policy.business &&
@@ -217,11 +203,13 @@ function choose(g, policy) {
   if (loose) {
     if (!loose.checked) {
       if (g.cash >= checkCost(g, loose)) return { type: 'check', id: loose.id };
-      return { type: 'job', id: 'warehouse' };
+      return instantSalePrice(loose) > 0
+        ? { type: 'outletSell', id: loose.id }
+        : { type: 'discard', id: loose.id };
     }
+    if (loose.stateGrade === 'F') return { type: 'discard', id: loose.id };
     if (
-      !loose.repaired &&
-      loose.condition !== '양호' &&
+      canRepair(loose) &&
       g.cash >= repairCost(loose) &&
       repairCost(loose) <= Math.max(marketValue(g, loose) * 0.2, 1000)
     )
@@ -243,11 +231,8 @@ function choose(g, policy) {
       g.sales.length >= listingLimit(g) ||
       actionsLeft(g) < 3)
   )
-    return policy.workWhileWaiting
-      ? { type: 'job', id: 'warehouse' }
-      : { type: 'wait' };
-  if (actionsLeft(g) < (policy.instant ? 2 : 4))
-    return { type: 'job', id: 'warehouse' };
+    return { type: 'wait' };
+  if (actionsLeft(g) < (policy.instant ? 2 : 4)) return { type: 'wait' };
   const budget = g.cash * policy.fraction;
   // Public asking price, claim tags, chat state and visible auction status only.
   const choices = g.board
@@ -276,7 +261,7 @@ function choose(g, policy) {
     return { type: 'buy', id: item.id };
   }
   return g.cash < MARKETS[0].min * 2
-    ? { type: 'job', id: 'warehouse' }
+    ? { type: 'wait' }
     : { type: 'refresh', marketId: 'street' };
 }
 for (const policy of strategies) {
@@ -299,7 +284,7 @@ for (const policy of strategies) {
           expiredListings: 0,
           purchaseSpend: 0,
           saleReceipts: 0,
-          jobIncome: 0,
+          jobIncome: 0, // Historical report column; retired work cannot generate income.
           careFees: 0,
           businessSpend: 0,
           businessIncome: 0,
@@ -381,11 +366,6 @@ for (const policy of strategies) {
           profit: receipt - record.purchase - record.fees,
         });
         costs.delete(id);
-      }
-      if (command.type === 'job') {
-        const pay = JOBS.find((j) => j.id === command.id).reward;
-        row.jobIncome += pay;
-        explained += pay;
       }
       if (command.type === 'buyBusiness') {
         const cost = BUSINESSES.find((b) => b.id === command.id).cost;

@@ -204,7 +204,7 @@ test('registered items cannot be repaired, including direct command invocation',
   assert.equal(result.ok, false);
   assert.strictEqual(result.game, posted.game);
 });
-test('check gives two XP once, instant sale gives none, giveaway and scavenging acquisitions give none', () => {
+test('check gives two XP once and instant sale gives none', () => {
   const { g, i } = sample('B');
   i.checked = false;
   const checked = execute(g, { type: 'check', id: i.id });
@@ -214,15 +214,6 @@ test('check gives two XP once, instant sale gives none, giveaway and scavenging 
   const sold = execute(checked.game, { type: 'outletSell', id: i.id });
   assert.ok(sold.ok);
   assert.equal(sold.game.marketExperience!.street, 2);
-  let free = newGame(42);
-  const gift = free.board.find((i) => !i.price)!;
-  assert.ok(gift);
-  free = execute(free, { type: 'buy', id: gift.id }).game;
-  assert.equal(free.marketExperience, undefined);
-  const scavenged = execute(newGame(42), { type: 'scavenge' });
-  assert.ok(scavenged.ok);
-  assert.equal(scavenged.game.marketExperience, undefined);
-  assert.equal(scavenged.game.inventory[0].marketId, 'street');
 });
 test('paid purchase and completed marketplace sale award XP to the original market exactly once', () => {
   let g = newGame(42);

@@ -87,7 +87,7 @@ import {
   settlementAmount,
 } from './debt';
 import { CATEGORY_PRICING, MARKET_PRICING } from '../content/market';
-import { JOBS, RULES, TIERS } from '../content/rules';
+import { RULES, TIERS } from '../content/rules';
 
 function roll(g: Game) {
   g.seed = (Math.imul(1664525, g.seed) + 1013904223) >>> 0;
@@ -351,18 +351,6 @@ function board(g: Game, selected?: MarketId) {
         );
       }
     }
-  }
-  if ((!selected || selected === 'street') && roll(g) < 0.5) {
-    const free = makeItem(
-      g,
-      MARKET_PRICING.giveawayMin +
-        Math.floor(
-          roll(g) * (MARKET_PRICING.giveawayMax - MARKET_PRICING.giveawayMin),
-        ),
-      true,
-    );
-    free.marketId = 'street';
-    list.push(free);
   }
   g.board = list;
 }
@@ -848,38 +836,6 @@ export function execute(
         log(g, message);
         break;
       }
-      case 'job': {
-        const j = JOBS.find((j) => j.id === command.id);
-        if (!j) throw Error('없는 일입니다.');
-        money(g, j.reward);
-        message = `${j.title} 완료. ${won(j.reward)}을 받았습니다.`;
-        log(g, message);
-        advance(g, j.actions);
-        break;
-      }
-      case 'scavenge': {
-        room(g);
-        const found = makeItem(
-          g,
-          roll(g) < MARKET_PRICING.scavengeCommonChance
-            ? MARKET_PRICING.scavengeMin +
-                Math.floor(
-                  roll(g) *
-                    (MARKET_PRICING.scavengeMax - MARKET_PRICING.scavengeMin),
-                )
-            : MARKET_PRICING.scavengeRare,
-          true,
-          false,
-        );
-        delete found.listing;
-        found.acquiredFor = 0;
-        g.inventory.push(found);
-        unlockItem(g, found);
-        message = `${found.title} 발견.`;
-        log(g, message);
-        advance(g, 1);
-        break;
-      }
       case 'refresh': {
         const target = command.marketId ?? 'street';
         if (!isActiveMarketId(target)) throw Error('없는 시장입니다.');
@@ -1015,7 +971,7 @@ export function execute(
           g.stats.purchases++;
           if (extraCost > 0) gainMarketExperience(g, extra, 2);
         }
-        message = `${item.title} ${cost === 0 ? '나눔 수령' : '구매'} 완료.`;
+        message = `${item.title} 구매 완료.`;
         log(g, message);
         advance(g, tradeActions);
         break;

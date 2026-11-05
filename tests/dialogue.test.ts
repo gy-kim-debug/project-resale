@@ -171,7 +171,7 @@ test('demographics can vary wording but never change economics or honesty', () =
   assert.deepEqual(purchaseProfile(a), purchaseProfile(b));
   assert.equal(a.value, b.value);
 });
-test('closed, walked, auction, invalid or repeated dialogue is rejected without state changes; free listings allow questions', () => {
+test('closed, walked, auction, invalid or repeated dialogue is rejected without state changes; retired free listings reject transactions', () => {
   const { g, i } = fixture();
   for (const patch of [
     { chatSettled: true },
@@ -186,13 +186,19 @@ test('closed, walked, auction, invalid or repeated dialogue is rejected without 
   });
   assert.equal(bad.ok, false);
   assert.deepEqual(bad.game, g);
-  i.price = 0;
-  assert.ok(dialogueChoices(i).some((c) => c.id === 'condition'));
-  assert.ok(!dialogueChoices(i).some((c) => c.id === 'quickDeal'));
   const old = structuredClone(g);
   delete old.board[0].dialogue;
   assert.ok(isGame(old));
   const malformed = reply(g, i, 'greet');
   malformed.board.find((x) => x.id === i.id)!.dialogue!.topics.push('greet');
   assert.equal(isGame(malformed), false);
+  const retired = structuredClone(g);
+  retired.board.find((x) => x.id === i.id)!.price = 0;
+  const result = execute(retired, {
+    type: 'dialogue',
+    id: i.id,
+    topic: 'greet',
+  });
+  assert.equal(result.ok, false);
+  assert.strictEqual(result.game, retired);
 });

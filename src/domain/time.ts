@@ -17,7 +17,9 @@ export function toWeeklyActions(original: Game): Game {
     (entry) => entry.text !== '이웃에게 시간 제한이 있는 제안이 왔습니다.',
   );
   // Retired listings disappear, while already owned assets and sales remain intact.
-  g.board = g.board.filter((item) => item.marketId !== 'aircraft');
+  g.board = g.board.filter(
+    (item) => item.marketId !== 'aircraft' && item.price > 0,
+  );
   delete g.satiety;
   delete g.hungerRemainder;
   delete g.health;

@@ -52,12 +52,6 @@ const groups: {
   activities: { label: string; route: Route }[];
 }[] = [
   {
-    title: '돈 벌기',
-    activities: (['무료나눔', '아르바이트', '물건 수집'] as const).map(
-      (kind) => ({ label: kind, route: { kind } }),
-    ),
-  },
-  {
     title: '시장',
     activities: MARKETS.map((market) => ({
       label: market.name,
@@ -234,7 +228,7 @@ function Sheet({
   }
   return (
     <div
-      className={`sheet-layer ${root.kind === '장터' || root.kind === '무료나눔' ? 'market-sheet' : ''}`}
+      className={`sheet-layer ${root.kind === '장터' ? 'market-sheet' : ''}`}
       role="region"
       aria-labelledby="sheet-title"
       onKeyDown={keydown}
@@ -292,9 +286,9 @@ function ActivityHome({
           <h1>활동</h1>
         </div>
       </div>
-      {[groups[1], groups[0], groups[2]].map((group) => (
+      {groups.map((group) => (
         <section
-          className={`activity-group activity-${group.title === '시장' ? 'markets' : group.title === '돈 벌기' ? 'earn' : 'assets'}`}
+          className={`activity-group activity-${group.title === '시장' ? 'markets' : 'assets'}`}
           key={group.title}
         >
           <h2>{group.title}</h2>
@@ -316,15 +310,9 @@ function ActivityHome({
                       aircraft: 'market',
                     } as const
                   )[market.id]
-                : activity.label === '아르바이트'
-                  ? 'wallet'
-                  : activity.label === '무료나눔'
-                    ? 'gift'
-                    : activity.label === '물건 수집'
-                      ? 'search'
-                      : activity.label === '사업'
-                        ? 'building'
-                        : 'bag';
+                : activity.label === '사업'
+                  ? 'building'
+                  : 'bag';
               return (
                 <button
                   className={market?.id === 'street' ? 'market-featured' : ''}

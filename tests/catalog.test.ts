@@ -7,7 +7,6 @@ import {
   LEGACY_BOARD_LIMIT,
   marketOf,
 } from '../src/content/markets';
-import { FIND_PRODUCTS } from '../src/content/marketProducts';
 import { PRODUCT_CATEGORIES } from '../src/content/productCategories';
 import { ITEM_CASES, caseApplies, itemCase } from '../src/content/itemCases';
 import { chooseItemCase, caseQuality } from '../src/domain/itemCases';
@@ -213,23 +212,21 @@ test('codex references all active products with correct ranges and category feat
     itemArt('색소폰', '악기'),
   );
 });
-test('free findings use the broader low-priced catalog, always produce an item and mostly remain cheap', () => {
-  assert.ok(FIND_PRODUCTS.length >= 20);
-  const seen = new Set<string>(),
-    values: number[] = [];
-  for (let seed = 1; seed <= 150; seed++) {
-    const g = run(newGame(seed), { type: 'scavenge' });
-    assert.equal(g.inventory.length, 1);
-    assert.equal(g.cash, 500000);
-    assert.equal(g.weekActions, 1);
-    const found = g.inventory[0];
-    seen.add(found.title);
-    values.push(found.value);
-    assert.ok(FIND_PRODUCTS.some((p) => p.title === found.title));
-    assert.equal(found.acquiredFor, 0);
-    assert.ok(g.discoveredItems?.includes(codexKey(found)));
-  }
-  assert.ok(seen.size >= 20);
-  values.sort((a, b) => a - b);
-  assert.ok(values[Math.floor(values.length * 0.9)] < 50000);
+test('legacy free NPC listings are removed without deleting owned gifts or changing their values', () => {
+  const g = newGame(42);
+  const owned = g.board.shift()!;
+  owned.price = 0;
+  owned.offers = [];
+  owned.acquiredFor = 0;
+  g.inventory = [owned];
+  const npc = { ...g.board[0], id: 'old-gift', price: 0 };
+  g.board.push(npc);
+  const before = structuredClone(g);
+  const loaded = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.ok(loaded.board.every((i) => i.price > 0));
+  assert.deepEqual(loaded.inventory, before.inventory);
+  assert.equal(loaded.cash, before.cash);
+  assert.equal(loaded.seed, before.seed);
+  assert.equal(loaded.minute, before.minute);
+  assert.deepEqual(g, before);
 });

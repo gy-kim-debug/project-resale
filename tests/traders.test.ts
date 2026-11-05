@@ -199,24 +199,18 @@ test('codex unlocks on acquisition rather than viewing or negotiating, deduplica
   );
   assert.equal(unlockedItems(newGame()).size, 0);
 });
-test('scavenging and free gifts unlock codex with no extra action or fees', () => {
-  let g = newGame(1);
-  const cash = g.cash;
-  g = run(g, { type: 'scavenge' });
-  assert.equal(g.weekActions, 1);
-  assert.equal(g.cash, cash);
-  assert.ok(unlockedItems(g).has(codexKey(g.inventory[0])));
-  for (let seed = 1; seed < 30; seed++) {
-    let gift = newGame(seed);
-    const item = gift.board.find((i) => i.price === 0);
-    if (!item) continue;
-    gift = run(gift, { type: 'buy', id: item.id });
-    assert.equal(gift.cash, 500000);
-    assert.equal(gift.weekActions, 1);
-    assert.ok(unlockedItems(gift).has(codexKey(item)));
-    return;
-  }
-  assert.fail('gift fixture unavailable');
+test('legacy free gifts remain in the codex without charging acquisition fees or actions', () => {
+  const g = newGame(1);
+  const item = g.board.shift()!;
+  item.price = 0;
+  item.acquiredFor = 0;
+  g.inventory = [item];
+  delete g.discoveredItems;
+  const restored = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  assert.ok(unlockedItems(restored).has(codexKey(item)));
+  assert.equal(restored.cash, g.cash);
+  assert.equal(restored.weekActions, g.weekActions);
+  assert.equal(restored.inventory[0].acquiredFor, 0);
 });
 test('legacy owned items migrate into codex without changing prices or revealing board items; invalid unlocks are rejected', () => {
   const g = newGame(7);

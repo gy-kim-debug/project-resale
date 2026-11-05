@@ -331,20 +331,6 @@ main {
   top: 14px;
   color: var(--accent);
 }
-.activity-earn .activity-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.activity-earn .activity-grid button {
-  align-items: center;
-  justify-content: center;
-  min-height: 94px;
-  padding: 12px 4px;
-  gap: 10px;
-}
-.activity-earn .activity-label strong {
-  font-size: 12px;
-}
-.activity-earn .activity-arrow,
 .activity-assets .activity-arrow {
   display: none;
 }

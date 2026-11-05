@@ -68,11 +68,7 @@ export function SellerConversation({
         <ItemArt item={item} />
         <span>
           <strong>{item.title}</strong>
-          <b>
-            {item.price === 0
-              ? '무료나눔'
-              : won(item.negotiatedPrice ?? item.price)}
-          </b>
+          <b>{won(item.negotiatedPrice ?? item.price)}</b>
         </span>
       </div>
       <TradeChat

@@ -56,7 +56,7 @@ import { MARKETS, marketDefinition, marketOf } from '../content/markets';
 import { SALE_BARGAINING } from '../content/bargaining';
 import { auctionBidOptions } from '../domain/auction';
 import { instantSalePrice } from '../domain/instantSale';
-import { JOBS, RULES } from '../content/rules';
+import { RULES } from '../content/rules';
 import {
   interestPending,
   interestAmount,
@@ -70,9 +70,6 @@ import {
 export type Route = {
   kind:
     | '장터'
-    | '무료나눔'
-    | '아르바이트'
-    | '물건 수집'
     | '즉시 판매'
     | '매물'
     | '물품'
@@ -543,21 +540,19 @@ export function BusinessTabView({ g, act }: { g: Game; act: Act }) {
 export function MarketView({
   g,
   open,
-  free = false,
   marketId = 'street',
 }: {
   g: Game;
   open: Open;
-  free?: boolean;
   marketId?: MarketId;
 }) {
-  const filterKey = free ? 'giveaway' : marketId;
+  const filterKey = marketId;
   const { category, onlyFavorites, sort } = useMarketUi(
     (state) => state.filters[filterKey] ?? DEFAULT_MARKET_FILTERS,
   );
   const update = (patch: Partial<MarketFilters>) =>
     useMarketUi.getState().update(filterKey, patch);
-  const market = marketDefinition(free ? 'street' : marketId);
+  const market = marketDefinition(marketId);
   const categories = [
     ...new Set([
       ...market.products.map((p) => p.category ?? p.kind),
@@ -573,7 +568,7 @@ export function MarketView({
     .filter(
       (i) =>
         marketOf(i) === market.id &&
-        (free ? i.price === 0 : i.price > 0) &&
+        i.price > 0 &&
         (category === '전체' ||
           i.category === category ||
           i.kind === category) &&
@@ -607,37 +602,31 @@ export function MarketView({
           {g.marketFactor - 100}%
         </p>
         <span className="market-band">
-          {free ? '무료나눔' : `${won(market.min)} ~ ${won(market.max)}`}
+          {`${won(market.min)} ~ ${won(market.max)}`}
         </span>
       </div>
-      {!free && (
-        <>
-          <div className="filters" aria-label="카테고리">
-            {(['전체', ...categories] as const).map((c) => (
-              <button
-                key={c}
-                aria-pressed={category === c}
-                onClick={() => update({ category: c })}
-              >
-                {c === '전체' ? c : categoryLabel(c)}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="filters" aria-label="카테고리">
+        {(['전체', ...categories] as const).map((c) => (
+          <button
+            key={c}
+            aria-pressed={category === c}
+            onClick={() => update({ category: c })}
+          >
+            {c === '전체' ? c : categoryLabel(c)}
+          </button>
+        ))}
+      </div>
       <div className="market-list-actions">
         <div className="market-list-meta">
-          {!free && (
-            <label className="check-label">
-              <input
-                type="checkbox"
-                aria-label="관심 매물만 보기"
-                checked={onlyFavorites}
-                onChange={(e) => update({ onlyFavorites: e.target.checked })}
-              />
-              관심만
-            </label>
-          )}
+          <label className="check-label">
+            <input
+              type="checkbox"
+              aria-label="관심 매물만 보기"
+              checked={onlyFavorites}
+              onChange={(e) => update({ onlyFavorites: e.target.checked })}
+            />
+            관심만
+          </label>
           <span>{listings.length}개</span>
         </div>
         <Button
@@ -653,20 +642,16 @@ export function MarketView({
             key={i.id}
             item={i}
             detail={
-              free
-                ? '무료나눔'
-                : i.auction
-                  ? `${i.auction.currentBid ? '현재가' : '시작가'} ${won(i.auction.currentBid || i.price)}`
-                  : won(i.price)
+              i.auction
+                ? `${i.auction.currentBid ? '현재가' : '시작가'} ${won(i.auction.currentBid || i.price)}`
+                : won(i.price)
             }
             onClick={() => open({ kind: '매물', id: i.id })}
           />
         ))
       ) : (
         <div className="empty">
-          <h2>
-            {free ? '현재 무료나눔 글이 없습니다.' : '표시할 매물이 없습니다.'}
-          </h2>
+          <h2>표시할 매물이 없습니다.</h2>
         </div>
       )}
     </>
@@ -702,9 +687,7 @@ export function ListingView({
           <p className="asset-market">
             {marketDefinition(marketOf(item)).name}
           </p>
-          <p className="item-price">
-            {item.price === 0 ? '무료나눔' : won(item.price)}
-          </p>
+          <p className="item-price">{won(item.price)}</p>
           <TraderProfile
             traderId={item.traderId}
             entityId={item.id}
@@ -738,8 +721,7 @@ export function ListingView({
             }
             onClick={() => setConfirm(true)}
           >
-            {item.price === 0 ? '나눔 수령 확인' : '구매 내용 확인'} ·{' '}
-            {won(price)}
+            구매 내용 확인 · {won(price)}
           </Button>
         ) : (
           <section className="card">
@@ -755,7 +737,7 @@ export function ListingView({
               actionCost={1}
               onClick={() => act({ type: 'buy', id: item.id })}
             >
-              {item.price === 0 ? '나눔 수령 확정' : '지불·수령 확정'}
+              지불·수령 확정
             </Button>
             <Button onClick={() => setConfirm(false)}>구매하지 않기</Button>
           </section>
@@ -1146,8 +1128,6 @@ export function RouteView({
       return <ItemCodex g={g} />;
     case '장터':
       return <MarketView g={g} open={open} marketId={route.marketId} />;
-    case '무료나눔':
-      return <MarketView g={g} open={open} free />;
     case '매물':
       return listing ? (
         listing.marketId === 'auction' ? (
@@ -1220,39 +1200,6 @@ export function RouteView({
         )
       ) : (
         <p>보유하지 않은 물품입니다.</p>
-      );
-    case '아르바이트':
-      return (
-        <>
-          {JOBS.map((j) => (
-            <section key={j.id} className="card">
-              <h2>{j.title}</h2>
-              <p>보상 {won(j.reward)}</p>
-
-              <Button
-                actionCost={j.actions}
-                onClick={() => act({ type: 'job', id: j.id })}
-              >
-                일하기
-              </Button>
-            </section>
-          ))}
-        </>
-      );
-    case '물건 수집':
-      return (
-        <>
-          <p>
-            보관함 {g.inventory.length}/{RULES.capacity}
-          </p>
-          <Button
-            disabled={g.inventory.length >= RULES.capacity}
-            actionCost={1}
-            onClick={() => act({ type: 'scavenge' })}
-          >
-            물건 수집하기
-          </Button>
-        </>
       );
     case '즉시 판매':
       return <InstantSaleView g={g} act={act} />;

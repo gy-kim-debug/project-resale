@@ -1,5 +1,4 @@
 import type { Command, Game } from '../domain/game';
-import { JOBS } from '../content/rules';
 
 export const ACTION_DURATION_MS = 750;
 export const HIGHLIGHT_DURATION_MS = 1400;
@@ -16,19 +15,13 @@ export type ActionSceneKind =
   | 'listing'
   | 'finance'
   | 'walk';
-export function actionScene(command: Command, before?: Game): ActionSceneKind {
+export function actionScene(command: Command): ActionSceneKind {
   switch (command.type) {
     case 'buy':
-      return before?.board.find((item) => item.id === command.id)?.price === 0
-        ? 'gift'
-        : 'buy';
+      return 'buy';
     case 'accept':
     case 'outletSell':
       return 'sell';
-    case 'scavenge':
-      return 'search';
-    case 'job':
-      return 'work';
     case 'check':
       return 'inspect';
     case 'repair':
@@ -63,13 +56,10 @@ export function changesBetween(before: Game, after: Game): Changes {
   return changes;
 }
 export function actionLabel(command: Command): string {
-  if (command.type === 'job')
-    return `${JOBS.find((j) => j.id === command.id)?.title ?? '일'} 중…`;
-  const labels: Record<Exclude<Command['type'], 'job'>, string> = {
+  const labels: Record<Command['type'], string> = {
     storyNext: '대화 중…',
     storyChoice: '거래하는 중…',
     buyBusiness: '사업을 구매하는 중…',
-    scavenge: '물건을 찾는 중…',
     refresh: '새 매물을 찾는 중…',
     wait: '기다리는 중…',
     dialogue: '대화하는 중…',

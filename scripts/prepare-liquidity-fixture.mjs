@@ -21,7 +21,7 @@ for (let seed = 1; seed <= 100; seed++) {
   let next = execute(game, { type: 'post', id: item.id, price: 1000 });
   if (!next.ok) throw Error(next.message);
   for (let n = 0; n < 2; n++) {
-    next = execute(next.game, { type: 'job', id: 'warehouse' });
+    next = execute(next.game, { type: 'wait' });
     if (!next.ok) throw Error(next.message);
   }
   if (next.game.inquiries.length) {

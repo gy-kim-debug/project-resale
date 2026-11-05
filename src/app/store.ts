@@ -391,7 +391,7 @@ export const useGameStore = create<State>((set, get) => ({
       action: {
         id,
         label: actionLabel(presentationCommand),
-        scene: actionScene(presentationCommand, g),
+        scene: actionScene(presentationCommand),
         before: g,
         after: result.game,
         duration: ACTION_DURATION_MS,

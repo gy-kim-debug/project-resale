@@ -21,6 +21,7 @@ await build({
     'tests/intro.test.ts',
     'tests/settlementEvents.test.ts',
     'tests/resumeSession.test.ts',
+    'tests/retiredIncome.test.ts',
   ],
   bundle: true,
   external: ['react', 'react-dom/server'],
@@ -50,6 +51,7 @@ const result = spawnSync(
     'work/test-bundles/intro.test.mjs',
     'work/test-bundles/settlementEvents.test.mjs',
     'work/test-bundles/resumeSession.test.mjs',
+    'work/test-bundles/retiredIncome.test.mjs',
   ],
   { stdio: 'inherit' },
 );

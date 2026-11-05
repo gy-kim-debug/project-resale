@@ -509,10 +509,7 @@ export function afterAction(g: Game, c: Command, before: Game) {
       }
     }
   }
-  if (
-    !['wait', 'refresh', 'job', 'scavenge'].includes(c.type) ||
-    g.minute === before.minute
-  )
+  if (!['wait', 'refresh'].includes(c.type) || g.minute === before.minute)
     return;
   if (
     (g.weekActions ?? 0) < 20 &&

@@ -194,9 +194,7 @@ export interface Game {
 export type Command =
   | { type: 'storyNext' }
   | { type: 'storyChoice'; choice: string }
-  | { type: 'job'; id: string }
   | { type: 'buyBusiness'; id: string }
-  | { type: 'scavenge' }
   | { type: 'refresh'; marketId?: MarketId }
   | { type: 'wait' }
   | { type: 'dialogue'; id: string; topic: DialogueTopic }

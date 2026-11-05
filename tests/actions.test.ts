@@ -49,16 +49,19 @@ test('action is committed once, briefly presented, then highlighted; all input p
   setup();
   const store = useGameStore;
   const before = structuredClone(store.getState().game!);
-  const completion = store.getState().act({ type: 'job', id: 'flyer' });
+  const price = before.board[0].price;
+  const completion = store
+    .getState()
+    .act({ type: 'buy', id: before.board[0].id });
   const active = store.getState();
   assert.equal(active.action?.duration, 750);
-  assert.equal(active.action?.scene, 'work');
+  assert.equal(active.action?.scene, 'buy');
   assert.ok(ACTION_DURATION_MS >= 500 && ACTION_DURATION_MS <= 1000);
   assert.equal(active.action?.before.minute, before.minute);
   assert.equal(active.action?.after.minute, before.minute + ACTION_TICK);
-  assert.equal(active.game!.cash, 509000);
+  assert.equal(active.game!.cash, before.cash - price);
   assert.equal(active.notice, '');
-  assert.equal(await active.act({ type: 'job', id: 'flyer' }), false);
+  assert.equal(await active.act({ type: 'wait' }), false);
   active.setTab('보관함');
   active.toggleFavorite('x');
   active.selectMarket('cars');
@@ -67,16 +70,16 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.equal(active.importSave('{}'), false);
   assert.equal(store.getState().tab, '활동');
   assert.deepEqual(store.getState().favoriteIds, []);
-  assert.equal(store.getState().game!.cash, 509000);
+  assert.equal(store.getState().game!.cash, before.cash - price);
   assert.equal(await completion, true);
   await flushSaves();
   assert.equal(writes.length, 1);
-  assert.equal(writes[0].game.cash, 509000);
+  assert.equal(writes[0].game.cash, before.cash - price);
   assert.ok(!('action' in writes[0]));
   assert.equal(store.getState().action, null);
-  assert.equal(store.getState().changes.cash, 9000);
+  assert.equal(store.getState().changes.cash, -price);
   assert.equal(store.getState().changes.minute, ACTION_TICK);
-  assert.match(store.getState().notice, /전단 배포 완료/);
+  assert.match(store.getState().notice, /구매 완료/);
 });
 test('navigation, favorites and rejected actions do not show presentation or consume time', async () => {
   setup();
@@ -424,13 +427,15 @@ test('ordinary actions stay in history without becoming unread mail and hidden r
   setup();
   const s = useGameStore;
   s.getState().readAllNotifications();
-  await s.getState().act({ type: 'job', id: 'flyer' });
+  await s.getState().act({ type: 'wait' });
   const game = s.getState().game!;
-  assert.ok(game.logs.some((l) => l.text.includes('전단 배포 완료')));
+  assert.ok(game.logs.some((l) => l.text.includes('기다리기를 마쳤습니다')));
   assert.equal(unreadCount(game, s.getState().readNotificationIds), 0);
-  const jobId = game.logs.find((l) => l.text.includes('전단 배포 완료'))!.id;
-  s.getState().readNotification(jobId);
-  assert.equal(s.getState().readNotificationIds.includes(jobId), false);
+  const activityId = game.logs.find((l) =>
+    l.text.includes('기다리기를 마쳤습니다'),
+  )!.id;
+  s.getState().readNotification(activityId);
+  assert.equal(s.getState().readNotificationIds.includes(activityId), false);
   await flushSaves();
 });
 
@@ -477,15 +482,8 @@ test('dialogue choices save immediately without a loading layer, toast or econom
 
 test('action illustrations distinguish trade direction and free actions keep their existing presentation rules', () => {
   assert.equal(actionScene({ type: 'buy', id: 'x' }), 'buy');
-  const freeGame = newGame();
-  freeGame.board[0].price = 0;
-  assert.equal(
-    actionScene({ type: 'buy', id: freeGame.board[0].id }, freeGame),
-    'gift',
-  );
   assert.equal(actionScene({ type: 'accept', id: 'x' }), 'sell');
   assert.equal(actionScene({ type: 'outletSell', id: 'x' }), 'sell');
-  assert.equal(actionScene({ type: 'scavenge' }), 'search');
   assert.equal(actionScene({ type: 'check', id: 'x' }), 'inspect');
   assert.equal(actionScene({ type: 'repair', id: 'x' }), 'repair');
   assert.equal(actionScene({ type: 'post', id: 'x', price: 100 }), 'listing');

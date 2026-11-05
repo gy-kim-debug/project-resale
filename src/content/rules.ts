@@ -8,26 +8,6 @@ export const RULES = {
   capacity: 12,
   maxMoney: 1_000_000_000_000_000,
 };
-export const JOBS = [
-  {
-    id: 'flyer',
-    title: '전단 배포',
-    actions: 1,
-    reward: 9_000,
-  },
-  {
-    id: 'shop',
-    title: '매장 정리',
-    actions: 1,
-    reward: 22_000,
-  },
-  {
-    id: 'warehouse',
-    title: '창고 분류',
-    actions: 1,
-    reward: 38_000,
-  },
-];
 export const INSTANT_SALE_PERCENT = 60;
 export { TIERS } from './market';
 export const CATALOG = [

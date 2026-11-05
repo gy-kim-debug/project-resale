@@ -128,9 +128,9 @@ test('start, deterministic RNG, pure engine, rejected commands do not change tim
   assert.equal(failed.ok, false);
   assert.deepEqual(g, snapshot);
   assert.strictEqual(failed.game, g);
-  const next = run(g, { type: 'job', id: 'flyer' });
+  const next = run(g, { type: 'wait' });
   assert.equal(next.minute, g.minute + ACTION_TICK);
-  assert.equal(next.cash, 509000);
+  assert.equal(next.cash, g.cash);
   assert.deepEqual(g, snapshot);
 });
 test('obsolete hunger fields are discarded without blocking actions or changing progress', () => {
@@ -147,8 +147,7 @@ test('obsolete hunger fields are discarded without blocking actions or changing 
   assert.deepEqual(legacy, snapshot);
   assert.deepEqual(g.inventory, original.inventory);
   for (const c of [
-    { type: 'job', id: 'flyer' },
-    { type: 'scavenge' },
+    { type: 'wait' },
     { type: 'refresh' },
     { type: 'check', id: g.inventory[0].id },
   ] as Command[])
@@ -172,7 +171,7 @@ test('old survival fields are ignored and stripped without changing time, invent
   const old = { ...g, health: 0, fatigue: 0, fatigueRemainder: 59 };
   const restored = parseSave({ version: 2, game: old, favoriteIds: [] }).game;
   assert.deepEqual(restored, g);
-  const worked = run(restored, { type: 'job', id: 'warehouse' });
+  const worked = run(restored, { type: 'wait' });
   assert.equal(worked.minute, ACTION_TICK);
   assert.equal(actionsLeft(worked), 19);
 });
@@ -191,30 +190,30 @@ test('obsolete survival fields do not modify hidden value or stochastic negotiat
   assert.equal(ra.board[0].negotiation, rb.board[0].negotiation);
   assert.equal(ra.seed, rb.seed);
 });
-test('free giveaways appear randomly regardless of capital; available giveaway is guaranteed', () => {
-  let absent = false,
-    present = false;
-  for (let seed = 1; seed < 100; seed++) {
+test('new games and refreshes generate paid listings only, regardless of cash', () => {
+  for (let seed = 1; seed <= 100; seed++) {
     const g = newGame(seed);
-    const f = g.board.find((i) => i.price === 0);
-    if (!f) absent = true;
-    else {
-      present = true;
-      const next = run(g, { type: 'buy', id: f.id });
-      assert.equal(next.inventory[0].id, f.id);
-      assert.equal(next.cash, g.cash);
-    }
+    assert.equal(g.board.length, MARKETS.length * MARKET_LISTING_COUNT);
+    assert.ok(g.board.every((i) => i.price > 0));
+    g.cash = 0;
+    const refreshed = run(g, { type: 'refresh' });
+    assert.ok(refreshed.board.every((i) => i.price > 0));
+    assert.equal(refreshed.cash, 0);
   }
-  assert.ok(absent && present);
 });
-test('scavenging always finds one item; capacity checked before cost/time', () => {
+test('inventory capacity is checked before any purchase cost or time', () => {
   let g = newGame();
+  g.cash = 100000000;
+  g.stats.peakCash = g.cash;
   for (let n = 0; n < RULES.capacity; n++) {
-    g = run(g, { type: 'scavenge' });
+    const item = g.board.find((i) => i.marketId === 'street')!;
+    g = run(g, { type: 'buy', id: item.id });
     assert.equal(g.inventory.length, n + 1);
   }
   const snapshot = structuredClone(g);
-  assert.equal(execute(g, { type: 'scavenge' }).ok, false);
+  const result = execute(g, { type: 'buy', id: g.board[0].id });
+  assert.equal(result.ok, false);
+  assert.strictEqual(result.game, g);
   assert.deepEqual(g, snapshot);
 });
 test('purchase costs are atomic, no transport fee, value needs separate check', () => {
@@ -366,7 +365,7 @@ test('principal repayments are separate from interest; legacy interest remains p
   assert.equal(g.status, 'playing');
   g = run(g, { type: 'payInterest' });
   assert.equal(g.status, 'cleared');
-  assert.equal(execute(g, { type: 'job', id: 'flyer' }).ok, false);
+  assert.equal(execute(g, { type: 'wait' }).ok, false);
 });
 test('expiry frees listing without disposing item; fixed capacity never grows', () => {
   let g = owned();
@@ -452,7 +451,7 @@ for (const seed of [1, 42, 210])
           if (r.ok) {
             g = r.game;
             commands++;
-          } else step({ type: 'job', id: 'shop' });
+          } else step({ type: 'wait' });
           continue;
         }
         if (i.stateGrade === 'F') step({ type: 'discard', id: i.id });
@@ -483,7 +482,7 @@ for (const seed of [1, 42, 210])
       )
         step({ type: 'offer', id: candidate.id, price: candidate.offers[0] });
       else if (candidate) step({ type: 'buy', id: candidate.id });
-      else if (g.cash < 35000) step({ type: 'job', id: 'shop' });
+      else if (g.cash < 35000) step({ type: 'wait' });
       else step({ type: 'refresh' });
     }
     console.log(
@@ -501,19 +500,13 @@ for (const seed of [1, 42, 210])
     if (g.status === 'bankrupt') {
       assert.ok(interestPending(g));
       assert.ok(g.cash < settlementAmount(g));
-      assert.equal(execute(g, { type: 'job', id: 'warehouse' }).ok, false);
+      assert.equal(execute(g, { type: 'wait' }).ok, false);
     } else assert.equal(g.principal + g.interest, 0);
   });
 
 test('action costs distinguish major commands from free operations; inquiries start after registration', () => {
   const cases: { game: Game; command: Command; cost: number }[] = [];
-  for (const [id, cost] of [
-    ['flyer', 1],
-    ['shop', 1],
-    ['warehouse', 1],
-  ] as const)
-    cases.push({ game: rich(), command: { type: 'job', id }, cost });
-  for (const type of ['scavenge', 'refresh', 'wait'] as const)
+  for (const type of ['refresh', 'wait'] as const)
     cases.push({ game: rich(), command: { type }, cost: 1 });
   for (const type of ['buy', 'offer'] as const) {
     const g = rich();
@@ -771,16 +764,15 @@ test('acquisition cost records the exact payment, survives appraisal, and free f
     compareItem(g, g.inventory[0]).value,
     marketValue(g, g.inventory[0]),
   );
-  const found = run(rich(), { type: 'scavenge' });
-  assert.equal(found.inventory[0].acquiredFor, 0);
-  assert.equal(acquisitionCost(found.inventory[0]), 0);
-  const free = rich();
-  free.board[0].price = 0;
-  free.board[0].negotiatedPrice = null;
-  assert.equal(
-    run(free, { type: 'buy', id: free.board[0].id }).inventory[0].acquiredFor,
-    0,
-  );
+  const legacy = rich();
+  const old = legacy.board.shift()!;
+  old.price = 0;
+  old.offers = [];
+  old.acquiredFor = 0;
+  legacy.inventory = [old];
+  const loaded = parseSave({ version: 2, game: legacy, favoriteIds: [] }).game;
+  assert.equal(acquisitionCost(loaded.inventory[0]), 0);
+  assert.deepEqual(loaded.inventory, legacy.inventory);
 });
 
 test('inventory comparison follows market changes and safely reads legacy costs without revealing unchecked values', () => {
@@ -926,26 +918,26 @@ test('twenty major actions exhaust the weekly budget without automatic settlemen
   assert.equal(weekOf(g), 1);
   assert.equal(actionsLeft(g), 20);
   for (let used = 1; used <= 20; used++) {
-    g = run(g, { type: 'job', id: 'flyer' });
+    g = run(g, { type: 'wait' });
     assert.equal(actionsLeft(g), 20 - used);
     assert.equal(weekOf(g), 1);
     assert.equal(interestPending(g), false);
   }
   const before = structuredClone(g);
-  const failed = execute(g, { type: 'job', id: 'flyer' });
+  const failed = execute(g, { type: 'wait' });
   assert.equal(failed.ok, false);
   assert.deepEqual(failed.game, before);
-  assert.equal(g.cash, 500000 + 9000 * 20);
+  assert.equal(g.cash, 500000);
 });
 
-test('all jobs use exactly one action with no premature day ending', () => {
+test('waiting uses one action with no premature day ending', () => {
   let g = newGame();
   for (const remaining of [19, 18, 17]) {
-    g = run(g, { type: 'job', id: 'warehouse' });
+    g = run(g, { type: 'wait' });
     assert.equal(actionsLeft(g), remaining);
   }
   assert.equal(dayOf(g), 2);
-  assert.equal(g.cash, newGame().cash + 38000 * 3);
+  assert.equal(g.cash, newGame().cash);
 });
 
 test('weekly rates increase by 0.002 percentage points and round won exactly', () => {
@@ -998,7 +990,7 @@ test('week boundary locks progress until payment, then increases the rate withou
   assert.equal(interestPending(g), true);
   assert.equal(g.interest, 0);
   assert.equal(g.cash, 150000);
-  for (const type of ['job', 'wait', 'visit', 'discard', 'offer'] as const)
+  for (const type of ['wait', 'visit', 'discard', 'offer'] as const)
     assert.equal(execute(g, { type, id: 'scrap' } as Command).ok, false);
   const snapshot = structuredClone(g);
   assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
@@ -1012,7 +1004,7 @@ test('week boundary locks progress until payment, then increases the rate withou
   assert.equal(interestPending(g), false);
   assert.equal(interestAmount(g), 300000);
   assert.equal(execute(g, { type: 'payInterest' }).ok, false);
-  assert.equal(run(g, { type: 'job', id: 'flyer' }).cash, 9000);
+  assert.equal(run(g, { type: 'wait' }).cash, g.cash);
 });
 
 test('migration retains active listings, chats, prices and finances and refuses malformed new time grids', () => {
@@ -1056,7 +1048,7 @@ test('spending the last cash does not end the game and owned items remain usable
   assert.equal(after.cash, 0);
   assert.equal(after.status, 'playing');
   assert.equal(after.inventory.length, 1);
-  assert.equal(run(after, { type: 'job', id: 'flyer' }).cash, 9000);
+  assert.equal(run(after, { type: 'wait' }).cash, after.cash);
 });
 test('repaying all cash toward principal stays playable; final full principal repayment clears', () => {
   const g = rich();
@@ -1112,7 +1104,7 @@ test('insufficient cash at the weekly deadline ends play even when cash and inve
   assert.equal(after.status, 'bankrupt');
   assert.equal(after.cash, 99900);
   assert.equal(after.inventory.length, 1);
-  assert.equal(execute(after, { type: 'job', id: 'flyer' }).ok, false);
+  assert.equal(execute(after, { type: 'wait' }).ok, false);
   assert.deepEqual(
     parseSave({ version: 2, game: after, favoriteIds: [] }).game,
     after,
@@ -1860,7 +1852,7 @@ test('won auction settlement rechecks cash, inventory and weekly locks without l
 
 test('early settlement charges the full current rate once and discards unused actions', () => {
   let g = newGame(17);
-  g = run(g, { type: 'job', id: 'warehouse' });
+  g = run(g, { type: 'wait' });
   const before = structuredClone(g);
   g = run(g, { type: 'startSettlement' });
   assert.equal(g.minute, before.minute);
@@ -1889,9 +1881,8 @@ test('zero budget allows free owned-item verification but refuses every paid tra
   g = run(g, { type: 'check', id: g.inventory[0].id });
   for (const command of [
     { type: 'wait' },
-    { type: 'job', id: 'flyer' },
+    { type: 'wait' },
     { type: 'refresh' },
-    { type: 'scavenge' },
     { type: 'buy', id: g.board[0].id },
     { type: 'post', id: g.inventory[0].id, price: 10000 },
     { type: 'repay', amount: 100 },
@@ -2205,7 +2196,7 @@ test('mandatory principal or interest shortfalls end play while exact funds resu
   g = run(g, { type: 'payInterest' });
   assert.equal(g.cash, 0);
   assert.equal(g.status, 'playing');
-  assert.equal(run(g, { type: 'job', id: 'flyer' }).cash, 9000);
+  assert.equal(run(g, { type: 'wait' }).cash, g.cash);
 });
 
 test('final remaining principal clears without excess mandatory charge and legacy interest is preserved', () => {
@@ -2753,7 +2744,7 @@ test('purchase experience improves new negotiation floors without changing hidde
 test('retired neighbor offers never spawn and legacy pending offers clear without paying or consuming actions', () => {
   for (let seed = 1; seed <= 30; seed++) {
     let g = newGame(seed);
-    for (let n = 0; n < 12; n++) g = run(g, { type: 'job', id: 'flyer' });
+    for (let n = 0; n < 12; n++) g = run(g, { type: 'wait' });
     assert.equal(g.event, null);
     assert.equal(
       g.logs.some((l) => l.text.includes('이웃에게')),
@@ -2831,7 +2822,7 @@ test('sale inquiry demand rewards discounted listings and falls at each public m
   assert.ok(saleInquiryChance(10000, 10000) > saleInquiryChance(12000, 10000));
 });
 
-test('new posts wait two later actions, retries are spaced, and jobs advance the same sale window', () => {
+test('new posts wait two later actions, retries are spaced, and waiting advances the same sale window', () => {
   let g = owned();
   g = run(g, { type: 'post', id: g.inventory[0].id, price: 1000 });
   assert.equal(g.inquiries.length, 0);
@@ -2841,7 +2832,7 @@ test('new posts wait two later actions, retries are spaced, and jobs advance the
     g.sales[0].created + SALE_FLOW.listingLifetimeActions * ACTION_TICK,
   );
   const deadline = g.sales[0].nextCheck;
-  g = run(g, { type: 'job', id: 'warehouse' });
+  g = run(g, { type: 'wait' });
   assert.equal(g.inquiries.length, 0);
   assert.equal(g.sales[0].nextCheck, deadline);
   assert.equal(g.minute, deadline - ACTION_TICK);
@@ -2861,11 +2852,11 @@ test('new posts wait two later actions, retries are spaced, and jobs advance the
   const failed = run(probe, { type: 'wait' });
   assert.equal(failed.inquiries.length, 0);
   assert.equal(failed.sales[0].nextCheck, failed.minute + 2 * ACTION_TICK);
-  const gap = run(failed, { type: 'job', id: 'warehouse' });
+  const gap = run(failed, { type: 'wait' });
   assert.equal(gap.inquiries.length, 0);
   assert.equal(gap.sales[0].nextCheck, failed.sales[0].nextCheck);
   assert.equal(gap.seed, failed.seed);
-  assert.equal(gap.cash, failed.cash + 38000);
+  assert.equal(gap.cash, failed.cash);
 });
 
 test('category personalities distinguish demand, condition loss and repair or appraisal cost without changing actions', () => {

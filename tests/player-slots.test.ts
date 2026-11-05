@@ -139,7 +139,7 @@ test('new games only occupy empty slots and each profile/progress is independent
     await s.getState().createSlot(2, { ...player, nickname: '두번째' }),
   );
   await finishIntro();
-  assert.ok(await s.getState().act({ type: 'job', id: 'flyer' }));
+  assert.ok(await s.getState().act({ type: 'wait' }));
   await flushSaves();
   assert.equal(records.get(2)!.game.weekActions, 1);
   assert.equal(records.get(1)!.game.weekActions, 0);
@@ -155,7 +155,7 @@ test('slot switches wait for pending saves and block during an action', async ()
   records.set(2, data('다른사람'));
   await s.getState().createSlot(1, player);
   await finishIntro();
-  const action = s.getState().act({ type: 'job', id: 'flyer' });
+  const action = s.getState().act({ type: 'wait' });
   assert.equal(await s.getState().continueSlot(2), false);
   assert.equal(await s.getState().returnToMenu(), false);
   assert.equal(await s.getState().deleteSlot(1), false);
@@ -173,7 +173,7 @@ test('failed writes cannot silently exit or switch; retries keep the correct slo
   await s.getState().createSlot(1, player);
   await finishIntro();
   failSave = true;
-  await s.getState().act({ type: 'job', id: 'flyer' });
+  await s.getState().act({ type: 'wait' });
   await flushSaves();
   assert.equal(s.getState().unsaved, true);
   assert.equal(await s.getState().returnToMenu(), false);
@@ -201,7 +201,7 @@ test('failed creation, invalid profile, menu actions and deletion preserve other
     await s.getState().createSlot(2, { ...player, nickname: '' }),
     false,
   );
-  assert.equal(await s.getState().act({ type: 'scavenge' }), false);
+  assert.equal(await s.getState().act({ type: 'wait' }), false);
   await s.getState().continueSlot(1);
   assert.equal(await s.getState().deleteSlot(1), false);
   await s.getState().returnToMenu();
