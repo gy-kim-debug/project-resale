@@ -1,3 +1,4 @@
+import { resumeSession, type ResumeTab } from './resumeSession';
 import { enableStory } from '../domain/story';
 import type { PlayerProfile } from '../content/player';
 import { isPlayer } from '../domain/player';
@@ -23,7 +24,7 @@ import {
   type Changes,
 } from './actionPresentation';
 export type Act = (command: Command) => Promise<boolean>;
-export type Tab = '내 정보' | '채무' | '활동' | '보관함' | '사업';
+export type Tab = ResumeTab;
 interface State {
   discarded: { before: Game; after: Game; slot: SlotId } | null;
   undoDiscard(): void;
@@ -121,17 +122,46 @@ export const useGameStore = create<State>((set, get) => ({
         const recent = slots
           .filter((slot) => slot.data)
           .sort((a, b) => b.updatedAt - a.updatedAt)[0];
-        const saved = recent?.data;
+        const intent = resumeSession.load();
+        const requested =
+          intent?.screen === 'game'
+            ? slots.find((slot) => slot.id === intent.slot)
+            : undefined;
+        // One-time upgrade path: an already-open older app has no session marker yet.
+        const resume =
+          intent?.screen === 'game'
+            ? requested?.data
+              ? requested
+              : undefined
+            : intent === undefined && resumeSession.isReload()
+              ? recent
+              : undefined;
+        const selected = resume ?? recent;
+        const saved = selected?.data;
+        const tab = resume && intent?.screen === 'game' ? intent.tab : '활동';
         set({
           slots,
-          activeSlot: recent?.id ?? 1,
-          screen: 'menu',
-          game: saved?.game ?? null,
+          activeSlot: selected?.id ?? 1,
+          screen: resume ? 'game' : 'menu',
+          game: saved ? (resume ? enableStory(saved.game) : saved.game) : null,
           favoriteIds: saved?.favoriteIds ?? [],
           selectedMarket: saved?.selectedMarket ?? 'street',
           readNotificationIds: saved?.readNotificationIds ?? [],
+          tab,
+          changes: {},
+          notice: '',
+          storageBlocked: false,
+          saveError:
+            intent?.screen === 'game' && !resume
+              ? '이전에 플레이한 슬롯을 불러올 수 없습니다. 저장 슬롯을 확인하세요.'
+              : '',
           ready: true,
         });
+        resumeSession.save(
+          resume
+            ? { screen: 'game', slot: resume.id, tab }
+            : { screen: 'menu' },
+        );
       } catch (e) {
         set({
           game: null,
@@ -140,7 +170,9 @@ export const useGameStore = create<State>((set, get) => ({
           saveError: `저장 데이터를 불러오지 못했습니다. 자동 저장을 멈췄습니다. ${e instanceof Error ? e.message : ''} 백업을 가져오거나 새 게임을 명시적으로 시작할 수 있습니다.`,
         });
       }
-    })();
+    })().finally(() => {
+      hydration = null;
+    });
     return hydration;
   },
   async continueSlot(id) {
@@ -166,6 +198,7 @@ export const useGameStore = create<State>((set, get) => ({
         storageBlocked: false,
         saveError: '',
       });
+      resumeSession.save({ screen: 'game', slot: id, tab: '활동' });
       return true;
     } catch (e) {
       set({
@@ -209,6 +242,7 @@ export const useGameStore = create<State>((set, get) => ({
         saveError: '',
         storageBlocked: false,
       });
+      resumeSession.save({ screen: 'game', slot: id, tab: '활동' });
       return true;
     } catch (e) {
       const slots = await saveRepository.listSlots().catch(() => get().slots);
@@ -258,6 +292,7 @@ export const useGameStore = create<State>((set, get) => ({
       if (get().unsaved) return false;
       const slots = await saveRepository.listSlots();
       set({ screen: 'menu', slots, notice: '', changes: {} });
+      resumeSession.save({ screen: 'menu' });
       return true;
     } catch {
       set({ saveError: '저장 상태를 확인하지 못했습니다.' });
@@ -383,6 +418,8 @@ export const useGameStore = create<State>((set, get) => ({
   setTab(tab) {
     if (get().action || get().slotBusy || get().game?.inquiries.length) return;
     set({ tab, notice: '' });
+    if (get().screen === 'game')
+      resumeSession.save({ screen: 'game', slot: get().activeSlot, tab });
   },
   toggleFavorite(id) {
     if (!get().ready || get().action || get().slotBusy) return;
@@ -499,6 +536,11 @@ export const useGameStore = create<State>((set, get) => ({
         saveError: '',
       });
       get().save();
+      resumeSession.save({
+        screen: 'game',
+        slot: get().activeSlot,
+        tab: '활동',
+      });
       return true;
     } catch (e) {
       set({
@@ -527,6 +569,7 @@ export const useGameStore = create<State>((set, get) => ({
       saveError: '',
     });
     get().save();
+    resumeSession.save({ screen: 'game', slot: get().activeSlot, tab: '활동' });
   },
 }));
 
