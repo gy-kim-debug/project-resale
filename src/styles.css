@@ -2851,3 +2851,321 @@ html {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Intro cameras change inside one fixed stage; dialogue never moves the actors. */
+.intro-stage {
+  position: relative;
+  height: clamp(180px, 36dvh, 320px);
+  background: #101820;
+}
+.intro-stage > svg {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  animation: intro-reveal 0.6s ease-out both;
+}
+.intro-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 55px 18px #03080b80;
+}
+.intro-scene-caption {
+  position: absolute;
+  left: 16px;
+  bottom: 10px;
+  color: #d9d1ba;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.intro-shot-family,
+.intro-shot-departure,
+.intro-shot-child,
+.intro-shot-contract {
+  filter: sepia(0.3) saturate(0.65);
+}
+.intro-shot-child .intro-vignette {
+  box-shadow: inset 0 0 80px 30px #03080bb0;
+}
+.intro-shot-door > svg {
+  animation:
+    intro-reveal 0.25s both,
+    intro-knock 1.1s steps(2) both;
+}
+.intro-passer {
+  animation: intro-passer 5s linear infinite;
+}
+.intro-traffic {
+  animation: intro-traffic 5.5s linear infinite;
+}
+.intro-rain {
+  animation: intro-rain 0.8s linear infinite;
+}
+.intro-drip {
+  animation: intro-drip 1.8s steps(5) infinite;
+}
+.intro-parents {
+  opacity: 0.8;
+}
+.intro-parents-leave {
+  animation: intro-departure 1.1s steps(7) both;
+}
+.intro-lonely-child {
+  animation: intro-lonely 2s steps(3) both;
+}
+.intro-knock-word {
+  animation: intro-knock-word 1.1s steps(2) both;
+}
+.intro-signature {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: intro-sign 0.6s 0.1s steps(8) forwards;
+}
+.intro-stamp {
+  transform-origin: 155px 92px;
+  animation: intro-stamp 0.3s 0.6s both;
+}
+.intro-pen {
+  animation: intro-pen 0.6s steps(5) both;
+}
+.intro-wake-camera {
+  transform-origin: 70px 70px;
+  animation: intro-wake-camera 1.1s ease-out both;
+}
+.intro-waking {
+  transform-origin: 66px 88px;
+  animation: intro-waking 0.9s steps(7) both;
+}
+.intro-phone-ring {
+  transform-origin: center;
+  animation: intro-ring 0.45s 0.1s steps(2) 2;
+}
+.intro-message {
+  animation: intro-message 0.2s both;
+}
+.intro-message-one {
+  animation-delay: 0.1s;
+}
+.intro-message-two {
+  animation-delay: 0.4s;
+}
+.intro-message-three {
+  animation-delay: 0.7s;
+}
+.intro-listing-card {
+  animation: intro-message 0.4s 0.2s both;
+}
+.intro-face {
+  animation: intro-face 0.8s ease-out both;
+}
+.intro-hero-exit {
+  animation: intro-exit 1.1s steps(8) forwards;
+}
+.intro-door-light {
+  animation: intro-light 1.1s ease-out both;
+}
+.intro-sound-toggle {
+  display: block;
+  margin: -8px 0 4px auto;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  min-height: 44px;
+}
+.story-next:disabled .story-next-label {
+  visibility: hidden;
+}
+@keyframes intro-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes intro-passer {
+  from {
+    transform: translateX(-130px);
+  }
+  to {
+    transform: translateX(190px);
+  }
+}
+@keyframes intro-traffic {
+  from {
+    transform: translateX(130px);
+  }
+  to {
+    transform: translateX(-270px);
+  }
+}
+@keyframes intro-rain {
+  to {
+    transform: translate(-3px, 8px);
+  }
+}
+@keyframes intro-drip {
+  0%,
+  40% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(23px);
+    opacity: 0;
+  }
+}
+@keyframes intro-departure {
+  0% {
+    transform: translateX(0);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(54px);
+    opacity: 0;
+  }
+}
+@keyframes intro-lonely {
+  from {
+    transform: translateY(-2px);
+  }
+  to {
+    transform: translateY(2px);
+  }
+}
+@keyframes intro-knock {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateX(0);
+  }
+  12%,
+  43%,
+  73% {
+    transform: translateX(2px);
+  }
+  16%,
+  47%,
+  77% {
+    transform: translateX(-2px);
+  }
+}
+@keyframes intro-knock-word {
+  0%,
+  25%,
+  55%,
+  100% {
+    opacity: 0;
+  }
+  12%,
+  43%,
+  78% {
+    opacity: 0.85;
+  }
+}
+@keyframes intro-sign {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes intro-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes intro-pen {
+  from {
+    transform: translate(-25px, -6px);
+  }
+  to {
+    transform: translate(10px, 3px);
+  }
+}
+@keyframes intro-wake-camera {
+  from {
+    transform: scale(1.8);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes intro-waking {
+  from {
+    transform: rotate(-76deg) translate(-9px, 5px);
+  }
+  to {
+    transform: rotate(0) translate(0, 0);
+  }
+}
+@keyframes intro-ring {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(1px);
+  }
+}
+@keyframes intro-message {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes intro-face {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes intro-exit {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(79px);
+  }
+}
+@keyframes intro-light {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.25;
+  }
+}
+@media (max-height: 650px) {
+  .intro-stage {
+    height: 28dvh;
+    min-height: 140px;
+  }
+  .intro-stage > svg {
+    max-height: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-stage *,
+  .intro-stage > svg {
+    animation: none !important;
+  }
+  .intro-signature {
+    stroke-dashoffset: 0;
+  }
+}

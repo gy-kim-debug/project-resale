@@ -21,6 +21,7 @@ export const EVENT_KINDS = [
 export type EventKind = (typeof EVENT_KINDS)[number];
 export type SceneKind = 'intro' | 'success' | 'failure' | EventKind;
 export interface StoryLine {
+  shot?: import('./intro').IntroShot;
   speaker: string;
   text: string;
   motion: 'phone' | 'listen' | 'look' | 'meet' | 'exchange' | 'leave';

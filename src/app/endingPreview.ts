@@ -11,6 +11,7 @@ import { useGameStore } from './store';
 export type EndingKind = 'success' | 'failure';
 declare global {
   interface Window {
+    previewIntro: () => boolean;
     previewEnding: (kind?: EndingKind) => boolean;
     previewEvent: (kind?: string, variant?: number) => boolean;
   }
@@ -18,6 +19,14 @@ declare global {
 let showing = false;
 /** Explicit production console helper; no live state mutations or repository writes. */
 export function installEndingPreview() {
+  window.previewIntro = () => {
+    const state = useGameStore.getState();
+    if (showing || state.action || state.slotBusy) return false;
+    return openPreview(
+      enableStory(newGame(1, state.game?.player), true),
+      'intro',
+    );
+  };
   window.previewEnding = (kind = 'success') => {
     if (!['success', 'failure'].includes(kind))
       throw Error('success 또는 failure를 선택하세요.');
@@ -55,12 +64,13 @@ export function installEndingPreview() {
 }
 function openPreview(
   game: Game | null,
-  mode: 'ending' | 'event',
+  mode: 'ending' | 'event' | 'intro',
   variant: 0 | 1 | 2 = 0,
 ) {
   const host = document.createElement('div');
   host.dataset.scenePreview = 'true';
   if (mode === 'ending') host.dataset.endingPreview = 'true';
+  else if (mode === 'intro') host.dataset.introPreview = 'true';
   else host.dataset.eventPreview = 'true';
   document.body.append(host);
   const app = document.getElementById('root');

@@ -1,3 +1,4 @@
+import { INTRO_BEATS } from '../content/intro';
 import {
   deepLines,
   depthChoices,
@@ -23,6 +24,7 @@ import {
 import { moneyRatio } from './money';
 import { RULES } from '../content/rules';
 export interface StoryScene {
+  introVersion?: 2;
   kind: SceneKind;
   step: number;
   explained?: boolean;
@@ -52,7 +54,7 @@ export interface StoryState {
 export function enableStory(game: Game, intro = false): Game {
   const g = structuredClone(game);
   g.story ??= {
-    active: intro ? { kind: 'intro', step: 0 } : null,
+    active: intro ? { kind: 'intro', step: 0, introVersion: 2 } : null,
     history: [],
     lastAt: Math.max(0, g.minute - STORY_RULES.cooldownActions * ACTION_TICK),
     contacts: [],
@@ -79,6 +81,11 @@ export function storyLines(g: Game): StoryLine[] {
   const other = s.name ?? '판매자';
   switch (s.kind) {
     case 'intro':
+      if (s.introVersion === 2)
+        return INTRO_BEATS.map((beat) => ({
+          ...beat,
+          speaker: beat.speaker === '$player' ? me : beat.speaker,
+        }));
       return [
         line('', '작은 방. 휴대폰이 울린다.', 'phone'),
         line('채권 담당자', '남은 원금 100억 원. 확인하셨죠?', 'listen'),

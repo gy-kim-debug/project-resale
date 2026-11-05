@@ -1,3 +1,4 @@
+import { INTRO_BEATS } from '../content/intro';
 import { GRADES, DIFFICULTIES } from '../content/conditionGrades';
 import { gradeCondition } from '../domain/conditionGrades';
 import { EVENT_QUESTIONS, QUESTIONS_FOR } from '../content/eventScenes';
@@ -248,7 +249,14 @@ function validStory(g: Record<string, unknown>): boolean {
   if (
     !record(scene) ||
     !isSceneKind(scene.kind) ||
-    !integer(scene.step, 10) ||
+    !integer(
+      scene.step,
+      scene.kind === 'intro' && scene.introVersion === 2
+        ? INTRO_BEATS.length - 1
+        : 10,
+    ) ||
+    (scene.introVersion !== undefined &&
+      (scene.kind !== 'intro' || scene.introVersion !== 2)) ||
     (scene.variant !== undefined && !integer(scene.variant, 2)) ||
     (scene.traderId !== undefined && !isTraderId(scene.traderId)) ||
     (scene.marketId !== undefined &&

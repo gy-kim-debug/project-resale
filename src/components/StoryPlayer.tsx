@@ -1,5 +1,8 @@
+import { IntroStage } from './IntroStage';
+import { INTRO_SHOTS } from '../content/intro';
+import { useIntroSound } from './useIntroSound';
 import { Toast } from './Toast';
-import { useId, useLayoutEffect, useRef } from 'react';
+import { useId, useLayoutEffect, useRef, useEffect, useState } from 'react';
 import { useGameStore, type Act } from '../app/store';
 import type { Game } from '../domain/game';
 import { STORY_TITLES } from '../content/story';
@@ -32,6 +35,18 @@ export function StoryPlayer({
   const lines = storyLines(game);
   const line = lines[scene.step];
   const last = scene.step === lines.length - 1;
+  const shot = line.shot;
+  const sound = useIntroSound(shot);
+  const [readyStep, setReadyStep] = useState(-1);
+  const ready = !shot || readyStep === scene.step;
+  useEffect(() => {
+    if (!shot) return;
+    const timer = setTimeout(
+      () => setReadyStep(scene.step),
+      matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1100,
+    );
+    return () => clearTimeout(timer);
+  }, [shot, scene.step]);
   const ref = useRef<HTMLElement>(null);
   const solo = ['intro', 'success', 'failure'].includes(scene.kind);
   useLayoutEffect(() => {
@@ -47,7 +62,7 @@ export function StoryPlayer({
     ref.current
       ?.querySelector<HTMLButtonElement>('[data-story-primary]')
       ?.focus({ preventScroll: true });
-  }, [scene.step, scene.kind, scene.explained]);
+  }, [scene.step, scene.kind, scene.explained, ready]);
   async function skip() {
     if (preview) {
       preview.skip();
@@ -100,84 +115,108 @@ export function StoryPlayer({
         }}
       >
         <header className="story-toolbar">
-          <h1 id={titleId}>{STORY_TITLES[scene.kind]}</h1>
+          <h1 id={titleId}>
+            {shot ? INTRO_SHOTS[shot] : STORY_TITLES[scene.kind]}
+          </h1>
           {!last && <button onClick={() => void skip()}>스킵</button>}
         </header>
-        <div
-          key={scene.kind}
-          className={`story-stage story-motion-${line.motion}`}
-          aria-hidden="true"
-        >
-          <svg
-            viewBox="0 0 240 128"
-            shapeRendering="crispEdges"
-            focusable="false"
+        {shot ? (
+          <IntroStage shot={shot} appearance={playerOf(game).appearance} />
+        ) : (
+          <div
+            key={scene.kind}
+            className={`story-stage story-motion-${line.motion}`}
+            aria-hidden="true"
           >
-            <rect
-              width="240"
-              height="128"
-              fill={solo ? '#18212e' : '#121f2b'}
-            />
-            {solo ? (
-              <>
-                <rect x="12" y="12" width="58" height="46" fill="#3b4e60" />
-                <rect x="16" y="16" width="50" height="38" fill="#0d1420" />
-                <path d="M41 16v38M16 35h50" stroke="#3b4e60" strokeWidth="3" />
-                <rect x="159" y="54" width="58" height="10" fill="#846a51" />
-                <rect x="163" y="64" width="5" height="39" fill="#514337" />
-                <rect x="208" y="64" width="5" height="39" fill="#514337" />
-                <rect x="187" y="40" width="14" height="14" fill="#c0a36a" />
-              </>
-            ) : (
-              <>
-                <rect x="8" y="18" width="67" height="85" fill="#263947" />
-                <rect x="160" y="8" width="70" height="95" fill="#24333e" />
-                {[18, 43, 171, 201].map((x) => (
-                  <rect
-                    key={x}
-                    x={x}
-                    y="29"
-                    width="15"
-                    height="22"
-                    fill="#526553"
+            <svg
+              viewBox="0 0 240 128"
+              shapeRendering="crispEdges"
+              focusable="false"
+            >
+              <rect
+                width="240"
+                height="128"
+                fill={solo ? '#18212e' : '#121f2b'}
+              />
+              {solo ? (
+                <>
+                  <rect x="12" y="12" width="58" height="46" fill="#3b4e60" />
+                  <rect x="16" y="16" width="50" height="38" fill="#0d1420" />
+                  <path
+                    d="M41 16v38M16 35h50"
+                    stroke="#3b4e60"
+                    strokeWidth="3"
                   />
-                ))}
-                <rect x="73" y="83" width="25" height="20" fill="#b2835c" />
-                <rect x="83" y="83" width="4" height="20" fill="#e1b682" />
-              </>
-            )}
-            <rect
-              y="103"
-              width="240"
-              height="25"
-              fill={solo ? '#302e30' : '#303c42'}
-            />
-            <rect y="103" width="240" height="2" fill="#536158" />
-            <g className="story-actor">
-              <g transform={`translate(${solo ? 105 : 69} 39) scale(2)`}>
-                <PixelCharacter
-                  animated
-                  scale={1}
-                  appearance={playerOf(game).appearance}
-                />
-              </g>
-            </g>
-            {!solo && (
-              <g className="story-npc">
-                <g transform="translate(186 39) scale(-2 2)">
-                  <PixelCharacter animated variant="trader" scale={1} />
+                  <rect x="159" y="54" width="58" height="10" fill="#846a51" />
+                  <rect x="163" y="64" width="5" height="39" fill="#514337" />
+                  <rect x="208" y="64" width="5" height="39" fill="#514337" />
+                  <rect x="187" y="40" width="14" height="14" fill="#c0a36a" />
+                </>
+              ) : (
+                <>
+                  <rect x="8" y="18" width="67" height="85" fill="#263947" />
+                  <rect x="160" y="8" width="70" height="95" fill="#24333e" />
+                  {[18, 43, 171, 201].map((x) => (
+                    <rect
+                      key={x}
+                      x={x}
+                      y="29"
+                      width="15"
+                      height="22"
+                      fill="#526553"
+                    />
+                  ))}
+                  <rect x="73" y="83" width="25" height="20" fill="#b2835c" />
+                  <rect x="83" y="83" width="4" height="20" fill="#e1b682" />
+                </>
+              )}
+              <rect
+                y="103"
+                width="240"
+                height="25"
+                fill={solo ? '#302e30' : '#303c42'}
+              />
+              <rect y="103" width="240" height="2" fill="#536158" />
+              <g className="story-actor">
+                <g transform={`translate(${solo ? 105 : 69} 39) scale(2)`}>
+                  <PixelCharacter
+                    animated
+                    scale={1}
+                    appearance={playerOf(game).appearance}
+                  />
                 </g>
               </g>
-            )}
-            {solo && (
-              <g className="story-phone">
-                <rect x="149" y="69" width="8" height="14" fill="#8294a8" />
-                <rect x="151" y="71" width="4" height="9" fill="#91e0bc" />
-              </g>
-            )}
-          </svg>
-        </div>
+              {!solo && (
+                <g className="story-npc">
+                  <g transform="translate(186 39) scale(-2 2)">
+                    <PixelCharacter animated variant="trader" scale={1} />
+                  </g>
+                </g>
+              )}
+              {solo && (
+                <g className="story-phone">
+                  <rect x="149" y="69" width="8" height="14" fill="#8294a8" />
+                  <rect x="151" y="71" width="4" height="9" fill="#91e0bc" />
+                </g>
+              )}
+            </svg>
+          </div>
+        )}
         <div className="story-dialogue">
+          {shot && (
+            <button
+              className="intro-sound-toggle"
+              aria-pressed={sound.enabled}
+              disabled={sound.unavailable}
+              onClick={() => void sound.toggle()}
+            >
+              {sound.unavailable
+                ? '소리 지원 안 됨'
+                : sound.enabled
+                  ? '소리 끄기'
+                  : '소리 켜기'}
+            </button>
+          )}
           {target && (
             <div className="story-item">
               {target.title}
@@ -202,7 +241,7 @@ export function StoryPlayer({
           <div
             className="story-line"
             onClick={() => {
-              if (!last) void act({ type: 'storyNext' });
+              if (!last && ready) void act({ type: 'storyNext' });
             }}
             aria-live="polite"
             aria-atomic="true"
@@ -214,6 +253,7 @@ export function StoryPlayer({
             <button
               className="story-next"
               data-story-primary
+              disabled={!ready}
               onClick={() => void act({ type: 'storyNext' })}
             >
               <span className="story-next-label">다음</span>
@@ -224,7 +264,8 @@ export function StoryPlayer({
                 <button
                   key={choice.id}
                   disabled={
-                    !!choice.actions && actionsLeft(game) < choice.actions
+                    !ready ||
+                    (!!choice.actions && actionsLeft(game) < choice.actions)
                   }
                   data-story-primary={index === 0 ? true : undefined}
                   onClick={() =>
