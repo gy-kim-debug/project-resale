@@ -1,3 +1,4 @@
+import { WELCOME_LETTER } from '../content/welcomeLetter';
 import { MARKET_SKILLS, REPAIR_RULES } from '../content/conditionGrades';
 import {
   canRepair,
@@ -1339,6 +1340,41 @@ function MailboxView({ g, open }: { g: Game; open: (route: Route) => void }) {
       <ol className="journal mailbox">
         {mailboxLogs(g).map((log) => {
           const isRead = readIds.includes(log.id);
+          if (log.letter === 'getting-started')
+            return (
+              <li key={log.id} className={isRead ? 'mail-read' : 'mail-unread'}>
+                <details
+                  className="welcome-mail"
+                  onToggle={(e) => {
+                    if (e.currentTarget.open) read(log.id);
+                  }}
+                >
+                  <summary className="mail-entry">
+                    <span className="mail-meta">
+                      <small>시작 안내</small>
+                      <span className="mail-state">
+                        {isRead ? '읽음' : '안 읽음'}
+                      </span>
+                    </span>
+                    <span className="mail-text">{WELCOME_LETTER.title}</span>
+                  </summary>
+                  <article
+                    className="welcome-letter"
+                    aria-label={WELCOME_LETTER.title}
+                  >
+                    <p className="welcome-sender">{WELCOME_LETTER.sender}</p>
+                    <p>{WELCOME_LETTER.opening}</p>
+                    {WELCOME_LETTER.sections.map((section) => (
+                      <section key={section.title}>
+                        <h3>{section.title}</h3>
+                        <p>{section.text}</p>
+                      </section>
+                    ))}
+                    <p>{WELCOME_LETTER.closing}</p>
+                  </article>
+                </details>
+              </li>
+            );
           return (
             <li key={log.id} className={isRead ? 'mail-read' : 'mail-unread'}>
               <button

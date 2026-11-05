@@ -137,7 +137,10 @@ export function log(g: Game, text: string, category: LogCategory = 'activity') {
     text,
     category,
   });
-  g.logs = g.logs.slice(0, 80);
+  const welcome = g.logs.find((entry) => entry.letter === 'getting-started');
+  g.logs = welcome
+    ? [...g.logs.filter((entry) => entry !== welcome).slice(0, 79), welcome]
+    : g.logs.slice(0, 80);
 }
 function money(g: Game, amount: number) {
   if (
@@ -568,6 +571,7 @@ export function newGame(seed = 1, player?: PlayerProfile): Game {
   };
   board(g);
   log(g, `현금 ${won(RULES.startingCash)}, 채무 100억 원.`, 'start');
+  g.logs[0].letter = 'getting-started';
   return g;
 }
 export function execute(

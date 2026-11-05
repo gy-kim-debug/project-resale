@@ -3169,3 +3169,43 @@ html {
     stroke-dashoffset: 0;
   }
 }
+
+.welcome-mail > summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 72px;
+}
+.welcome-mail > summary::-webkit-details-marker {
+  display: none;
+}
+.welcome-mail > summary::after {
+  content: '열어보기 ▾';
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.welcome-mail[open] > summary::after {
+  content: '접기 ▴';
+}
+.welcome-letter {
+  padding: 0 16px 20px;
+  font-size: 14px;
+  line-height: 1.85;
+  color: #d2dbe5;
+}
+.welcome-letter > p {
+  margin: 14px 0;
+}
+.welcome-letter section {
+  margin-top: 22px;
+}
+.welcome-letter h3 {
+  margin-bottom: 7px;
+  font-size: 15px;
+  color: var(--accent);
+}
+.welcome-letter .welcome-sender {
+  font-size: 12px;
+  color: var(--muted);
+}

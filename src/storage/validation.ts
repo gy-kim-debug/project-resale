@@ -652,6 +652,8 @@ export function isGame(v: unknown): v is Game {
   if (
     !Array.isArray(v.logs) ||
     v.logs.length > 80 ||
+    v.logs.filter((l) => record(l) && l.letter === 'getting-started').length >
+      1 ||
     !v.logs.every(
       (l) =>
         record(l) &&
@@ -659,6 +661,8 @@ export function isGame(v: unknown): v is Game {
         integer(l.minute) &&
         (l.week === undefined || (integer(l.week) && Number(l.week) > 0)) &&
         text(l.text) &&
+        (l.letter === undefined ||
+          (l.letter === 'getting-started' && l.category === 'start')) &&
         (l.category === undefined ||
           ['start', 'market', 'special', 'activity'].includes(
             String(l.category),

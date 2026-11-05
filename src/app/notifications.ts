@@ -7,7 +7,12 @@ export function isMailboxLog(log: Log): boolean {
     log.text,
   );
 }
-export const mailboxLogs = (game: Game) =>
-  game.logs.filter(isMailboxLog).slice(0, 20);
+export const mailboxLogs = (game: Game) => {
+  const logs = game.logs.filter(isMailboxLog);
+  const welcome = logs.find((log) => log.letter === 'getting-started');
+  return welcome
+    ? [welcome, ...logs.filter((log) => log !== welcome).slice(0, 19)]
+    : logs.slice(0, 20);
+};
 export const unreadCount = (game: Game, readIds: number[]) =>
   mailboxLogs(game).filter((log) => !readIds.includes(log.id)).length;

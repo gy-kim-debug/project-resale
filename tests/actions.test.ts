@@ -12,7 +12,7 @@ import {
   parseSave,
   type SaveData,
 } from '../src/storage/saveRepository';
-import { newGame, execute } from '../src/domain/engine';
+import { newGame, execute, log as appendLog } from '../src/domain/engine';
 import { auctionBidOptions } from '../src/domain/auction';
 import { ACTION_TICK } from '../src/domain/game';
 import {
@@ -491,4 +491,53 @@ test('action illustrations distinguish trade direction and free actions keep the
   assert.equal(actionScene({ type: 'post', id: 'x', price: 100 }), 'listing');
   assert.equal(actionScene({ type: 'repay', amount: 100 }), 'finance');
   assert.equal(actionScene({ type: 'refresh' }), 'walk');
+});
+
+test('one welcome letter survives log and mailbox limits without duplicate delivery or economic changes', () => {
+  const g = newGame(42);
+  const welcome = g.logs.find((l) => l.letter === 'getting-started')!;
+  assert.ok(welcome);
+  assert.equal(g.logs.filter((l) => l.letter).length, 1);
+  const before = structuredClone(g);
+  for (let n = 0; n < 200; n++)
+    appendLog(
+      g,
+      n % 2 ? '시장 변화: 새 소식' : '거래 기록',
+      n % 2 ? 'market' : 'activity',
+    );
+  assert.equal(g.logs.length, 80);
+  assert.equal(mailboxLogs(g).length, 20);
+  assert.equal(mailboxLogs(g)[0].id, welcome.id);
+  assert.equal(g.logs.filter((l) => l.letter).length, 1);
+  assert.equal(unreadCount(g, [welcome.id]), 19);
+  for (const key of [
+    'cash',
+    'principal',
+    'seed',
+    'minute',
+    'weekActions',
+    'stats',
+    'inventory',
+    'board',
+  ] as const)
+    assert.deepEqual(g[key], before[key]);
+  const saved = parseSave({
+    version: 2,
+    game: g,
+    favoriteIds: [],
+    readNotificationIds: [welcome.id],
+  });
+  assert.deepEqual(saved.game, g);
+  assert.deepEqual(saved.readNotificationIds, [welcome.id]);
+});
+test('legacy saves gain no tutorial retrospectively and malformed or duplicate letters are rejected', () => {
+  const g = newGame(42);
+  delete g.logs[0].letter;
+  assert.deepEqual(parseSave({ version: 2, game: g, favoriteIds: [] }).game, g);
+  const bad = newGame(42);
+  bad.logs.push({ ...bad.logs[0], id: ++bad.serial });
+  assert.throws(() => parseSave({ version: 2, game: bad, favoriteIds: [] }));
+  bad.logs.pop();
+  bad.logs[0].letter = 'unknown' as never;
+  assert.throws(() => parseSave({ version: 2, game: bad, favoriteIds: [] }));
 });

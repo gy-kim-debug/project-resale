@@ -131,6 +131,7 @@ export interface Inquiry {
 }
 export type LogCategory = 'start' | 'market' | 'special' | 'activity';
 export interface Log {
+  letter?: 'getting-started';
   category?: LogCategory;
   week?: number;
   id: number;
