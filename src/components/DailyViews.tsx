@@ -1,5 +1,6 @@
 import { LottoBalls, LottoResult } from './LottoResult';
-import { confirmDailyAction } from '../app/dailyActions';
+import { useDailyConfirmation } from '../app/useDailyConfirmation';
+import { ActionConfirmation } from './ActionConfirmation';
 import { useState } from 'react';
 import { DAILY_RULES, STOCKS, stockDefinition } from '../content/daily';
 import { dailyState, sharePrice, stockFee } from '../domain/daily';
@@ -17,6 +18,7 @@ export function DailyTabView({
   open: Open;
   act: Act;
 }) {
+  const confirmation = useDailyConfirmation(act);
   const d = dailyState(g),
     bought = d.tickets.count > 0;
   const rows = [
@@ -66,8 +68,7 @@ export function DailyTabView({
                 if (row.title === '주식') open({ kind: '주식' });
                 else if (row.title === '복권' && bought) open({ kind: '복권' });
                 else
-                  void confirmDailyAction(
-                    act,
+                  confirmation.request(
                     row.title === '복권'
                       ? { type: 'buyLottery', count: 1 }
                       : {
@@ -110,10 +111,12 @@ export function DailyTabView({
           </li>
         ))}
       </ul>
+      <ActionConfirmation confirmation={confirmation} />
     </>
   );
 }
 export function LotteryView({ g, act }: { g: Game; act: Act }) {
+  const confirmation = useDailyConfirmation(act);
   const d = dailyState(g),
     bought = d.tickets.count > 0;
   return (
@@ -139,7 +142,7 @@ export function LotteryView({ g, act }: { g: Game; act: Act }) {
           <Button
             disabled={g.cash < DAILY_RULES.lotteryCost}
             onClick={() =>
-              confirmDailyAction(act, { type: 'buyLottery', count: 1 })
+              confirmation.request({ type: 'buyLottery', count: 1 })
             }
           >
             복권 구매 · {won(DAILY_RULES.lotteryCost)}
@@ -168,6 +171,7 @@ export function LotteryView({ g, act }: { g: Game; act: Act }) {
           ))}
         </section>
       )}
+      <ActionConfirmation confirmation={confirmation} />
     </>
   );
 }
@@ -241,6 +245,7 @@ function PriceChart({
   );
 }
 export function StocksView({ g, act }: { g: Game; act: Act }) {
+  const confirmation = useDailyConfirmation(act);
   const [id, setId] = useState<string>(STOCKS[0].id),
     [side, setSide] = useState<'buy' | 'sell'>('buy'),
     [quantity, setQuantity] = useState(1);
@@ -363,8 +368,7 @@ export function StocksView({ g, act }: { g: Game; act: Act }) {
           primary
           disabled={!amount}
           onClick={() =>
-            confirmDailyAction(
-              act,
+            confirmation.request(
               { type: 'tradeStock', id, side, quantity: amount },
               gross - fee,
             )
@@ -380,6 +384,7 @@ export function StocksView({ g, act }: { g: Game; act: Act }) {
           </p>
         )}
       </section>
+      <ActionConfirmation confirmation={confirmation} />
     </>
   );
 }
