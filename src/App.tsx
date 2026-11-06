@@ -58,10 +58,6 @@ const groups: {
       route: { kind: '장터', marketId: market.id },
     })),
   },
-  {
-    title: '자산',
-    activities: [{ label: '즉시 판매', route: { kind: '즉시 판매' } }],
-  },
 ];
 function Header({
   g,
