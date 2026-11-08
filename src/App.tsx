@@ -1,3 +1,4 @@
+import { SalesOverview } from './components/SalesOverview';
 import { DailyTabView } from './components/DailyViews';
 import { StoryPlayer } from './components/StoryPlayer';
 import { StartMenu } from './components/StartMenu';
@@ -23,7 +24,6 @@ import {
 } from './components/GameViews';
 import type { Game } from './domain/game';
 import { weekOf, actionsLeft, won, ACTIONS_PER_WEEK } from './domain/game';
-import { listingLimit } from './domain/engine';
 import { ActionBudget, ActionProgress } from './components/ActionProgress';
 import type {
   ActionPresentation,
@@ -327,20 +327,7 @@ function ActivityHome({
           </div>
         </section>
       ))}
-      {g.sales.length > 0 && (
-        <section className="card">
-          <h2>
-            판매 중 {g.sales.length}/{listingLimit(g)}
-          </h2>
-
-          <Button
-            actionCost={1}
-            onClick={() => useGameStore.getState().act({ type: 'wait' })}
-          >
-            구매 문의 기다리기
-          </Button>
-        </section>
-      )}
+      <SalesOverview g={g} open={open} />
       {actionsLeft(g) > 0 && (
         <Button onClick={settle}>이번 주 마무리하기</Button>
       )}
