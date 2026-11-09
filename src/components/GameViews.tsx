@@ -470,7 +470,7 @@ export function MarketView({
   marketId?: MarketId;
 }) {
   const filterKey = marketId;
-  const { category, onlyFavorites, sort } = useMarketUi(
+  const { category, onlyFavorites } = useMarketUi(
     (state) => state.filters[filterKey] ?? DEFAULT_MARKET_FILTERS,
   );
   const update = (patch: Partial<MarketFilters>) =>
@@ -487,39 +487,16 @@ export function MarketView({
   ];
   const act = useGameStore((s) => s.act);
   const favorites = useGameStore((s) => s.favoriteIds);
-  const listings = g.board
-    .filter(
-      (i) =>
-        marketOf(i) === market.id &&
-        i.price > 0 &&
-        (category === '전체' ||
-          i.category === category ||
-          i.kind === category) &&
-        (!onlyFavorites || favorites.includes(i.id)),
-    )
-    .sort((a, b) =>
-      sort === 'low'
-        ? a.price - b.price
-        : sort === 'high'
-          ? b.price - a.price
-          : 0,
-    );
+  const listings = g.board.filter(
+    (i) =>
+      marketOf(i) === market.id &&
+      i.price > 0 &&
+      (category === '전체' || i.category === category || i.kind === category) &&
+      (!onlyFavorites || favorites.includes(i.id)),
+  );
   return (
     <div className="market-list-layout">
       <div className="market-fixed-filters">
-        <div className="market-sort-row">
-          <select
-            aria-label="매물 정렬"
-            value={sort}
-            onChange={(event) =>
-              update({ sort: event.target.value as MarketFilters['sort'] })
-            }
-          >
-            <option value="default">기본순</option>
-            <option value="low">가격 ↑</option>
-            <option value="high">가격 ↓</option>
-          </select>
-        </div>
         <div className="market-context">
           <p className="market-trend">
             {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}

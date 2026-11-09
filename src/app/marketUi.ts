@@ -4,12 +4,10 @@ import type { Kind } from '../domain/game';
 export interface MarketFilters {
   category: Kind | ProductCategory | '전체';
   onlyFavorites: boolean;
-  sort: 'default' | 'low' | 'high';
 }
 export const DEFAULT_MARKET_FILTERS: MarketFilters = {
   category: '전체',
   onlyFavorites: false,
-  sort: 'default',
 };
 /** Temporary view state survives detail/back navigation, never modifies game saves. */
 export const useMarketUi = create<{

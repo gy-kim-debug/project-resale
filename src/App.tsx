@@ -1,3 +1,4 @@
+import { MarketStatus } from './components/MarketStatus';
 import { ChatList, PendingInquiryBar } from './components/ChatViews';
 import { unreadChats } from './domain/chats';
 import { SalesOverview } from './components/SalesOverview';
@@ -170,6 +171,7 @@ function Sheet({
   onClose,
   onHome,
   scrollPositions,
+  summary,
   footer,
 }: {
   routes: Route[];
@@ -179,6 +181,7 @@ function Sheet({
   onClose: () => void;
   onHome: () => void;
   scrollPositions: Map<string, number>;
+  summary?: ReactNode;
   footer?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -240,6 +243,7 @@ function Sheet({
           <Icon name="home" size={20} />
         </button>
       </div>
+      {summary}
       <div
         className="sheet-content"
         ref={ref}
@@ -483,6 +487,11 @@ function GameApp() {
               state.dismiss();
             }}
             scrollPositions={scrollPositions}
+            summary={
+              shownRoutes[0]?.kind === '장터' ? (
+                <MarketStatus g={g} />
+              ) : undefined
+            }
             footer={
               actionsLeft(g) === 0 &&
               !pending &&
