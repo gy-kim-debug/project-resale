@@ -4051,3 +4051,21 @@ html {
 .app-shell:has(.sheet-layer) .toast {
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
+
+.market-sticky-filters {
+  position: sticky;
+  top: -20px;
+  z-index: 5;
+  margin: -20px -20px 0;
+  padding: 12px 20px 0;
+  background: var(--bg);
+}
+.market-sticky-filters .market-list-actions {
+  margin-bottom: 0;
+}
+@media (max-width: 350px) {
+  .market-sticky-filters {
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+}

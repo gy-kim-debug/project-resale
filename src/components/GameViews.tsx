@@ -506,58 +506,60 @@ export function MarketView({
     );
   return (
     <>
-      <div className="market-sort-row">
-        <select
-          aria-label="매물 정렬"
-          value={sort}
-          onChange={(event) =>
-            update({ sort: event.target.value as MarketFilters['sort'] })
-          }
-        >
-          <option value="default">기본순</option>
-          <option value="low">가격 ↑</option>
-          <option value="high">가격 ↓</option>
-        </select>
-      </div>
-      <div className="market-context">
-        <p className="market-trend">
-          {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}
-          {g.marketFactor - 100}%
-        </p>
-        <span className="market-band">
-          {`${won(market.min)} ~ ${won(market.max)}`}
-        </span>
-      </div>
-      <div className="filters" aria-label="카테고리">
-        {(['전체', ...categories] as const).map((c) => (
-          <button
-            key={c}
-            aria-pressed={category === c}
-            onClick={() => update({ category: c })}
+      <div className="market-sticky-filters">
+        <div className="market-sort-row">
+          <select
+            aria-label="매물 정렬"
+            value={sort}
+            onChange={(event) =>
+              update({ sort: event.target.value as MarketFilters['sort'] })
+            }
           >
-            {c === '전체' ? c : categoryLabel(c)}
-          </button>
-        ))}
-      </div>
-      <div className="market-list-actions">
-        <div className="market-list-meta">
-          <label className="check-label">
-            <input
-              type="checkbox"
-              aria-label="관심 매물만 보기"
-              checked={onlyFavorites}
-              onChange={(e) => update({ onlyFavorites: e.target.checked })}
-            />
-            관심만
-          </label>
-          <span>{listings.length}개</span>
+            <option value="default">기본순</option>
+            <option value="low">가격 ↑</option>
+            <option value="high">가격 ↓</option>
+          </select>
         </div>
-        <Button
-          actionCost={1}
-          onClick={() => act({ type: 'refresh', marketId: market.id })}
-        >
-          새 매물 탐색
-        </Button>
+        <div className="market-context">
+          <p className="market-trend">
+            {g.trend} 수요 ↑ · 전반 {g.marketFactor >= 100 ? '+' : ''}
+            {g.marketFactor - 100}%
+          </p>
+          <span className="market-band">
+            {`${won(market.min)} ~ ${won(market.max)}`}
+          </span>
+        </div>
+        <div className="filters" aria-label="카테고리">
+          {(['전체', ...categories] as const).map((c) => (
+            <button
+              key={c}
+              aria-pressed={category === c}
+              onClick={() => update({ category: c })}
+            >
+              {c === '전체' ? c : categoryLabel(c)}
+            </button>
+          ))}
+        </div>
+        <div className="market-list-actions">
+          <div className="market-list-meta">
+            <label className="check-label">
+              <input
+                type="checkbox"
+                aria-label="관심 매물만 보기"
+                checked={onlyFavorites}
+                onChange={(e) => update({ onlyFavorites: e.target.checked })}
+              />
+              관심만
+            </label>
+            <span>{listings.length}개</span>
+          </div>
+          <Button
+            actionCost={1}
+            onClick={() => act({ type: 'refresh', marketId: market.id })}
+          >
+            새 매물 탐색
+          </Button>
+        </div>
       </div>
       {listings.length ? (
         listings.map((i) => (
