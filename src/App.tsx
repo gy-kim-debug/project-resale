@@ -70,9 +70,11 @@ function Header({
   actionId,
   onOpen,
   unread,
+  obscured,
 }: {
   g: Game;
   unread: number;
+  obscured: boolean;
   action: ActionPresentation | null;
   changes: Changes;
   actionId: number;
@@ -97,7 +99,12 @@ function Header({
     return () => observer.disconnect();
   }, []);
   return (
-    <header className="status-header" ref={ref}>
+    <header
+      className="status-header"
+      ref={ref}
+      inert={obscured}
+      aria-hidden={obscured || undefined}
+    >
       <div className="header-tools" aria-label="빠른 메뉴">
         <button
           aria-label="우편함"
@@ -369,6 +376,7 @@ function GameApp() {
   return (
     <div className="app-shell">
       <Header
+        obscured={shownRoutes.length > 0 || over}
         g={state.action?.before ?? g}
         unread={unreadCount(
           state.action?.before ?? g,
@@ -421,7 +429,12 @@ function GameApp() {
             )}
           </main>
         </div>
-        <nav className="bottom-nav" aria-label="주요 메뉴">
+        <nav
+          className="bottom-nav"
+          aria-label="주요 메뉴"
+          inert={shownRoutes.length > 0 || over}
+          aria-hidden={shownRoutes.length > 0 || over || undefined}
+        >
           {nav.map((n) => (
             <button
               key={n.tab}

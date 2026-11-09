@@ -904,16 +904,21 @@ input[type='checkbox'] {
 }
 .sheet-layer {
   position: fixed;
-  top: var(--header-height);
-  bottom: var(--nav-height);
+  top: 0;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
   background: var(--bg);
-  z-index: 50;
+  z-index: 80;
   display: flex;
   flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.app-shell:has(.sheet-layer) .status-header {
+  visibility: hidden;
 }
 .sheet-toolbar {
   display: grid;
@@ -1347,7 +1352,7 @@ input[type='checkbox'] {
 .welcome-overlay,
 .end-overlay {
   position: fixed;
-  inset: var(--header-height) 0 0;
+  inset: 0;
   z-index: 90;
   overflow-y: auto;
   background: #10141cf8;
@@ -1411,7 +1416,7 @@ html {
 }
 .action-layer {
   position: fixed;
-  inset: var(--header-height) 0 0;
+  inset: 0;
   display: grid;
   place-items: center;
   z-index: 150;
@@ -1857,11 +1862,6 @@ html {
 .conversation-product .item-art svg {
   width: 32px;
   height: 32px;
-}
-.sheet-layer:has(.seller-conversation) {
-  top: 0;
-  z-index: 80;
-  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .pixel-character {
@@ -4046,4 +4046,8 @@ html {
   .header-budget-track > span {
     transition: none;
   }
+}
+
+.app-shell:has(.sheet-layer) .toast {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }

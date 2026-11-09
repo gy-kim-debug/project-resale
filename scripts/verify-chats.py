@@ -14,7 +14,9 @@ def saved(page,predicate):
   page.wait_for_timeout(25)
  raise AssertionError('Expected chat save update missing')
 def idle(page):expect(page.locator('.action-layer')).to_have_count(0)
-def nav(page,label):page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name=label,exact=True).click()
+def nav(page,label):
+ if page.locator('.sheet-layer').count():page.get_by_role('button',name='활동으로 이동',exact=True).click()
+ page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name=label,exact=True).click()
 def inject(page,key):page.evaluate(WRITE,FIXTURES[key]);page.reload();expect(page.get_by_role('heading',name='채팅',exact=True)).to_be_visible()
 def confirm(page,button):
  button.click();expect(page.get_by_role('alertdialog')).to_be_visible();page.locator('.confirmation-submit').click();expect(page.get_by_role('alertdialog')).to_have_count(0)
