@@ -1,7 +1,5 @@
 import { ChatList, PendingInquiryBar } from './components/ChatViews';
 import { unreadChats } from './domain/chats';
-import { PixelCharacter } from './components/PixelCharacter';
-import { playerOf } from './domain/player';
 import { SalesOverview } from './components/SalesOverview';
 import { DailyTabView } from './components/DailyViews';
 import { StoryPlayer } from './components/StoryPlayer';
@@ -98,14 +96,6 @@ function Header({
   return (
     <header className="status-header" ref={ref}>
       <div className="header-tools" aria-label="빠른 메뉴">
-        <button
-          className="header-avatar"
-          aria-label="내 정보"
-          disabled={!!action || interestPending(g) || g.status !== 'playing'}
-          onClick={() => onOpen('내 정보')}
-        >
-          <PixelCharacter scale={1} appearance={playerOf(g).appearance} />
-        </button>
         <button
           aria-label="우편함"
           aria-describedby="mail-unread-count"
@@ -279,6 +269,7 @@ function ActivityHome({
         <div>
           <h1>활동</h1>
         </div>
+        <Button onClick={() => open({ kind: '내 정보' })}>내 정보</Button>
       </div>
       {groups.map((group) => (
         <section

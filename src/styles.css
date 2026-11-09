@@ -3829,15 +3829,11 @@ html {
 }
 
 .header-time {
-  padding-right: 132px;
+  padding-right: 88px;
   flex-wrap: wrap;
   column-gap: 8px;
   row-gap: 0;
   min-height: 44px;
-}
-.header-avatar .pixel-character {
-  width: 24px;
-  height: 32px;
 }
 .bottom-nav .nav-icon {
   position: relative;
