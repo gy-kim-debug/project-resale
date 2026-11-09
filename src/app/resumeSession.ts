@@ -1,11 +1,5 @@
 import { isSlotId, type SlotId } from '../storage/saveRepository';
-export const SESSION_TABS = [
-  '내 정보',
-  '채무',
-  '활동',
-  '보관함',
-  '일상',
-] as const;
+export const SESSION_TABS = ['채팅', '채무', '활동', '보관함', '일상'] as const;
 export type ResumeTab = (typeof SESSION_TABS)[number];
 export type ResumeIntent =
   { screen: 'menu' } | { screen: 'game'; slot: SlotId; tab: ResumeTab };
@@ -30,12 +24,19 @@ export function parseResumeIntent(
       'slot' in value &&
       isSlotId(value.slot) &&
       'tab' in value &&
-      (value.tab === '사업' || SESSION_TABS.includes(value.tab as ResumeTab))
+      (value.tab === '내 정보' ||
+        value.tab === '사업' ||
+        SESSION_TABS.includes(value.tab as ResumeTab))
     )
       return {
         screen: 'game',
         slot: value.slot,
-        tab: value.tab === '사업' ? '일상' : (value.tab as ResumeTab),
+        tab:
+          value.tab === '내 정보'
+            ? '활동'
+            : value.tab === '사업'
+              ? '일상'
+              : (value.tab as ResumeTab),
       };
   } catch {
     /* Malformed UI state must never select a different game. */

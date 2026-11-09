@@ -1,3 +1,4 @@
+import { syncTradeChats } from './chats';
 import { upgradeStockState } from './daily';
 import { retireBusinesses } from './business';
 import type { Game, Item } from './game';
@@ -101,6 +102,7 @@ export function normalizeMoney(original: Game): Game {
   g.moneyUnit = 100;
   retireBusinesses(g);
   upgradeStockState(g);
+  syncTradeChats(g);
   return g;
 }
 export function allMoneyAligned(g: Game): boolean {

@@ -1,3 +1,7 @@
+import { ChatList, PendingInquiryBar } from './components/ChatViews';
+import { unreadChats } from './domain/chats';
+import { PixelCharacter } from './components/PixelCharacter';
+import { playerOf } from './domain/player';
 import { SalesOverview } from './components/SalesOverview';
 import { DailyTabView } from './components/DailyViews';
 import { StoryPlayer } from './components/StoryPlayer';
@@ -16,7 +20,6 @@ import { Icon, type IconName } from './components/Icon';
 import {
   Button,
   DebtView,
-  InfoView,
   InventoryView,
   RouteView,
   StorageView,
@@ -42,9 +45,9 @@ import {
 
 const nav: { tab: Tab; icon: IconName }[] = [
   { tab: '채무', icon: 'debt' },
-  { tab: '내 정보', icon: 'user' },
-  { tab: '활동', icon: 'activity' },
   { tab: '보관함', icon: 'bag' },
+  { tab: '활동', icon: 'activity' },
+  { tab: '채팅', icon: 'chat' },
   { tab: '일상', icon: 'moon' },
 ];
 const groups: {
@@ -72,7 +75,7 @@ function Header({
   action: ActionPresentation | null;
   changes: Changes;
   actionId: number;
-  onOpen: (kind: '우편함' | '설정') => void;
+  onOpen: (kind: '우편함' | '설정' | '내 정보') => void;
 }) {
   const changed = (key: ChangeKey) =>
     changes[key]
@@ -96,14 +99,17 @@ function Header({
     <header className="status-header" ref={ref}>
       <div className="header-tools" aria-label="빠른 메뉴">
         <button
+          className="header-avatar"
+          aria-label="내 정보"
+          disabled={!!action || interestPending(g) || g.status !== 'playing'}
+          onClick={() => onOpen('내 정보')}
+        >
+          <PixelCharacter scale={1} appearance={playerOf(g).appearance} />
+        </button>
+        <button
           aria-label="우편함"
           aria-describedby="mail-unread-count"
-          disabled={
-            !!action ||
-            !!g.inquiries.length ||
-            interestPending(g) ||
-            g.status !== 'playing'
-          }
+          disabled={!!action || interestPending(g) || g.status !== 'playing'}
           onClick={() => onOpen('우편함')}
         >
           <Icon name="mail" size={21} />
@@ -118,12 +124,7 @@ function Header({
         </button>
         <button
           aria-label="설정"
-          disabled={
-            !!action ||
-            !!g.inquiries.length ||
-            interestPending(g) ||
-            g.status !== 'playing'
-          }
+          disabled={!!action || interestPending(g) || g.status !== 'playing'}
           onClick={() => onOpen('설정')}
         >
           <Icon name="settings" size={21} />
@@ -348,14 +349,10 @@ function GameApp() {
     void useGameStore.getState().hydrate();
   }, []);
   const due = !!g && interestPending(g);
-  const pending = due || !!g?.inquiries.length;
+  const pending = due;
   const over = !!g && g.status !== 'playing';
-  // Pending inquiries override every route, including when restored from a save.
-  const shownRoutes: Route[] = due
-    ? [{ kind: '주간 정산' }]
-    : pending
-      ? [{ kind: '문의' }]
-      : routes;
+  // Debt settlement is mandatory; unanswered inquiries are handled in the chat tab.
+  const shownRoutes: Route[] = due ? [{ kind: '주간 정산' }] : routes;
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [state.tab]);
@@ -371,7 +368,9 @@ function GameApp() {
       ['accept', 'break', 'reject', 'counter', 'payInterest'].includes(
         c.type,
       ) &&
-      !useGameStore.getState().game?.inquiries.length
+      !useGameStore.getState().game?.inquiries.length &&
+      state.tab !== '채팅' &&
+      !routes.some((r) => r.kind === '채팅방')
     )
       navigate([], state.tab, true);
     return ok;
@@ -423,14 +422,15 @@ function GameApp() {
       >
         <div className="base-content" inert={shownRoutes.length > 0 || over}>
           <main>
+            <PendingInquiryBar g={g} open={open} />
             {state.tab === '활동' ? (
               <ActivityHome
                 g={g}
                 open={open}
                 settle={() => navigate([{ kind: '주간 정산' }])}
               />
-            ) : state.tab === '내 정보' ? (
-              <InfoView g={g} />
+            ) : state.tab === '채팅' ? (
+              <ChatList g={g} open={open} />
             ) : state.tab === '채무' ? (
               <DebtView g={g} act={act} />
             ) : state.tab === '보관함' ? (
@@ -444,6 +444,10 @@ function GameApp() {
           {nav.map((n) => (
             <button
               key={n.tab}
+              aria-label={n.tab}
+              aria-describedby={
+                n.tab === '채팅' ? 'chat-nav-description' : undefined
+              }
               className={n.tab === '활동' ? 'home-tab' : ''}
               aria-current={n.tab === state.tab ? 'page' : undefined}
               onClick={() => {
@@ -454,10 +458,18 @@ function GameApp() {
             >
               <span className="nav-icon">
                 <Icon name={n.icon} size={n.tab === '활동' ? 25 : 21} />
+                {n.tab === '채팅' && unreadChats(g) > 0 && (
+                  <span className="chat-nav-badge" aria-hidden="true">
+                    {unreadChats(g)}
+                  </span>
+                )}
               </span>
               <span>{n.tab}</span>
             </button>
           ))}
+          <span id="chat-nav-description" className="sr-only">
+            안 읽은 채팅 {unreadChats(g)}개
+          </span>
         </nav>
         {shownRoutes.length > 0 && !over && (
           <Sheet

@@ -1,3 +1,5 @@
+import { archiveInquiry, syncTradeChats, sellerChatClosed } from './chats';
+import { dialogueOpening } from './tradeDialogue';
 import { DAILY_RULES, WALK_EVENTS } from '../content/daily';
 import {
   advanceStocks,
@@ -514,6 +516,7 @@ function room(g: Game) {
 function preItem(g: Game, itemId: string) {
   const i = g.board.find((i) => i.id === itemId && i.expires > g.minute);
   if (!i) throw Error('판매가 끝난 매물입니다.');
+  if (sellerChatClosed(i)) throw Error('종료된 채팅입니다.');
   return i;
 }
 
@@ -568,7 +571,7 @@ export function newGame(seed = 1, player?: PlayerProfile): Game {
   g.logs[0].letter = 'getting-started';
   return g;
 }
-export function execute(
+function executeCommand(
   original: Game,
   command: Command,
   sceneResolved = false,
@@ -578,6 +581,12 @@ export function execute(
   // Copy first; any rejected/invalid command leaves all state and RNG unchanged.
   const g = structuredClone(toWeeklyActions(original));
   try {
+    if (command.type === 'readChat') {
+      const thread = g.chats?.find((t) => t.id === command.id);
+      if (!thread) throw Error('없는 채팅입니다.');
+      thread.unread = false;
+      return { game: g, ok: true, message: '' };
+    }
     if (command.type === 'storyNext' || command.type === 'storyChoice') {
       const st = g.story;
       const scene = st?.active;
@@ -807,9 +816,20 @@ export function execute(
     if (
       !interestPending(g) &&
       g.inquiries.length &&
-      !['accept', 'reject', 'break', 'counter'].includes(command.type)
+      ([
+        'buy',
+        'refresh',
+        'wait',
+        'dailyWork',
+        'walk',
+        'post',
+        'cancel',
+        'outletSell',
+        'repay',
+      ].includes(command.type) ||
+        (command.type === 'event' && command.choice === 'yes'))
     )
-      throw Error('구매 문의 응답이 필요합니다.');
+      throw Error('채팅에서 구매 문의에 먼저 답변해 주세요.');
     if (interestPending(g) && !['repay', 'payInterest'].includes(command.type))
       throw Error('주간 이자 납부가 필요합니다.');
     if (!sceneResolved && g.story && ['buy', 'accept'].includes(command.type)) {
@@ -817,8 +837,7 @@ export function execute(
         const item = preItem(g, command.id);
         room(g);
         affordable(g, item.negotiatedPrice ?? item.price);
-        if (item.purchaseBargain?.walked)
-          throw Error('판매자가 거래를 종료했습니다.');
+        if (sellerChatClosed(item)) throw Error('종료된 거래입니다.');
       }
       if (actionsLeft(g) < 1) throw Error('이번 주 행동을 모두 사용했습니다.');
       const scene = beforeTrade(g, command);
@@ -831,6 +850,14 @@ export function execute(
     const beforeLevels = ABILITIES.map((ability) => level(g, ability.stat));
     let message = '';
     switch (command.type) {
+      case 'startChat': {
+        const item = preItem(g, command.id);
+        if (sellerChatClosed(item)) throw Error('종료된 채팅입니다.');
+        if (item.marketId === 'auction')
+          throw Error('경매 상세에서 입찰할 수 있습니다.');
+        item.chat ??= dialogueOpening(item);
+        break;
+      }
       case 'dailyWork': {
         if (actionsLeft(g) < 1)
           throw Error('이번 주 행동을 모두 사용했습니다.');
@@ -932,14 +959,14 @@ export function execute(
         if (!i.chat || i.chatSettled) throw Error('진행 중인 흥정이 없습니다.');
         i.chat.push({ speaker: 'player', text: '이번 거래는 하지 않을게요.' });
         i.chatSettled = true;
+        i.chatClosed = true;
         message = '흥정을 마쳤습니다.';
         log(g, message);
         break;
       }
       case 'buy': {
         const item = preItem(g, command.id);
-        if (item.purchaseBargain?.walked)
-          throw Error('판매자가 거래를 종료했습니다.');
+        if (sellerChatClosed(item)) throw Error('종료된 거래입니다.');
         room(g);
         if (item.marketId === 'auction' && item.auction?.status !== 'won')
           throw Error('낙찰 후 결제할 수 있습니다.');
@@ -1092,6 +1119,15 @@ export function execute(
         const i = owned(g, sale.itemId);
         if (i.stateGrade === 'F')
           throw Error('폐기 대상 물품은 판매할 수 없습니다.');
+        archiveInquiry(g, q, 'completed', [
+          ...(q.chat ?? [
+            {
+              speaker: 'other' as const,
+              text: `${won(q.price)}에 거래할 수 있을까요?`,
+            },
+          ]),
+          { speaker: 'player', text: `네, ${won(q.price)}에 거래할게요.` },
+        ]);
         money(g, q.price);
         unlockItem(g, i);
         g.inventory = g.inventory.filter((i) => i.id !== sale.itemId);
@@ -1119,7 +1155,10 @@ export function execute(
           g.inquiries = g.inquiries.map((inquiry) =>
             inquiry.id === q.id ? reply.inquiry! : inquiry,
           );
-        else endInquiry(g, q.id);
+        else {
+          archiveInquiry(g, q, 'cancelled', reply.transcript);
+          endInquiry(g, q.id);
+        }
         message = reply.message;
         log(g, message);
         break;
@@ -1127,6 +1166,15 @@ export function execute(
       case 'break': {
         const q = g.inquiries.find((q) => q.id === command.id);
         if (!q) throw Error('종료된 문의입니다.');
+        archiveInquiry(g, q, 'cancelled', [
+          ...(q.chat ?? [
+            {
+              speaker: 'other' as const,
+              text: `${won(q.price)}에 거래할 수 있을까요?`,
+            },
+          ]),
+          { speaker: 'player', text: '이번 거래는 하지 않을게요.' },
+        ]);
         endInquiry(g, q.id);
         message = '구매자와의 거래를 파토냈습니다. 판매 글은 유지됩니다.';
         log(g, message);
@@ -1296,4 +1344,23 @@ export function execute(
       message: e instanceof Error ? e.message : '행동을 실행할 수 없습니다.',
     };
   }
+}
+
+/** Archive successful transitions, including recursive story trades, without changing economic RNG. */
+export function execute(
+  original: Game,
+  command: Command,
+  sceneResolved = false,
+  bundleId?: string,
+  tradeActions = 1,
+): Result {
+  const result = executeCommand(
+    original,
+    command,
+    sceneResolved,
+    bundleId,
+    tradeActions,
+  );
+  if (result.ok) syncTradeChats(result.game, original, command);
+  return result;
 }

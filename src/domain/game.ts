@@ -93,6 +93,7 @@ export interface Item {
   acquiredFor?: number;
   chat?: ChatMessage[];
   chatSettled?: boolean;
+  chatClosed?: boolean;
   id: string;
   title: string;
   kind: Kind;
@@ -147,6 +148,8 @@ export interface Event {
   expires: number;
 }
 export interface Game {
+  chats?: import('./chats').TradeThread[];
+  chatSerial?: number;
   /** Unpaid legacy business principal retained only when the cash ceiling is reached. */
   businessRefund?: number;
   daily?: import('./daily').DailyState;
@@ -195,6 +198,8 @@ export interface Game {
   lastEvent: number;
 }
 export type Command =
+  | { type: 'startChat'; id: string }
+  | { type: 'readChat'; id: string }
   | { type: 'dailyWork' }
   | { type: 'walk' }
   | { type: 'buyLottery'; count: number }

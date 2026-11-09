@@ -109,7 +109,9 @@ function pending() {
     g = run(g, { type: 'wait' });
   assert.ok(g.inquiries.length);
   for (const q of g.inquiries) delete q.traderId;
-  return g;
+  delete g.chats;
+  delete g.chatSerial;
+  return parseSave({ version: 2, game: g, favoriteIds: [] }).game;
 }
 
 test('start, deterministic RNG, pure engine, rejected commands do not change time/RNG', () => {
@@ -2087,7 +2089,15 @@ test('bargaining is independent of hidden item value and validates previous offe
   g.board[0] = purchaseReply(legacy, legacy.offers[0], () => 0.9).item;
   delete g.board[0].purchaseBargain!.previousOffer;
   const restored = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
-  assert.deepEqual(restored, g);
+  const restoredCore = structuredClone(restored);
+  delete restoredCore.chats;
+  delete restoredCore.chatSerial;
+  assert.deepEqual(restoredCore, g);
+  assert.deepEqual(restored.chats![0].messages, g.board[0].chat);
+  assert.deepEqual(
+    parseSave({ version: 2, game: restored, favoriteIds: [] }).game,
+    restored,
+  );
   for (const previousOffer of [-1, 0, 1.5, restored.board[0].price + 1]) {
     const invalid = structuredClone(restored);
     invalid.board[0].purchaseBargain!.previousOffer = previousOffer;

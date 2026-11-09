@@ -1,5 +1,11 @@
 import { MONEY_UNIT, roundMoney } from './money';
-import { isMoney, won, type Item, type Inquiry } from './game';
+import {
+  isMoney,
+  won,
+  type Item,
+  type Inquiry,
+  type ChatMessage,
+} from './game';
 import {
   bargainingMarket,
   canPurchaseOffer,
@@ -121,7 +127,7 @@ export function saleReply(
   asking: number,
   proposed: number | null,
   random: () => number,
-): { inquiry: Inquiry | null; message: string } {
+): { inquiry: Inquiry | null; message: string; transcript: ChatMessage[] } {
   const q = structuredClone(original);
   if (proposed !== null) {
     if (!isMoney(proposed)) throw Error('100원 단위 금액을 입력하세요.');
@@ -155,6 +161,7 @@ export function saleReply(
     });
     return {
       inquiry: q,
+      transcript: q.chat,
       message: `구매자가 ${won(q.price)} 제안을 수락했습니다.`,
     };
   }
@@ -165,6 +172,13 @@ export function saleReply(
   )
     return {
       inquiry: null,
+      transcript: [
+        ...q.chat,
+        {
+          speaker: 'other',
+          text: '이번 거래는 어려울 것 같아요. 다른 분께 판매해 주세요.',
+        },
+      ],
       message: '구매자가 거래를 파토냈습니다. 판매 글은 유지됩니다.',
     };
   if (!counter) q.rounds++;
@@ -183,6 +197,7 @@ export function saleReply(
   });
   return {
     inquiry: q,
+    transcript: q.chat,
     message: `구매자가 ${won(q.price)}으로 다시 제안했습니다.`,
   };
 }

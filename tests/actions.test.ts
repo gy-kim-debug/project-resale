@@ -85,7 +85,7 @@ test('navigation, favorites and rejected actions do not show presentation or con
   setup();
   const s = useGameStore;
   const minute = s.getState().game!.minute;
-  s.getState().setTab('내 정보');
+  s.getState().setTab('채팅');
   s.getState().toggleFavorite('x');
   assert.equal(s.getState().action, null);
   assert.equal(await s.getState().act({ type: 'buy', id: 'missing' }), false);
@@ -538,4 +538,54 @@ test('legacy saves gain no tutorial retrospectively and malformed or duplicate l
   bad.logs.pop();
   bad.logs[0].letter = 'unknown' as never;
   assert.throws(() => parseSave({ version: 2, game: bad, favoriteIds: [] }));
+});
+
+test('unanswered inquiries allow tab and market navigation; reading persists silently while paid actions stay blocked', async () => {
+  setup();
+  const g = newGame(42),
+    item = g.board.shift()!;
+  g.inventory = [{ ...item, acquiredFor: item.price }];
+  g.sales = [
+    {
+      id: 'nav-sale',
+      itemId: item.id,
+      price: 100000,
+      created: 0,
+      expires: 3840,
+      nextCheck: 960,
+    },
+  ];
+  g.inquiries = [
+    {
+      id: 'nav-buyer',
+      saleId: 'nav-sale',
+      name: '문의손님',
+      price: 80000,
+      max: 90000,
+      rounds: 0,
+    },
+  ];
+  useGameStore.setState({ game: g });
+  useGameStore.getState().setTab('채팅');
+  assert.equal(useGameStore.getState().tab, '채팅');
+  useGameStore.getState().setTab('일상');
+  assert.equal(useGameStore.getState().tab, '일상');
+  useGameStore.getState().selectMarket('computers');
+  assert.equal(useGameStore.getState().selectedMarket, 'computers');
+  assert.strictEqual(useGameStore.getState().game, g);
+  assert.equal(await useGameStore.getState().act({ type: 'wait' }), false);
+  assert.equal(useGameStore.getState().action, null);
+  assert.equal(
+    await useGameStore
+      .getState()
+      .act({ type: 'readChat', id: 'sell:nav-buyer' }),
+    true,
+  );
+  assert.equal(useGameStore.getState().action, null);
+  assert.equal(useGameStore.getState().notice, '');
+  assert.equal(useGameStore.getState().game!.minute, g.minute);
+  assert.equal(useGameStore.getState().game!.cash, g.cash);
+  assert.equal(useGameStore.getState().game!.chats![0].unread, false);
+  await flushSaves();
+  assert.equal(writes.at(-1)?.game.chats![0].unread, false);
 });

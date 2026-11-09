@@ -317,17 +317,20 @@ export const useGameStore = create<State>((set, get) => ({
       set({ notice: result.message, noticeId: get().noticeId + 1, ok: false });
       return false;
     }
-    set({
-      discarded:
-        command.type === 'discard'
-          ? { before: g, after: result.game, slot: current.activeSlot }
-          : null,
-    });
+    if (command.type !== 'readChat')
+      set({
+        discarded:
+          command.type === 'discard'
+            ? { before: g, after: result.game, slot: current.activeSlot }
+            : null,
+      });
     clearTimeout(highlightTimer);
     // Navigation and chat replies update immediately, without action presentation.
     if (
       ((result.game.story?.active && !g.story?.active) ||
         [
+          'readChat',
+          'startChat',
           'storyNext',
           'storyChoice',
           'startSettlement',
@@ -348,6 +351,8 @@ export const useGameStore = create<State>((set, get) => ({
         game: result.game,
         noticeId: get().noticeId + 1,
         notice:
+          command.type === 'readChat' ||
+          command.type === 'startChat' ||
           command.type === 'storyNext' ||
           (command.type === 'storyChoice' && result.message === '') ||
           command.type === 'dialogue' ||
@@ -416,7 +421,7 @@ export const useGameStore = create<State>((set, get) => ({
     return actionFinished;
   },
   setTab(tab) {
-    if (get().action || get().slotBusy || get().game?.inquiries.length) return;
+    if (get().action || get().slotBusy) return;
     set({ tab, notice: '' });
     if (get().screen === 'game')
       resumeSession.save({ screen: 'game', slot: get().activeSlot, tab });
@@ -438,7 +443,6 @@ export const useGameStore = create<State>((set, get) => ({
       !current.game ||
       current.action ||
       current.slotBusy ||
-      current.game.inquiries.length ||
       !isActiveMarketId(id) ||
       current.selectedMarket === id
     )

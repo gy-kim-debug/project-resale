@@ -295,7 +295,7 @@ test('daily save validation rejects corrupt prices, duplicate draw weeks, invali
     assert.equal(isGame(copy), false);
   }
 });
-test('work, lottery and stocks respect mandatory inquiry and settlement locks', () => {
+test('pending inquiries block paid actions while free finance stays available; settlement still restricts finance', () => {
   const pending = newGame(5);
   const item = pending.board.shift()!;
   item.acquiredFor = item.price;
@@ -317,15 +317,18 @@ test('work, lottery and stocks respect mandatory inquiry and settlement locks', 
     rounds: 0,
   });
   assert.ok(isGame(pending));
+  for (const c of [{ type: 'dailyWork' }, { type: 'walk' }] as const) {
+    const r = execute(pending, c);
+    assert.equal(r.ok, false);
+    assert.strictEqual(r.game, pending);
+  }
   for (const c of [
-    { type: 'dailyWork' },
-    { type: 'walk' },
     { type: 'buyLottery', count: 1 },
     { type: 'tradeStock', id: 'local', side: 'buy', quantity: 1 },
   ] as const) {
     const r = execute(pending, c);
-    assert.equal(r.ok, false);
-    assert.strictEqual(r.game, pending);
+    assert.equal(r.ok, true);
+    assert.equal(r.game.minute, pending.minute);
   }
   let g = newGame(5);
   g.cash = settlementAmount(g);

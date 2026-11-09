@@ -122,6 +122,7 @@
 
 - [장터 판매 가격 설정과 수정 제한](trading/marketplace/LISTING_PRICE.md)
 - [판매 글 등록 한도와 확장](trading/marketplace/LISTING_LIMITS.md)
+- [거래 채팅과 이어하기](trading/CHAT_THREADS.md)
 - [복수 구매 문의와 필수 응답](trading/marketplace/INQUIRIES.md)
 - [판매 가격과 구매 문의의 관계](trading/marketplace/PRICE_AND_DEMAND.md)
 - [장터 판매 성사 방식](trading/marketplace/SALE_ACCEPTANCE.md)

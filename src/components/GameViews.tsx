@@ -1,3 +1,5 @@
+import { ChatRoom } from './ChatViews';
+import { buyChatId, sellerChatClosed } from '../domain/chats';
 import { LotteryView, StocksView } from './DailyViews';
 import { WELCOME_LETTER } from '../content/welcomeLetter';
 import { MARKET_SKILLS, REPAIR_RULES } from '../content/conditionGrades';
@@ -64,6 +66,8 @@ import {
 
 export type Route = {
   kind:
+    | '채팅방'
+    | '내 정보'
     | '복권'
     | '주식'
     | '장터'
@@ -580,15 +584,19 @@ export function ListingView({
   g,
   item,
   act,
+  open,
+  conversation = false,
 }: {
   g: Game;
   item: Item;
   act: Act;
+  open: Open;
+  conversation?: boolean;
 }) {
   const favorites = useGameStore((s) => s.favoriteIds);
   const toggle = useGameStore((s) => s.toggleFavorite);
   const [confirm, setConfirm] = useState(false);
-  const [chatOpen, setChatOpen] = useState(!!item.chat);
+  const [chatOpen, setChatOpen] = useState(conversation);
   const price = item.negotiatedPrice ?? item.price;
   return (
     <>
@@ -622,7 +630,17 @@ export function ListingView({
           </Button>
           {item.marketId !== 'auction' && (
             <section className="card negotiation-card">
-              <Button onClick={() => setChatOpen(true)}>
+              <Button
+                disabled={sellerChatClosed(item)}
+                onClick={async () => {
+                  if (conversation) {
+                    setChatOpen(true);
+                    return;
+                  }
+                  if (await act({ type: 'startChat', id: item.id }))
+                    open({ kind: '채팅방', id: buyChatId(item.id) });
+                }}
+              >
                 {item.chat ? '대화 이어보기' : '판매자와 채팅'}
               </Button>
             </section>
@@ -634,7 +652,7 @@ export function ListingView({
           <Button
             primary
             disabled={
-              !!item.purchaseBargain?.walked ||
+              sellerChatClosed(item) ||
               g.cash < price ||
               g.inventory.length >= RULES.capacity
             }
@@ -648,7 +666,7 @@ export function ListingView({
             <p>{won(price)}</p>
             <Button
               disabled={
-                !!item.purchaseBargain?.walked ||
+                sellerChatClosed(item) ||
                 g.cash < price ||
                 g.inventory.length >= RULES.capacity
               }
@@ -862,92 +880,104 @@ export function InstantSaleView({ g, act }: { g: Game; act: Act }) {
     </>
   );
 }
-export function InquiriesView({ g, act }: { g: Game; act: Act }) {
+export function InquiriesView({
+  g,
+  act,
+  onlyId,
+}: {
+  g: Game;
+  act: Act;
+  onlyId?: string;
+}) {
   return (
     <>
-      {g.inquiries.map((q) => {
-        const sale = g.sales.find((s) => s.id === q.saleId);
-        const item = g.inventory.find((i) => i.id === sale?.itemId);
-        const presets = sale
-          ? [
-              { label: '등록가', amount: sale.price },
-              {
-                label: '절충가',
-                amount: Math.max(
-                  q.price + MONEY_UNIT,
-                  q.price + moneyRatio(sale.price - q.price, 50),
-                ),
-              },
-              {
-                label: '소폭 인상',
-                amount: Math.max(
-                  q.price + MONEY_UNIT,
-                  q.price + moneyRatio(sale.price - q.price, 25),
-                ),
-              },
-            ].filter(
-              (preset, index, all) =>
-                preset.amount > q.price &&
-                preset.amount <= sale.price &&
-                all.findIndex((other) => other.amount === preset.amount) ===
-                  index,
-            )
-          : [];
-        return (
-          <section className="card" key={q.id}>
-            <h2>{q.name}</h2>
-            <TraderProfile
-              traderId={q.traderId}
-              entityId={q.id}
-              name={q.name}
-              role="구매자"
-            />
-            {item && <ItemArt item={item} />}
-            <p>
-              {item?.title} · 등록 {won(sale?.price ?? 0)}
-            </p>
-            {item && <ItemComparison g={g} item={item} />}
+      {g.inquiries
+        .filter((q) => !onlyId || q.id === onlyId)
+        .map((q) => {
+          const sale = g.sales.find((s) => s.id === q.saleId);
+          const item = g.inventory.find((i) => i.id === sale?.itemId);
+          const presets = sale
+            ? [
+                { label: '등록가', amount: sale.price },
+                {
+                  label: '절충가',
+                  amount: Math.max(
+                    q.price + MONEY_UNIT,
+                    q.price + moneyRatio(sale.price - q.price, 50),
+                  ),
+                },
+                {
+                  label: '소폭 인상',
+                  amount: Math.max(
+                    q.price + MONEY_UNIT,
+                    q.price + moneyRatio(sale.price - q.price, 25),
+                  ),
+                },
+              ].filter(
+                (preset, index, all) =>
+                  preset.amount > q.price &&
+                  preset.amount <= sale.price &&
+                  all.findIndex((other) => other.amount === preset.amount) ===
+                    index,
+              )
+            : [];
+          return (
+            <section className="card" key={q.id}>
+              <h2>{q.name}</h2>
+              <TraderProfile
+                traderId={q.traderId}
+                entityId={q.id}
+                name={q.name}
+                role="구매자"
+              />
+              {item && <ItemArt item={item} />}
+              <p>
+                {item?.title} · 등록 {won(sale?.price ?? 0)}
+              </p>
+              {item && <ItemComparison g={g} item={item} />}
 
-            <TradeChat
-              name={q.name}
-              messages={
-                q.chat ?? [
-                  {
-                    speaker: 'other',
-                    text: `${won(q.price)}에 거래할 수 있을까요?`,
-                  },
-                ]
-              }
-            />
-            {sale &&
-              q.rounds < SALE_BARGAINING.maxRounds &&
-              q.price < sale.price && (
-                <AmountChoice
-                  key={`${q.id}-${q.rounds}`}
-                  presets={presets}
-                  title="가격 제안"
-                  label="제안할 판매 가격 (원)"
-                  min={q.price + MONEY_UNIT}
-                  max={sale.price}
-                  submit={(price) => act({ type: 'counter', id: q.id, price })}
-                />
-              )}
-            <Button
-              primary
-              actionCost={1}
-              onClick={() => act({ type: 'accept', id: q.id })}
-            >
-              수락하고 거래
-            </Button>
-            <Button onClick={() => act({ type: 'reject', id: q.id })}>
-              거절
-            </Button>
-            <Button danger onClick={() => act({ type: 'break', id: q.id })}>
-              거래 파토
-            </Button>
-          </section>
-        );
-      })}
+              <TradeChat
+                name={q.name}
+                messages={
+                  q.chat ?? [
+                    {
+                      speaker: 'other',
+                      text: `${won(q.price)}에 거래할 수 있을까요?`,
+                    },
+                  ]
+                }
+              />
+              {sale &&
+                q.rounds < SALE_BARGAINING.maxRounds &&
+                q.price < sale.price && (
+                  <AmountChoice
+                    key={`${q.id}-${q.rounds}`}
+                    presets={presets}
+                    title="가격 제안"
+                    label="제안할 판매 가격 (원)"
+                    min={q.price + MONEY_UNIT}
+                    max={sale.price}
+                    submit={(price) =>
+                      act({ type: 'counter', id: q.id, price })
+                    }
+                  />
+                )}
+              <Button
+                primary
+                actionCost={1}
+                onClick={() => act({ type: 'accept', id: q.id })}
+              >
+                수락하고 거래
+              </Button>
+              <Button onClick={() => act({ type: 'reject', id: q.id })}>
+                거절
+              </Button>
+              <Button danger onClick={() => act({ type: 'break', id: q.id })}>
+                거래 파토
+              </Button>
+            </section>
+          );
+        })}
     </>
   );
 }
@@ -1043,6 +1073,10 @@ export function RouteView({
   const currentValue = item?.checked ? marketValue(g, item) : null;
   const purchaseCost = item ? acquisitionCost(item) : 0;
   switch (route.kind) {
+    case '내 정보':
+      return <InfoView g={g} />;
+    case '채팅방':
+      return <ChatRoom g={g} id={route.id ?? ''} act={act} open={open} />;
     case '복권':
       return <LotteryView g={g} act={act} />;
     case '주식':
@@ -1056,7 +1090,7 @@ export function RouteView({
         listing.marketId === 'auction' ? (
           <AuctionListingView g={g} item={listing} act={act} />
         ) : (
-          <ListingView g={g} item={listing} act={act} />
+          <ListingView g={g} item={listing} act={act} open={open} />
         )
       ) : (
         <div className="empty">
@@ -1269,7 +1303,7 @@ function MailboxView({ g, open }: { g: Game; open: (route: Route) => void }) {
   );
 }
 
-function AuctionListingView({
+export function AuctionListingView({
   g,
   item,
   act,

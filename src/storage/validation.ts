@@ -1,3 +1,4 @@
+import { validChatArchive } from '../domain/chats';
 import { isDailyState, isDailyScene } from '../domain/daily';
 import { SETTLEMENT_EVENTS } from '../content/settlementEvents';
 import { INTRO_BEATS } from '../content/intro';
@@ -86,6 +87,12 @@ function listing(v: unknown, itemKind: unknown): boolean {
   );
 }
 function item(v: unknown): v is Item {
+  if (
+    record(v) &&
+    v.chatClosed !== undefined &&
+    typeof v.chatClosed !== 'boolean'
+  )
+    return false;
   return (
     record(v) &&
     (v.stateGrade === undefined
@@ -626,6 +633,7 @@ export function isGame(v: unknown): v is Game {
     (!integer(v.businessRefund, RULES.maxMoney) || v.businessRefund % 100 !== 0)
   )
     return false;
+  if (!validChatArchive(v.chats, v.chatSerial)) return false;
   if (!isDailyState(v.daily, Number(v.interestWeek ?? 0) + 1)) return false;
   if (!integer(v.marketFactor, 200) || !kind(v.trend)) return false;
   if (

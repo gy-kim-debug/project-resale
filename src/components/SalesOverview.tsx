@@ -1,3 +1,4 @@
+import { sellChatId } from '../domain/chats';
 import { listingLimit } from '../domain/engine';
 import { durationText, won, type Game } from '../domain/game';
 import { marketDefinition, marketOf } from '../content/markets';
@@ -42,13 +43,20 @@ export function SalesOverview({ g, open }: { g: Game; open: Open }) {
           </dl>
           <ul className="sales-overview-list">
             {listings.map(({ sale, item, inquiries }) => {
-              const expired = sale.expires <= g.minute;
+              const expired =
+                sale.expires <= g.minute && inquiries.length === 0;
               return (
                 <li key={sale.id}>
                   <button
                     className="sale-overview-row"
                     aria-label={`${item.title} 판매 상세`}
-                    onClick={() => open({ kind: '물품', id: item.id })}
+                    onClick={() =>
+                      open(
+                        inquiries.length
+                          ? { kind: '채팅방', id: sellChatId(inquiries[0].id) }
+                          : { kind: '물품', id: item.id },
+                      )
+                    }
                   >
                     <ItemArt item={item} />
                     <span className="sale-overview-body">

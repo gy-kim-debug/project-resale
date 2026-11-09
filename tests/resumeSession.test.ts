@@ -212,13 +212,13 @@ test('only successful slot entry and explicit successful menu exit change the re
 });
 test('storage read failure keeps recovery controls and can retry the same selected slot after recovery', async () => {
   await reset();
-  intent = { screen: 'game', slot: 1, tab: '내 정보' };
+  intent = { screen: 'game', slot: 1, tab: '채팅' };
   failList = true;
   await cold();
   assert.equal(useGameStore.getState().screen, 'menu');
   assert.equal(useGameStore.getState().storageBlocked, true);
   assert.equal(useGameStore.getState().game, null);
-  assert.deepEqual(intent, { screen: 'game', slot: 1, tab: '내 정보' });
+  assert.deepEqual(intent, { screen: 'game', slot: 1, tab: '채팅' });
   failList = false;
   await cold();
   assert.equal(useGameStore.getState().screen, 'game');
