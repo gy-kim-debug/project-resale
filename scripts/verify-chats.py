@@ -15,7 +15,9 @@ def saved(page,predicate):
  raise AssertionError('Expected chat save update missing')
 def idle(page):expect(page.locator('.action-layer')).to_have_count(0)
 def nav(page,label):
- if page.locator('.sheet-layer').count():page.get_by_role('button',name='활동으로 이동',exact=True).click()
+ if page.get_by_role('button',name='채팅 나가기',exact=True).count():
+  before=read(page);page.get_by_role('button',name='채팅 나가기',exact=True).click();expect(page.get_by_role('heading',name='채팅',exact=True)).to_be_visible();assert read(page)==before
+ elif page.locator('.sheet-layer').count():page.get_by_role('button',name='활동으로 이동',exact=True).click()
  page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name=label,exact=True).click()
 def inject(page,key):page.evaluate(WRITE,FIXTURES[key]);page.reload();expect(page.get_by_role('heading',name='채팅',exact=True)).to_be_visible()
 def confirm(page,button):
@@ -39,6 +41,7 @@ with sync_playwright() as p:
   cash=read(page)['cash'];price=read(page)['inquiries'][0]['price'];page.get_by_role('button',name='수락하고 거래',exact=True).click();g=saved(page,lambda g:len(g['inquiries'])==0);idle(page);assert g['cash']==cash+price and g['weekActions']==1 and len(g['sales'])==0;expect(page.locator('.chat-ended-status')).to_have_text('거래 완료');expect(page.get_by_role('button',name='수락하고 거래',exact=True)).to_have_count(0)
   nav(page,'채팅');expect(page.locator('.chat-list-row')).to_contain_text('거래 완료')
   inject(page,'pending');page.locator('.chat-list-row').first.click();saved(page,lambda g:not g['chats'][0]['unread']);page.get_by_role('button',name='거래 파토',exact=True).click();g=saved(page,lambda g:len(g['inquiries'])==0);expect(page.locator('.chat-ended-status')).to_have_text('거래 종료');assert len(g['sales'])==1 and len(g['inventory'])==1 and g['weekActions']==0
+  nav(page,'채팅');expect(page.locator('.chat-list-row')).to_contain_text('거래 종료')
   inject(page,'legacy');expect(page.locator('.chat-list-row')).to_have_count(1);page.locator('.chat-list-row').first.click();saved(page,lambda g:len(g.get('chats',[]))==1 and not g['chats'][0]['unread']);expect(page.locator('.trade-chat')).to_contain_text('거래');nav(page,'채팅');page.get_by_role('button',name='구매',exact=True).click();expect(page.locator('.chat-list-row')).to_have_count(1)
   if w==390:page.screenshot(path='work/chat-list-390.png')
   no_overflow(page);assert not errors,errors;c.close();print(f'{w}x{h}: new tab order+activity profile entry+two header tools, purchase chat→list/reload/resume→buy→sell→archived record, no double actions, pending navigation+action block, unread/read, seller negotiation resume/complete/cancel with listing retained, legacy chat migration, no typing/overflow/errors PASS',flush=True)

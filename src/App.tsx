@@ -352,6 +352,12 @@ function GameApp() {
   const over = !!g && g.status !== 'playing';
   // Debt settlement is mandatory; unanswered inquiries are handled in the chat tab.
   const shownRoutes: Route[] = due ? [{ kind: '주간 정산' }] : routes;
+  const currentRoute = shownRoutes.at(-1);
+  const endedChat =
+    currentRoute?.kind === '채팅방' &&
+    g?.chats?.some(
+      (thread) => thread.id === currentRoute.id && thread.status !== 'active',
+    );
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [state.tab]);
@@ -493,15 +499,29 @@ function GameApp() {
               ) : undefined
             }
             footer={
-              actionsLeft(g) === 0 &&
-              !pending &&
-              shownRoutes.at(-1)?.kind !== '주간 정산' ? (
-                <aside className="sheet-settlement-bar">
-                  <Button onClick={() => navigate([{ kind: '주간 정산' }])}>
-                    이번주 정산하기
-                  </Button>
-                </aside>
-              ) : null
+              <>
+                {endedChat && !pending && (
+                  <div className="sheet-chat-exit">
+                    <Button
+                      onClick={() => {
+                        navigate([], '채팅', true);
+                        state.dismiss();
+                      }}
+                    >
+                      채팅 나가기
+                    </Button>
+                  </div>
+                )}
+                {actionsLeft(g) === 0 &&
+                  !pending &&
+                  shownRoutes.at(-1)?.kind !== '주간 정산' && (
+                    <aside className="sheet-settlement-bar">
+                      <Button onClick={() => navigate([{ kind: '주간 정산' }])}>
+                        이번주 정산하기
+                      </Button>
+                    </aside>
+                  )}
+              </>
             }
           >
             {state.saveError && shownRoutes.at(-1)?.kind === '저장 관리' && (

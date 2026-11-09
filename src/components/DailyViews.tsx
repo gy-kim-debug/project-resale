@@ -193,10 +193,17 @@ function PriceChart({
   const y = (price: number) => 112 - ((price - low) / (span * 1.24)) * 96;
   const tickOf = (p: (typeof history)[number]) => p.tick ?? p.week - 1;
   const active = history.find((p) => tickOf(p) === selected) ?? history.at(-1)!;
+  const period = (point: (typeof history)[number]) => {
+    const ago = tickOf(history.at(-1)!) - tickOf(point);
+    return ago === 0 ? '현재' : ago === 1 ? '직전' : `${ago}회 전`;
+  };
   return (
     <div className="stock-chart">
       <p aria-live="polite">
-        시세 {tickOf(active) + 1} <strong>{won(active.price)}</strong>
+        <span>
+          {active.week}주차 · {period(active)}
+        </span>{' '}
+        <strong>{won(active.price)}</strong>
       </p>
       <svg
         viewBox="0 0 320 140"
@@ -221,11 +228,13 @@ function PriceChart({
             fill="currentColor"
           />
         ))}
-        <text x="15" y="136">
-          시세 {tickOf(history[0]) + 1}
-        </text>
+        {history.length > 1 && (
+          <text x="15" y="136">
+            {period(history[0])}
+          </text>
+        )}
         <text x="305" y="136" textAnchor="end">
-          시세 {tickOf(history.at(-1)!) + 1}
+          현재
         </text>
       </svg>
       <details>
@@ -237,7 +246,7 @@ function PriceChart({
               aria-pressed={tickOf(p) === tickOf(active)}
               onClick={() => setSelected(tickOf(p))}
             >
-              시세 {tickOf(p) + 1} · {won(p.price)}
+              {p.week}주차 · {period(p)} · {won(p.price)}
             </button>
           ))}
         </div>
@@ -289,8 +298,7 @@ export function StocksView({ g, act }: { g: Game; act: Act }) {
       </div>
       <section className="card stock-summary">
         <span className="eyebrow">
-          {definition.sector} · {weekOf(g)}주차 · 시세{' '}
-          {(d.stockTick ?? d.quoteWeek - 1) + 1}
+          {definition.sector} · {weekOf(g)}주차
         </span>
         <h2>{definition.name}</h2>
         <strong className="daily-big-number">{won(price)}</strong>

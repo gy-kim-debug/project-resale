@@ -16,7 +16,9 @@ def wait_saved(page,predicate):
   page.wait_for_timeout(30)
  raise AssertionError('Expected slot update missing')
 def idle(page):expect(page.locator('.action-layer')).to_have_count(0)
-def nav(page,label):page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name=label,exact=True).click()
+def nav(page,label):
+ if page.locator('.sheet-layer').count():page.get_by_role('button',name='활동으로 이동',exact=True).click()
+ page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name=label,exact=True).click()
 def row(page,label):return page.locator('.daily-row').filter(has_text=label)
 def confirm(page,button,text,accept=True):
  before=read(page)
@@ -79,7 +81,7 @@ with sync_playwright() as p:
   # Next week is a new purchase; its prompt can be cancelled without a navigation detour.
   before=read(page);confirm(page,row(page,'복권'),'복권 1장',False);assert read(page)==before
   page.get_by_role('button',name='지난 추첨 보기',exact=True).click();expect(page.get_by_role('heading',name='지난 추첨',exact=True)).to_be_visible();expect(page.locator('.lotto-verdict')).to_be_visible()
-  page.evaluate(WRITE,CHART);page.reload();row(page,'주식').click();expect(page.get_by_role('img',name=re.compile('최근 6개 시세'))).to_be_visible();page.get_by_text('시세 기록 보기',exact=True).click();page.get_by_role('button',name=re.compile('^시세 2 ·')).click();expect(page.locator('.stock-chart p')).to_contain_text('시세 2');page.get_by_role('button',name='바이오',exact=True).click();expect(page.locator('.stock-summary h2')).to_have_text('바이오');no_overflow(page)
+  page.evaluate(WRITE,CHART);page.reload();row(page,'주식').click();expect(page.get_by_role('img',name=re.compile('최근 6개 시세'))).to_be_visible();page.get_by_text('시세 기록 보기',exact=True).click();page.get_by_role('button',name=re.compile('주차 · 4회 전 ·')).click();expect(page.locator('.stock-chart p')).to_contain_text('4회 전');page.get_by_role('button',name='바이오',exact=True).click();expect(page.locator('.stock-summary h2')).to_have_text('바이오');no_overflow(page)
   if w==390:page.screenshot(path='work/theme-stocks-390.png',full_page=True)
   page.evaluate(WRITE,LEGACY);page.reload();row(page,'주식').click();expect(page.get_by_role('img',name=re.compile('최근 3개 시세'))).to_be_visible();expect(page.locator('.stock-summary .daily-big-number')).to_have_text('20,000 원');expect(page.get_by_role('heading',name=re.compile('내 보유 주식 3주'))).to_be_visible()
   nav(page,'일상');confirm(page,row(page,'아르바이트'),'아르바이트를 할까요');g=wait_saved(page,lambda g:g['weekActions']==1);idle(page);assert g['cash']==5020000 and g['daily']['stockTick']==4 and g['daily']['stocks'][0]['quantity']==3 and g['daily']['stocks'][0]['cost']==60000 and [p['price'] for p in g['daily']['stocks'][0]['history'][:3]]==[19000,19500,20000]

@@ -4119,3 +4119,13 @@ html {
     padding-inline: 16px;
   }
 }
+
+.sheet-chat-exit {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.sheet-chat-exit .action-button {
+  margin: 0;
+}
