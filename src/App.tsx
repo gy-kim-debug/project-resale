@@ -24,8 +24,12 @@ import {
   type Route,
 } from './components/GameViews';
 import type { Game } from './domain/game';
-import { weekOf, actionsLeft, won, ACTIONS_PER_WEEK } from './domain/game';
-import { ActionBudget, ActionProgress } from './components/ActionProgress';
+import { weekOf, actionsLeft, won } from './domain/game';
+import {
+  ActionBudget,
+  ActionProgress,
+  HeaderBudget,
+} from './components/ActionProgress';
 import type {
   ActionPresentation,
   Changes,
@@ -37,8 +41,7 @@ import {
   interestPending,
   interestAmount,
   mandatoryPrincipal,
-  paymentWeek,
-  weeklyRateText,
+  settlementAmount,
 } from './domain/debt';
 
 const nav: { tab: Tab; icon: IconName }[] = [
@@ -120,42 +123,29 @@ function Header({
           <Icon name="settings" size={21} />
         </button>
       </div>
+      {action ? (
+        <ActionBudget key={action.id} action={action} />
+      ) : (
+        <HeaderBudget g={g} />
+      )}
       <div
-        className={`status-top${g.cash >= 1_000_000_000 ? ' status-top-wide' : ''}`}
+        key={`cash-${actionId}`}
+        className={`header-cash${g.cash >= 1_000_000_000_000 ? ' header-cash-wide' : ''}${changed('cash')}`}
       >
-        <time
-          key={`time-${actionId}`}
-          className={`header-time${changed('minute')}`}
-        >
-          {action ? (
-            <ActionBudget key={action.id} action={action} />
-          ) : (
-            <>
-              <span className="status-day">{weekOf(g)}주차</span>{' '}
-              <strong className="status-clock">
-                남은 행동 {actionsLeft(g)}/{ACTIONS_PER_WEEK}
-              </strong>
-            </>
-          )}
-        </time>
-        <span
-          key={`cash-${actionId}`}
-          className={`header-cash${changed('cash')}`}
-        >
-          <span className="header-label">현금</span> <b>{won(g.cash)}</b>
-        </span>
+        <span className="header-label">보유 현금</span>
+        <b>{won(g.cash)}</b>
       </div>
-      <div className="header-obligations">
-        <div className="header-interest">
-          <span>이번 주 남은 의무 원금</span>
-          <strong>{won(mandatoryPrincipal(g))}</strong>
+      <div
+        className={`header-payment${g.cash < settlementAmount(g) ? ' payment-short' : ''}`}
+      >
+        <div className="header-payment-total">
+          <span>이번 주 납부금</span>
+          <strong>{won(settlementAmount(g))}</strong>
         </div>
-        <div className="header-interest">
-          <span>
-            {paymentWeek(g)}주차 이자{' '}
-            <small>{weeklyRateText(paymentWeek(g))}</small>
-          </span>
-          <strong>{won(interestAmount(g))}</strong>
+        <div className="header-payment-detail">
+          <span>원금 {won(mandatoryPrincipal(g))}</span>
+          <span aria-hidden="true">·</span>
+          <span>이자 {won(interestAmount(g))}</span>
         </div>
       </div>
       <div key={`debt-${actionId}`} className={`header-debt${changed('debt')}`}>

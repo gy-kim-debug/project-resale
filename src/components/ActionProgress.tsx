@@ -1,4 +1,5 @@
 import { ActionScene } from './ActionScene';
+import { Icon } from './Icon';
 import { useEffect, useRef, useState } from 'react';
 import type { ActionPresentation } from '../app/actionPresentation';
 import {
@@ -17,15 +18,41 @@ export function ActionBudget({ action }: { action: ActionPresentation }) {
     return () => clearTimeout(timer);
   }, [action]);
   const snapshot = finished ? action.after : action.before;
+  return <HeaderBudget g={snapshot} />;
+}
+export function HeaderBudget({ g }: { g: ActionPresentation['after'] }) {
+  const left = actionsLeft(g);
   return (
     <>
-      <span className="status-day">{weekOf(snapshot)}주차</span>
-      <strong className="status-clock">
-        남은 행동 {actionsLeft(snapshot)}/{ACTIONS_PER_WEEK}
-      </strong>
+      <time className="header-week">
+        <span className="status-day">{weekOf(g)}주차</span>
+      </time>
+      <div className="header-budget">
+        <div className="header-budget-row">
+          <span>남은 행동</span>
+          <strong>
+            <Icon name="activity" size={15} />
+            <span>
+              {left}
+              <small> / {ACTIONS_PER_WEEK}</small>
+            </span>
+          </strong>
+        </div>
+        <div
+          className="header-budget-track"
+          role="meter"
+          aria-label="남은 행동"
+          aria-valuemin={0}
+          aria-valuemax={ACTIONS_PER_WEEK}
+          aria-valuenow={left}
+        >
+          <span style={{ width: `${(left / ACTIONS_PER_WEEK) * 100}%` }} />
+        </div>
+      </div>
     </>
   );
 }
+
 export function ActionProgress({ action }: { action: ActionPresentation }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
