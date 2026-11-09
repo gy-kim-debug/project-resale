@@ -1,3 +1,4 @@
+import { upgradeStockState } from './daily';
 import { retireBusinesses } from './business';
 import type { Game, Item } from './game';
 import { auctionStep } from './auction';
@@ -99,6 +100,7 @@ export function normalizeMoney(original: Game): Game {
   }
   g.moneyUnit = 100;
   retireBusinesses(g);
+  upgradeStockState(g);
   return g;
 }
 export function allMoneyAligned(g: Game): boolean {

@@ -1,5 +1,6 @@
 import { DAILY_RULES, WALK_EVENTS } from '../content/daily';
 import {
+  advanceStocks,
   buyLottery,
   tradeStock,
   takeWalk,
@@ -463,6 +464,7 @@ function advance(g: Game, actions: number, generate = true) {
   g.weekActions = (g.weekActions ?? 0) + actions;
   const before = g.minute;
   g.minute += actions * ACTION_TICK;
+  advanceStocks(g, actions);
   if (dayOf(g) > Math.floor(before / 1440) + 1) endDay(g);
   else daily(g);
   expire(g);

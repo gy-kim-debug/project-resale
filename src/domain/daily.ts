@@ -32,11 +32,14 @@ export interface DailyState {
   version: 1;
   seed: number;
   quoteWeek: number;
+  /** Absent only in legacy weekly quote saves. */
+  stockTick?: number;
+  stockSeed?: number;
   stocks: {
     id: StockId;
     quantity: number;
     cost: number;
-    history: { week: number; price: number }[];
+    history: { week: number; price: number; tick?: number }[];
   }[];
   tickets: { week: number; count: number; numbers?: number[] };
   draws: LotteryResult[];
@@ -49,11 +52,13 @@ export function dailyState(g: Game): DailyState {
       version: 1,
       seed: (g.seed ^ 0x734ad985) >>> 0,
       quoteWeek: weekOf(g),
+      stockTick: 0,
+      stockSeed: (g.seed ^ 0x491a5e37) >>> 0,
       stocks: STOCKS.map((s) => ({
         id: s.id,
         quantity: 0,
         cost: 0,
-        history: [{ week: weekOf(g), price: s.initial }],
+        history: [{ week: weekOf(g), price: s.initial, tick: 0 }],
       })),
       tickets: { week: weekOf(g), count: 0 },
       draws: [],
@@ -62,7 +67,7 @@ export function dailyState(g: Game): DailyState {
   );
 }
 /** Separate saved RNG: opening a screen/reloading never advances a quote or outcome. */
-function roll(d: DailyState, max: number) {
+function roll(d: { seed: number }, max: number) {
   d.seed = (Math.imul(d.seed, 1664525) + 1013904223) >>> 0;
   return Math.floor((d.seed / 4294967296) * max);
 }
@@ -144,6 +149,7 @@ export function tradeStock(
 /** Called only after successful weekly debt payment; never on entering settlement. */
 export function finishDailyWeek(g: Game, paidWeek: number) {
   const d = (g.daily ??= dailyState(g));
+  upgradeStockState(g);
   if (d.quoteWeek > paidWeek) return;
   if (d.tickets.week === paidWeek && d.tickets.count > 0) {
     // Number-less tickets were already bought under the previous rules: honor them once.
@@ -169,19 +175,45 @@ export function finishDailyWeek(g: Game, paidWeek: number) {
     if (g.story) d.pending.push({ kind: 'lottery', result });
   }
   d.tickets = { week: paidWeek + 1, count: 0 };
-  for (const s of d.stocks) {
-    const definition = stockDefinition(s.id)!;
-    const change =
-      roll(d, definition.volatility * 2 + 1) - definition.volatility;
-    const price = Math.max(
-      100,
-      Math.min(1000000000, moneyRatio(sharePrice(s), 100 + change)),
-    );
-    s.history = [...s.history, { week: paidWeek + 1, price }].slice(
-      -DAILY_RULES.historyLimit,
-    );
-  }
   d.quoteWeek = paidWeek + 1;
+}
+/** Metadata-only migration: preserve all recorded prices, positions and the daily RNG. */
+export function upgradeStockState(g: Game) {
+  const d = g.daily;
+  if (!d || d.stockTick !== undefined) return;
+  d.stockTick = d.quoteWeek - 1;
+  d.stockSeed = (d.seed ^ 0x491a5e37) >>> 0;
+  for (const s of d.stocks)
+    for (const point of s.history) point.tick = point.week - 1;
+}
+/** One quote per actual action spent, with a private stream that never changes trading/lottery RNG. */
+export function advanceStocks(g: Game, actions: number) {
+  const d = (g.daily ??= dailyState(g));
+  upgradeStockState(g);
+  if (
+    !Number.isSafeInteger(actions) ||
+    actions < 0 ||
+    !Number.isSafeInteger(d.stockTick! + actions)
+  )
+    throw Error('시세 진행 범위를 벗어났습니다.');
+  const rng = { seed: d.stockSeed! };
+  for (let i = 0; i < actions; i++) {
+    d.stockTick!++;
+    for (const s of d.stocks) {
+      const definition = stockDefinition(s.id)!;
+      const change =
+        roll(rng, definition.volatility * 2 + 1) - definition.volatility;
+      const price = Math.max(
+        100,
+        Math.min(1000000000, moneyRatio(sharePrice(s), 100 + change)),
+      );
+      s.history = [
+        ...s.history,
+        { week: weekOf(g), price, tick: d.stockTick },
+      ].slice(-DAILY_RULES.historyLimit);
+    }
+  }
+  d.stockSeed = rng.seed;
 }
 export function takeWalk(g: Game) {
   const d = (g.daily ??= dailyState(g)),
@@ -347,6 +379,10 @@ export function isDailyState(v: unknown, week: number) {
     v.version !== 1 ||
     !integer(v.seed, 4294967295) ||
     v.quoteWeek !== week ||
+    (v.stockTick === undefined) !== (v.stockSeed === undefined) ||
+    (v.stockTick !== undefined &&
+      (!integer(v.stockTick, Number.MAX_SAFE_INTEGER) ||
+        !integer(v.stockSeed, 4294967295))) ||
     !record(v.tickets) ||
     v.tickets.week !== week ||
     !integer(v.tickets.count, 5) ||
@@ -380,18 +416,34 @@ export function isDailyState(v: unknown, week: number) {
     )
       return false;
     const history = s.history;
+    const actionMode = v.stockTick !== undefined;
     return (
-      history.every(
-        (p, i) =>
-          record(p) &&
-          integer(p.week, week) &&
-          p.week > 0 &&
-          (i === 0 || p.week === history[i - 1].week + 1) &&
-          typeof p.price === 'number' &&
-          isHundredWon(p.price) &&
-          p.price >= 100 &&
-          p.price <= 1000000000,
-      ) && history.at(-1).week === week
+      history.every((p, i) => {
+        if (
+          !record(p) ||
+          !integer(p.week, week) ||
+          p.week < 1 ||
+          typeof p.price !== 'number' ||
+          !isHundredWon(p.price) ||
+          p.price < 100 ||
+          p.price > 1000000000
+        )
+          return false;
+        if (!actionMode)
+          return (
+            p.tick === undefined &&
+            (i === 0 || p.week === history[i - 1].week + 1)
+          );
+        return (
+          integer(p.tick, Number(v.stockTick)) &&
+          (i === 0 ||
+            (p.tick === history[i - 1].tick + 1 &&
+              p.week >= history[i - 1].week))
+        );
+      }) &&
+      (actionMode
+        ? history.at(-1).tick === v.stockTick
+        : history.at(-1).week === week)
     );
   });
 }

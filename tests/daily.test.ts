@@ -8,6 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execute, newGame } from '../src/domain/engine';
 import {
+  advanceStocks,
   dailyState,
   finishDailyWeek,
   lotteryRank,
@@ -154,7 +155,7 @@ test('stock round trip charges a fee, costs no actions, saves cost basis and rej
   assert.equal(stockFee(0), 0);
   assert.equal(g.seed, initial.seed);
 });
-test('quote and draw advance once only on successful payment, with result scene after repayment scene', () => {
+test('weekly settlement draws lottery once without advancing stock quotes, then shows the result after repayment', () => {
   let g = enableStory(newGame(5));
   g = run(g, { type: 'buyLottery', count: 1 });
   const before = structuredClone(g.daily);
@@ -201,7 +202,7 @@ test('unpaid debt ends the game without lottery rescue or new quotes', () => {
   assert.equal(g.status, 'bankrupt');
   assert.deepEqual(g.daily, d);
 });
-test('weekly prices have gains and losses, bounded histories, 100-won precision and stable RNG on reload', () => {
+test('action prices have gains and losses, bounded histories, 100-won precision and stable RNG on reload', () => {
   let gains = 0,
     losses = 0;
   for (let seed = 0; seed < 12; seed++) {
@@ -212,6 +213,7 @@ test('weekly prices have gains and losses, bounded histories, 100-won precision 
     for (let i = 0; i < 28; i++) {
       const old = g.daily!.stocks.map(sharePrice);
       // Exercise long quote history independently of the debt campaign's ending.
+      advanceStocks(g, 1);
       finishDailyWeek(g, i + 1);
       g.interestWeek = i + 1;
       g.minute = (i + 1) * 20 * 480;

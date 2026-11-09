@@ -180,7 +180,7 @@ function PriceChart({
   history,
   name,
 }: {
-  history: { week: number; price: number }[];
+  history: { week: number; price: number; tick?: number }[];
   name: string;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
@@ -191,16 +191,17 @@ function PriceChart({
     low = min - span * 0.12;
   const x = (i: number) => 15 + (i * 290) / Math.max(1, history.length - 1);
   const y = (price: number) => 112 - ((price - low) / (span * 1.24)) * 96;
-  const active = history.find((p) => p.week === selected) ?? history.at(-1)!;
+  const tickOf = (p: (typeof history)[number]) => p.tick ?? p.week - 1;
+  const active = history.find((p) => tickOf(p) === selected) ?? history.at(-1)!;
   return (
     <div className="stock-chart">
       <p aria-live="polite">
-        {active.week}주차 <strong>{won(active.price)}</strong>
+        시세 {tickOf(active) + 1} <strong>{won(active.price)}</strong>
       </p>
       <svg
         viewBox="0 0 320 140"
         role="img"
-        aria-label={`${name} 최근 ${history.length}주 가격 그래프`}
+        aria-label={`${name} 최근 ${history.length}개 시세 그래프`}
       >
         {[20, 64, 112].map((v) => (
           <path key={v} d={`M15 ${v}H305`} className="chart-guide" />
@@ -213,30 +214,30 @@ function PriceChart({
         />
         {history.map((p, i) => (
           <circle
-            key={p.week}
+            key={tickOf(p)}
             cx={x(i)}
             cy={y(p.price)}
-            r={p.week === active.week ? 4 : 2}
+            r={tickOf(p) === tickOf(active) ? 4 : 2}
             fill="currentColor"
           />
         ))}
         <text x="15" y="136">
-          {history[0].week}주
+          시세 {tickOf(history[0]) + 1}
         </text>
         <text x="305" y="136" textAnchor="end">
-          {history.at(-1)!.week}주
+          시세 {tickOf(history.at(-1)!) + 1}
         </text>
       </svg>
       <details>
-        <summary>주별 가격 보기</summary>
+        <summary>시세 기록 보기</summary>
         <div className="price-history">
           {history.map((p) => (
             <button
-              key={p.week}
-              aria-pressed={p.week === active.week}
-              onClick={() => setSelected(p.week)}
+              key={tickOf(p)}
+              aria-pressed={tickOf(p) === tickOf(active)}
+              onClick={() => setSelected(tickOf(p))}
             >
-              {p.week}주 · {won(p.price)}
+              시세 {tickOf(p) + 1} · {won(p.price)}
             </button>
           ))}
         </div>
@@ -288,13 +289,14 @@ export function StocksView({ g, act }: { g: Game; act: Act }) {
       </div>
       <section className="card stock-summary">
         <span className="eyebrow">
-          {definition.sector} · {d.quoteWeek}주차
+          {definition.sector} · {weekOf(g)}주차 · 시세{' '}
+          {(d.stockTick ?? d.quoteWeek - 1) + 1}
         </span>
         <h2>{definition.name}</h2>
         <strong className="daily-big-number">{won(price)}</strong>
         <p className={change >= 0 ? 'stock-up' : 'stock-down'}>
           {change > 0 ? '+' : ''}
-          {change.toFixed(1)}% <span>지난주 대비</span>
+          {change.toFixed(1)}% <span>직전 시세 대비</span>
         </p>
         <PriceChart key={id} history={stock.history} name={definition.name} />
       </section>

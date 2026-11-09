@@ -1005,6 +1005,8 @@ test('week boundary locks progress until payment, then increases the rate withou
 
 test('migration retains active listings, chats, prices and finances and refuses malformed new time grids', () => {
   const old = pending();
+  // Historical minute saves predate the optional side-activity state.
+  delete old.daily;
   delete old.timeMode;
   old.minute = 9 * 1440 + 13 * 60 + 15;
   old.marketDay = 10;

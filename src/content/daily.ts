@@ -13,21 +13,21 @@ export const STOCKS = [
     name: '반도체',
     sector: '테마주',
     initial: 20000,
-    volatility: 8,
+    volatility: 1,
   },
   {
     id: 'tech',
     name: '바이오',
     sector: '테마주',
     initial: 50000,
-    volatility: 16,
+    volatility: 2,
   },
   {
     id: 'motion',
     name: '2차전지',
     sector: '테마주',
     initial: 100000,
-    volatility: 28,
+    volatility: 4,
   },
 ] as const;
 export type StockId = (typeof STOCKS)[number]['id'];
