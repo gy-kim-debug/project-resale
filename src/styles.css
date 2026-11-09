@@ -4052,20 +4052,42 @@ html {
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
-.market-sticky-filters {
-  position: sticky;
-  top: -20px;
-  z-index: 5;
-  margin: -20px -20px 0;
+.sheet-content:has(> .market-list-layout) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.market-list-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.market-fixed-filters {
+  flex-shrink: 0;
   padding: 12px 20px 0;
   background: var(--bg);
 }
-.market-sticky-filters .market-list-actions {
+.market-fixed-filters .market-list-actions {
   margin-bottom: 0;
 }
+.market-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 20px 24px;
+  scroll-padding-block: 12px;
+}
+.market-results:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -2px;
+}
 @media (max-width: 350px) {
-  .market-sticky-filters {
-    margin-inline: -16px;
+  .market-fixed-filters,
+  .market-results {
     padding-inline: 16px;
   }
 }

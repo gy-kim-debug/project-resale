@@ -505,8 +505,8 @@ export function MarketView({
           : 0,
     );
   return (
-    <>
-      <div className="market-sticky-filters">
+    <div className="market-list-layout">
+      <div className="market-fixed-filters">
         <div className="market-sort-row">
           <select
             aria-label="매물 정렬"
@@ -561,25 +561,32 @@ export function MarketView({
           </Button>
         </div>
       </div>
-      {listings.length ? (
-        listings.map((i) => (
-          <ItemRow
-            key={i.id}
-            item={i}
-            detail={
-              i.auction
-                ? `${i.auction.currentBid ? '현재가' : '시작가'} ${won(i.auction.currentBid || i.price)}`
-                : won(i.price)
-            }
-            onClick={() => open({ kind: '매물', id: i.id })}
-          />
-        ))
-      ) : (
-        <div className="empty">
-          <h2>표시할 매물이 없습니다.</h2>
-        </div>
-      )}
-    </>
+      <div
+        className="market-results"
+        role="region"
+        aria-label="매물 목록"
+        tabIndex={0}
+      >
+        {listings.length ? (
+          listings.map((i) => (
+            <ItemRow
+              key={i.id}
+              item={i}
+              detail={
+                i.auction
+                  ? `${i.auction.currentBid ? '현재가' : '시작가'} ${won(i.auction.currentBid || i.price)}`
+                  : won(i.price)
+              }
+              onClick={() => open({ kind: '매물', id: i.id })}
+            />
+          ))
+        ) : (
+          <div className="empty">
+            <h2>표시할 매물이 없습니다.</h2>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 export function ListingView({

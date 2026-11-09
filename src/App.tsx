@@ -198,7 +198,9 @@ function Sheet({
   useLayoutEffect(() => {
     const node = ref.current;
     title.current?.focus({ preventScroll: true });
-    node?.scrollTo(0, scrollPositions.get(routeKey) ?? 0);
+    const scroller =
+      node?.querySelector<HTMLElement>('.market-results') ?? node;
+    scroller?.scrollTo(0, scrollPositions.get(routeKey) ?? 0);
   }, [routeKey, scrollPositions]);
   function keydown(e: React.KeyboardEvent) {
     if (e.key === 'Escape' && !locked) {
@@ -241,9 +243,14 @@ function Sheet({
       <div
         className="sheet-content"
         ref={ref}
-        onScroll={(event) =>
-          scrollPositions.set(routeKey, event.currentTarget.scrollTop)
-        }
+        onScrollCapture={(event) => {
+          const scroller = event.target as HTMLElement;
+          if (
+            scroller === event.currentTarget ||
+            scroller.classList.contains('market-results')
+          )
+            scrollPositions.set(routeKey, scroller.scrollTop);
+        }}
       >
         {children}
       </div>
