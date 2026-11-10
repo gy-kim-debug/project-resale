@@ -377,7 +377,7 @@ function GameApp() {
       state.tab !== '채팅' &&
       !routes.some((r) => r.kind === '채팅방')
     )
-      navigate([], state.tab, true);
+      navigate([], state.tab);
     return ok;
   }
   function close() {
@@ -504,7 +504,7 @@ function GameApp() {
                   <div className="sheet-chat-exit">
                     <Button
                       onClick={() => {
-                        navigate([], '채팅', true);
+                        navigate([], '채팅');
                         state.dismiss();
                       }}
                     >

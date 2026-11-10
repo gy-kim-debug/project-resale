@@ -1,30 +1,24 @@
-"""Real mobile navigation regression. Run prepare-profiles-codex.mjs first."""
-import json,os
+"""Game buttons own layer navigation; browser history stays untouched."""
+import json
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
-BASE=os.getenv('SCREEN_BASE_URL','http://127.0.0.1:4182')
-DATA=json.loads(Path('work/profile-fixtures.json').read_text())
-WRITE="""async data=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(data,'current');tx.oncomplete=r});db.close()}"""
-READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('current');q.onsuccess=()=>{db.close();r(q.result)}})}"""
+FIXTURE=json.loads(Path('work/chat-fixtures.json').read_text())['basic']
+WRITE="""async d=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});await new Promise(r=>{const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put(d,'slot:1');tx.oncomplete=r});db.close();sessionStorage.setItem('resale:resume',JSON.stringify({version:1,screen:'game',slot:1,tab:'활동'}))}"""
+READ="""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('resale-game',2);q.onsuccess=()=>r(q.result)});return await new Promise(r=>{const q=db.transaction('saves').objectStore('saves').get('slot:1');q.onsuccess=()=>{db.close();r(q.result.game)}})}"""
+SPY="""window.navigationCalls=[];for(const k of ['pushState','replaceState','back','forward','go']){const original=history[k].bind(history);history[k]=(...args)=>{navigationCalls.push(k);return original(...args)}};const originalAdd=window.addEventListener.bind(window);window.addEventListener=(type,...args)=>{if(type==='popstate')navigationCalls.push('listen:popstate');return originalAdd(type,...args)};"""
+def nav(page,label):page.get_by_role('navigation',name='주요 메뉴').get_by_role('button',name=label,exact=True).click()
+def restored(page):expect(page.locator('.sheet-layer')).to_have_count(0);expect(page.locator('.status-header')).to_be_visible()
 with sync_playwright() as p:
- b=p.chromium.launch(executable_path=os.getenv('CHROMIUM_PATH','/usr/bin/chromium'),args=['--no-sandbox'])
- for width,height in [(320,667),(375,667),(390,844),(430,932),(900,900)]:
-  c=b.new_context(viewport={'width':width,'height':height},is_mobile=width<500,has_touch=width<500);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-  page.goto(BASE);page.get_by_role('heading',name='활동',exact=True).wait_for();page.evaluate(WRITE,DATA['initial']);page.reload();page.get_by_role('heading',name='활동',exact=True).wait_for()
-  nav=page.get_by_role('navigation',name='주요 메뉴');expect(nav).to_be_visible();page.locator('.activity-grid').get_by_role('button',name='중고 장터',exact=True).click()
-  page.get_by_label('매물 정렬',exact=True).select_option('high');scroller=page.locator('.sheet-content');scroller.evaluate('(e)=>e.scrollTop=350');page.wait_for_timeout(100)
-  # Pick a visible row so click automation does not change the saved list position.
-  row=page.locator('.item-row').nth(4)
-  row.scroll_into_view_if_needed();page.wait_for_timeout(100);offset=scroller.evaluate('(e)=>e.scrollTop');row.click();expect(page.locator('#sheet-title')).to_have_text('매물')
-  page.get_by_role('button',name='← 뒤로',exact=True).click();expect(page.locator('#sheet-title')).to_have_text('중고 장터');expect(page.get_by_label('매물 정렬',exact=True)).to_have_value('high');assert abs(scroller.evaluate('(e)=>e.scrollTop')-offset)<3,(width,offset,scroller.evaluate('(e)=>e.scrollTop'))
-  page.locator('.item-row').nth(4).click();expect(page.locator('#sheet-title')).to_have_text('매물');page.go_back();expect(page.locator('#sheet-title')).to_have_text('중고 장터');assert abs(scroller.evaluate('(e)=>e.scrollTop')-offset)<3
-  search=page.get_by_role('textbox',name='매물 검색');search.fill(DATA['flex']['title']);expect(page.locator('.item-row').first).to_contain_text(DATA['flex']['title']);filtered=page.locator('.item-row').count();page.locator('.item-row').first.click();expect(page.locator('#sheet-title')).to_have_text('매물');page.go_back();expect(search).to_have_value(DATA['flex']['title']);expect(page.locator('.item-row')).to_have_count(filtered);page.go_forward();expect(page.locator('#sheet-title')).to_have_text('매물')
-  nav.get_by_role('button',name='보관함',exact=True).click();expect(page.locator('.sheet-layer')).to_have_count(0);expect(page.get_by_role('heading',name='보관함',exact=False)).to_be_visible();page.go_back();expect(page.locator('#sheet-title')).to_have_text('매물');page.get_by_role('button',name='활동으로 이동',exact=True).click();expect(page.get_by_role('heading',name='활동',exact=True)).to_be_visible()
-  saved=page.evaluate(READ);assert saved['game']==DATA['initial']['game'],'navigation must not change gameplay'
-  if width==390:page.screenshot(path='work/ui-home-390.png',full_page=True)
-  assert page.locator('.status-header').bounding_box()['height']<190
-  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-  page.evaluate(WRITE,DATA['inquiries']);page.reload();expect(page.get_by_role('region',name='구매자 프로필')).to_have_count(2);assert nav.locator('button:disabled').count()==5;expect(page.get_by_role('button',name='활동으로 이동',exact=True)).to_be_disabled();page.go_back();expect(page.get_by_role('region',name='구매자 프로필')).to_have_count(2)
-  assert not errors,errors
-  c.close();print(f'{width}x{height}: toolbar/native back-forward, list scroll/search/sort restoration, tabs/home, no action or money change, pending inquiry lock PASS',flush=True)
+ b=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ for w,h in [(320,568),(390,844),(430,932),(1024,768)]:
+  c=b.new_context(viewport={'width':w,'height':h},reduced_motion='reduce');c.add_init_script(SPY);page=c.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.goto('about:blank#before-game');page.goto('http://127.0.0.1:4182');expect(page.get_by_role('button',name='새로 시작',exact=True)).to_be_visible();page.evaluate(WRITE,FIXTURE);page.reload();expect(page.get_by_role('heading',name='활동',exact=True)).to_be_visible();length=page.evaluate('history.length');before=page.evaluate(READ)
+  for label in ['보관함','일상','채무','채팅','활동']:nav(page,label)
+  for repeat in range(3):
+   page.get_by_role('button',name='내 정보',exact=True).click();page.get_by_role('button',name='닫기',exact=True).click();restored(page)
+  page.get_by_role('button',name='설정',exact=True).click();page.get_by_role('button',name='저장·백업 관리',exact=True).click();expect(page.locator('#sheet-title')).to_have_text('저장 관리');page.get_by_role('button',name='← 뒤로',exact=True).click();expect(page.locator('#sheet-title')).to_have_text('설정');page.keyboard.press('Escape');restored(page)
+  page.get_by_role('button',name='중고 장터',exact=True).click();results=page.locator('.market-results');results.evaluate('(n)=>n.scrollTop=n.scrollHeight');page.wait_for_timeout(60);saved=results.evaluate('(n)=>n.scrollTop');page.locator('.item-row').last.click();page.get_by_role('button',name='← 뒤로',exact=True).click();expect(page.locator('#sheet-title')).to_have_text('중고 장터');assert abs(results.evaluate('(n)=>n.scrollTop')-saved)<2;page.get_by_role('button',name='활동으로 이동',exact=True).click();restored(page)
+  page.get_by_role('button',name='우편함',exact=True).click();page.get_by_role('button',name='닫기',exact=True).click();restored(page);assert page.evaluate(READ)==before
+  nav(page,'일상');page.reload();expect(page.get_by_role('heading',name='일상',exact=True)).to_be_visible();assert page.evaluate('history.length')==length;assert page.evaluate('navigationCalls')==[]
+  page.go_back();expect(page).to_have_url('about:blank#before-game');page.go_forward();expect(page.get_by_role('heading',name='일상',exact=True)).to_be_visible();assert not errors,errors;assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  print(f'{w}x{h}: tabs/root close/nested back/Escape/home/list scroll restore, zero History API or popstate calls, stable history length, unchanged game, reload tab, browser back leaves and forward resumes PASS',flush=True);c.close()
  b.close()

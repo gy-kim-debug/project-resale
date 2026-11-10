@@ -171,3 +171,5 @@
 - [주간 복권](daily/LOTTERY.md)
 - [가상 주식](daily/STOCKS.md)
 - [아르바이트와 산책](daily/WORK_AND_WALK.md)
+
+- [게임 내부 이동과 네이티브 뒤로가기 후속 작업](ui/NAVIGATION.md)
