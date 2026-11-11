@@ -1,10 +1,12 @@
 import console from 'node:console';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 const html = await readFile('dist/index.html', 'utf8');
-const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map(
-  (m) => m[1],
-);
+// Vite imports such as character PNGs are referenced by JS, not index.html.
+const assets = (await readdir('dist/assets', { withFileTypes: true }))
+  .filter((entry) => entry.isFile())
+  .map((entry) => `/assets/${entry.name}`);
+
 const name =
   'resale-' + createHash('sha256').update(html).digest('hex').slice(0, 12);
 const files = ['/', '/index.html', '/favicon.svg', ...assets];
