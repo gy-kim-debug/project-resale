@@ -1,3 +1,5 @@
+import { PixelCharacter } from './PixelCharacter';
+import { traderAppearance } from '../app/traderAppearance';
 import { displayTrader, TRADER_STYLES } from '../content/traders';
 
 export function TraderProfile({
@@ -15,7 +17,11 @@ export function TraderProfile({
   return (
     <section className="trader-profile" aria-label={`${role} 프로필`}>
       <div className="trader-avatar" aria-hidden="true">
-        {trader.name.slice(0, 1)}
+        <PixelCharacter
+          variant="trader"
+          appearance={traderAppearance(trader)}
+          scale={2}
+        />
       </div>
       <div className="trader-identity">
         <strong>{trader.name}</strong>
