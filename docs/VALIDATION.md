@@ -856,3 +856,9 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - `npm test`: 276개 통과, 실패 0. 새 8개 테스트는 전체 콘텐츠 커버리지·품목 예외·기존 저장 조회·UI/실행 조건 분리·대상 외 반복 시도 전체 상태 불변·지원 수리의 비용/등급/XP/재시도/진위 보존·공개 UI/이전 문구를 검증한다. 기존 테스트의 PNG 로더 누락과 이전 SVG 꾸미기 기대값도 현재 승인 PNG 규칙으로 갱신해 전체 테스트를 실행했다.
 - TypeScript·ESLint·Prettier·프로덕션 빌드·`git diff --check` 통과. 기존 JS 청크 크기 경고 외 오류 없이 PNG를 포함한 오프라인 자산을 패키징했다.
 - `node scripts/prepare-repair-policy-fixtures.mjs`, `python -u scripts/verify-repair-policies.py`: Chromium 320×568, 390×844, 430×932, 1024×768 모두 통과. 조명/책의 동일 작업 버튼·비용과 분류/성공 예고 없음, 책 반복 시도 시 저장 전체 불변, 조명 실제 수리 후 비용 10,000원·A등급·XP4·행동 무소모, reload 후 추가 시도 차단을 확인했다. 가로 넘침·브라우저 오류·네이티브 팝업이 없고 `work/repair-hidden-policy-390.png`를 시각 검토했다.
+
+## 2026-11-12 — 기존 캐릭터 원복
+
+- 사용자 요청으로 B 작업 전 db0dc4e 커밋의 PixelCharacter/StartMenu/TraderProfile/player 팔레트를 바이트 동일하게 복원했다. PNG 자산과 PNG/SD 프로필 전용 스타일·별도 상대 외형 함수를 제거했다. 기존 SVG 그룹별 애니메이션과 5종 꾸미기 그룹이 복원되며 저장값/경제/최근 수리 분류 로직은 변경하지 않았다.
+- `npm test`: 276개 통과, 실패 0. 아바타/도입부 테스트도 원래 SVG 꾸미기 규칙으로 복원했다. TypeScript·ESLint·Prettier·프로덕션 빌드·`git diff --check` 통과. 기존 단일 청크 크기 경고 외 오류 없이 JS 530.97kB(gzip 172.27kB)와 PNG 없는 오프라인 자산 2개를 패키징했다.
+- `scripts/verify-sprite-polish.py`: Chromium 320×568, 390×844, 430×932, 1024×768 모두 통과. 각 꾸미기 그룹·24×32 캔버스, 생성/인트로/내 정보/실제 행동의 동일 SVG, 저장·새로고침 후 외형 보존과 가로 넘침/오류 없음을 확인했다. `work/restored-character-info-390.png`를 시각 검토했다. PNG 전용 브라우저 검증은 해당 기능과 함께 제거했다.

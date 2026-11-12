@@ -8,7 +8,7 @@ export const CLOTHING = {
 } as const;
 /** Saved outfit is the color key; clothing is the garment type. */
 export const OUTFITS = {
-  mint: { label: '민트', main: '#91af91', shade: '#587965' },
+  mint: { label: '민트', main: '#83dec0', shade: '#3b8e7d' },
   blue: { label: '블루', main: '#8dadd3', shade: '#506d9b' },
   amber: { label: '앰버', main: '#e3bb78', shade: '#96723d' },
   rose: { label: '로즈', main: '#d99fae', shade: '#955f7b' },

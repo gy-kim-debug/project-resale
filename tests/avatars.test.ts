@@ -22,7 +22,7 @@ const base: PlayerProfile = {
   nickname: '아바타',
   appearance: { hair: 'short', outfit: 'mint', skin: 'tan' },
 };
-test('all 900 saved appearance combinations remain valid while approved PNG base art follows avatar only', () => {
+test('all 900 avatar, hair, garment, color and skin combinations are valid and render distinct choice features', () => {
   let count = 0;
   for (const avatar of Object.keys(AVATARS) as (keyof typeof AVATARS)[])
     for (const hair of Object.keys(HAIRSTYLES) as (keyof typeof HAIRSTYLES)[])
@@ -36,13 +36,9 @@ test('all 900 saved appearance combinations remain valid while approved PNG base
             assert.equal(isPlayer(p), true);
             const svg = sprite(p);
             assert.ok(svg.includes(`data-avatar="${avatar}"`));
-            assert.ok(svg.includes('data-style="b-approved-png"'));
-            assert.equal((svg.match(/<image /g) ?? []).length, 1);
-            assert.ok(!svg.includes('<path'));
-            assert.equal(
-              svg,
-              sprite({ ...base, appearance: { ...base.appearance, avatar } }),
-            );
+            assert.ok(svg.includes(`data-clothing="${clothing}"`));
+            assert.ok(svg.includes(OUTFITS[outfit].main));
+            assert.ok(svg.includes(SKINS[skin].main));
             count++;
           }
   assert.equal(count, 900);
@@ -74,7 +70,7 @@ test('avatar profiles round-trip independently without changing market RNG, pric
       assert.deepEqual(p, original);
     }
 });
-test('legacy profiles remain unchanged and render the approved male base fallback; invalid optional fields are rejected', () => {
+test('legacy profiles remain unchanged and render the original male jacket fallback; invalid optional fields are rejected', () => {
   assert.equal(isPlayer(base), true);
   const original = structuredClone(base);
   const g = parseSave({
@@ -110,7 +106,7 @@ test('legacy profiles remain unchanged and render the approved male base fallbac
       false,
     );
 });
-test('approved PNG avatars use distinct crops, preserve unrendered garment choices and share art with NPCs', () => {
+test('body types and each garment produce different actual pixels, while trader sprites ignore player customization', () => {
   const geometry = (p: PlayerProfile) =>
     sprite(p).replace(/ data-[a-z]+="[^"]*"/g, '');
   assert.notEqual(
@@ -123,13 +119,13 @@ test('approved PNG avatars use distinct crops, preserve unrendered garment choic
         geometry({ ...base, appearance: { ...base.appearance, clothing } }),
       ),
     ).size,
-    1,
+    5,
   );
   const npc = (appearance: PlayerProfile['appearance']) =>
     renderToStaticMarkup(
       createElement(PixelCharacter, { variant: 'trader', appearance }),
     );
-  assert.notEqual(
+  assert.equal(
     npc(base.appearance),
     npc({
       avatar: 'female',

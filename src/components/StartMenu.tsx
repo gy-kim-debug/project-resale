@@ -4,6 +4,10 @@ import { SLOT_IDS, type SlotId } from '../storage/saveRepository';
 import {
   DEFAULT_PLAYER,
   AVATARS,
+  CLOTHING,
+  HAIRSTYLES,
+  OUTFITS,
+  SKINS,
   type PlayerAppearance,
 } from '../content/player';
 import { isPlayer, playerOf } from '../domain/player';
@@ -237,31 +241,69 @@ export function StartMenu() {
               />
             </label>
             <small id="nickname-help">1~12자 · 문자, 숫자, 공백, _ . -</small>
-            <fieldset disabled={s.slotBusy}>
-              <legend>아바타</legend>
-              <div className="appearance-options">
-                {Object.entries(AVATARS).map(([id, label]) => (
-                  <label key={id}>
-                    <input
-                      type="radio"
-                      name="avatar"
-                      value={id}
-                      checked={appearance.avatar === id}
-                      onChange={() =>
-                        setAppearance({
-                          ...appearance,
-                          avatar: id as PlayerAppearance['avatar'],
-                        })
-                      }
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <small className="character-options-pending">
-              상세 꾸미기 준비 중
-            </small>
+            {(['avatar', 'hair', 'clothing', 'outfit', 'skin'] as const).map(
+              (key) => {
+                const options: { id: string; label: string; color?: string }[] =
+                  ['avatar', 'hair', 'clothing'].includes(key)
+                    ? Object.entries(
+                        key === 'avatar'
+                          ? AVATARS
+                          : key === 'clothing'
+                            ? CLOTHING
+                            : HAIRSTYLES,
+                      ).map(([id, label]) => ({
+                        id,
+                        label,
+                      }))
+                    : Object.entries(key === 'outfit' ? OUTFITS : SKINS).map(
+                        ([id, palette]) => ({
+                          id,
+                          label: palette.label,
+                          color: palette.main,
+                        }),
+                      );
+                return (
+                  <fieldset key={key} disabled={s.slotBusy}>
+                    <legend>
+                      {key === 'avatar'
+                        ? '아바타'
+                        : key === 'clothing'
+                          ? '옷 종류'
+                          : key === 'hair'
+                            ? '헤어'
+                            : key === 'outfit'
+                              ? '옷 색상'
+                              : '피부색'}
+                    </legend>
+                    <div className="appearance-options">
+                      {options.map((option) => (
+                        <label key={option.id}>
+                          <input
+                            type="radio"
+                            name={key}
+                            value={option.id}
+                            checked={appearance[key] === option.id}
+                            onChange={() =>
+                              setAppearance({ ...appearance, [key]: option.id })
+                            }
+                          />
+                          <span>
+                            {option.color && (
+                              <i
+                                className="appearance-swatch"
+                                aria-hidden="true"
+                                style={{ backgroundColor: option.color }}
+                              />
+                            )}
+                            {option.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                );
+              },
+            )}
             <button
               className="action-button primary"
               type="submit"

@@ -80,8 +80,7 @@ test('each camera has a fixed viewBox and renders pixel artwork, with the select
     assert.ok(html.includes('shape-rendering="crispEdges"'));
     if (['family', 'child', 'wake', 'resolve', 'exit'].includes(shot)) {
       assert.ok(html.includes('data-avatar="female"'));
-      assert.ok(html.includes('data-style="b-approved-png"'));
-      assert.ok(html.includes('<image '));
+      assert.ok(html.includes('data-clothing="dress"'));
     }
     assert.ok(!html.includes('<button'));
   }
