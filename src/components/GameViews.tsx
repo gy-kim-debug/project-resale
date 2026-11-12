@@ -2,13 +2,11 @@ import { ChatRoom } from './ChatViews';
 import { buyChatId, sellerChatClosed } from '../domain/chats';
 import { LotteryView, StocksView } from './DailyViews';
 import { WELCOME_LETTER } from '../content/welcomeLetter';
-import { MARKET_SKILLS, REPAIR_RULES } from '../content/conditionGrades';
+import { MARKET_SKILLS } from '../content/conditionGrades';
 import {
-  canRepair,
-  repairChance,
+  canAttemptRepair,
   repairName,
   marketProgress,
-  gradedValue,
 } from '../domain/conditionGrades';
 import { AppraisalResult } from './AppraisalResult';
 import {
@@ -725,21 +723,9 @@ export function OwnedView({
           가치 확인 · {won(checkCost(g, item))}
         </Button>
       )}
-      {canRepair(item) && (
+      {canAttemptRepair(item) && (
         <section className="card">
           <h3>{repairName(item)}</h3>
-          {item.stateGrade && (
-            <>
-              <p>
-                난이도 {REPAIR_RULES[item.repairDifficulty!].name} · 성공률{' '}
-                {repairChance(g, item)}%
-              </p>
-              <p>
-                성공 시 {item.repairCeiling}등급 · 실제 가치{' '}
-                {won(gradedValue(item, item.repairCeiling))}
-              </p>
-            </>
-          )}
           <p>비용 {won(repairCost(item))}</p>
           <Button
             disabled={!!sale || g.cash < repairCost(item)}

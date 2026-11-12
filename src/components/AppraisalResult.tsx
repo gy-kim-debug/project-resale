@@ -1,3 +1,4 @@
+import { visibleItemDescription } from '../domain/conditionGrades';
 import { useEffect, useRef } from 'react';
 import type { Game, Item } from '../domain/game';
 import { won } from '../domain/game';
@@ -108,7 +109,7 @@ export function AppraisalResult({
           </span>
         ))}
       </div>
-      <p className="appraisal-defect">{item.defect}</p>
+      <p className="appraisal-defect">{visibleItemDescription(item)}</p>
     </section>
   );
 }

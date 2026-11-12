@@ -69,7 +69,7 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
-  /** Absent on legacy items: preserve their original economics and repair behavior. */
+  /** Absent on legacy items: retain original grade/value formulas; work eligibility uses shared content rules. */
   stateGrade?: import('../content/conditionGrades').Grade;
   repairDifficulty?: import('../content/conditionGrades').RepairDifficulty;
   repairCeiling?: 'A' | 'B';

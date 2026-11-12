@@ -13,6 +13,7 @@ import {
 import {
   assignGrade,
   canRepair,
+  visibleItemDescription,
   repairChance,
   gradeRepairCost,
   finishGradeRepair,
@@ -1037,7 +1038,7 @@ function executeCommand(
         i.checked = true;
         g.stats.checks++;
         gainMarketExperience(g, i, 2);
-        message = `가치 확인: ${i.title}, 실제 가치 ${won(i.value)}. ${i.defect}${i.listing ? ` ${listingFindings(i).join(' · ')}.` : ''}`;
+        message = `가치 확인: ${i.title}, 실제 가치 ${won(i.value)}. ${visibleItemDescription(i)}${i.listing ? ` ${listingFindings(i).join(' · ')}.` : ''}`;
         log(g, message);
         break;
       }
@@ -1045,7 +1046,7 @@ function executeCommand(
         const i = owned(g, command.id);
         unlisted(g, i.id);
         if (!i.checked) throw Error('미확인 물품입니다.');
-        if (!canRepair(i)) throw Error('수리할 수 없는 물품입니다.');
+        if (!canRepair(i)) throw Error('작업을 진행하지 못했습니다.');
         const cost = repairCost(i);
         affordable(g, cost);
         money(g, -cost);

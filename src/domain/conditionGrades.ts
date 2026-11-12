@@ -1,3 +1,5 @@
+import { repairMode } from './repairPolicy';
+import { REPAIR_MODES } from '../content/repairPolicies';
 import type { Game, Item, MarketId, Condition } from './game';
 import {
   GRADES,
@@ -7,7 +9,6 @@ import {
   DIFFICULTIES,
   REPAIR_RULES,
   MARKET_SKILLS,
-  DAMAGE_CASES,
   type Grade,
 } from '../content/conditionGrades';
 import { marketOf } from '../content/markets';
@@ -72,11 +73,19 @@ export function gradedValue(item: Item, grade = item.stateGrade!) {
 }
 export function gradeSummary(item: Item) {
   if (!item.stateGrade) return item.defect;
-  const market = skillMarket(item) as keyof typeof DAMAGE_CASES;
   const damage =
     item.repairDifficulty &&
-    DAMAGE_CASES[market]?.[DIFFICULTIES.indexOf(item.repairDifficulty)];
-  return `${GRADE_DESCRIPTION[item.stateGrade]}${['B', 'C'].includes(item.stateGrade) && damage ? ` ${damage}` : ''}${item.stateGrade === 'C' && item.repairCeiling === 'B' ? ' 복구 후에도 마모와 변형이 남습니다.' : ''}`;
+    REPAIR_MODES[repairMode(item)][DIFFICULTIES.indexOf(item.repairDifficulty)];
+  return `${GRADE_DESCRIPTION[item.stateGrade]}${['B', 'C'].includes(item.stateGrade) && damage ? ` ${damage}` : ''}`;
+}
+/** Old saved descriptions are adapted only for display; their financial data is untouched. */
+export function visibleItemDescription(item: Item) {
+  return item.stateGrade && !item.repaired
+    ? gradeSummary(item)
+    : item.defect.replace(
+        '기능이나 구조에 문제가 있으나 수리 가능합니다.',
+        GRADE_DESCRIPTION.C,
+      );
 }
 export function assignGrade(
   item: Item,
@@ -94,10 +103,14 @@ export function assignGrade(
   item.value = gradedValue(item);
   item.defect = gradeSummary(item);
 }
-export function canRepair(item: Item) {
+export function canAttemptRepair(item: Item) {
   return item.stateGrade
     ? item.checked && !item.repaired && ['B', 'C'].includes(item.stateGrade)
     : item.checked && !item.repaired && item.condition !== '양호';
+}
+/** Execution gate only; UI uses canAttemptRepair to avoid revealing the content rule. */
+export function canRepair(item: Item) {
+  return canAttemptRepair(item) && repairMode(item) !== 'none';
 }
 export function repairChance(g: Game, item: Item) {
   return item.stateGrade && item.repairDifficulty

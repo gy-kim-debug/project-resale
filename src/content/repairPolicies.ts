@@ -1,0 +1,116 @@
+import type { ProductCategory } from './productCategories';
+
+/** Internal content rules. Never render these mode names or eligibility in item UI. */
+export const REPAIR_MODES = {
+  general: [
+    '연결부에 마모가 있습니다.',
+    '부속품과 마감에 손상이 있습니다.',
+    '구조와 여러 부품에 손상이 있습니다.',
+  ],
+  electronics: [
+    '단자와 소모품에 사용 흔적이 있습니다.',
+    '전원·냉각 계통에 문제가 있습니다.',
+    '회로와 여러 기능에 이상이 있습니다.',
+  ],
+  furniture: [
+    '결합부와 표면에 사용 흔적이 있습니다.',
+    '프레임과 마감에 손상이 있습니다.',
+    '구조와 여러 연결부에 손상이 있습니다.',
+  ],
+  textile: [
+    '원단과 부속품에 마모가 있습니다.',
+    '봉제선과 잠금 부위에 손상이 있습니다.',
+    '원단과 여러 연결부에 손상이 있습니다.',
+  ],
+  instrument: [
+    '소모품과 음정에 사용 흔적이 있습니다.',
+    '구동부·배선과 외관에 문제가 있습니다.',
+    '본체와 주요 부품에 손상이 있습니다.',
+  ],
+  vehicle: [
+    '소모품과 센서에 이상이 있습니다.',
+    '구동·전장 계통에 문제가 있습니다.',
+    '주요 구동부와 여러 부품에 손상이 있습니다.',
+  ],
+  building: [
+    '부속 설비와 마감에 사용 흔적이 있습니다.',
+    '배관·전기와 내부 마감에 문제가 있습니다.',
+    '설비 전반과 구조에 손상이 있습니다.',
+  ],
+  restoration: [
+    '표면과 부속품에 사용 흔적이 있습니다.',
+    '재료와 표면에 손상이 있습니다.',
+    '구조와 세부 부위에 손상이 있습니다.',
+  ],
+  none: [
+    '보관 흔적이 남아 있습니다.',
+    '마모와 변색이 있습니다.',
+    '재질과 구성의 손상이 눈에 띕니다.',
+  ],
+} as const;
+export type RepairMode = keyof typeof REPAIR_MODES;
+
+export const CATEGORY_REPAIR_MODE: Record<ProductCategory, RepairMode> = {
+  lighting: 'electronics',
+  kitchen: 'electronics',
+  furniture: 'furniture',
+  dailyDigital: 'electronics',
+  hobby: 'none',
+  outdoor: 'textile',
+  sport: 'general',
+  books: 'none',
+  computers: 'electronics',
+  mobile: 'electronics',
+  imaging: 'electronics',
+  audio: 'electronics',
+  gaming: 'electronics',
+  displays: 'electronics',
+  guitars: 'instrument',
+  keys: 'instrument',
+  strings: 'instrument',
+  winds: 'instrument',
+  percussion: 'instrument',
+  studio: 'electronics',
+  compactCars: 'vehicle',
+  familyCars: 'vehicle',
+  suvs: 'vehicle',
+  imports: 'vehicle',
+  ecoCars: 'vehicle',
+  commercial: 'vehicle',
+  apartments: 'building',
+  houses: 'building',
+  shops: 'building',
+  land: 'none',
+  buildings: 'building',
+  fineArt: 'restoration',
+  watches: 'general',
+  jewelry: 'restoration',
+  antiques: 'restoration',
+  rareCollections: 'none',
+};
+/** Mixed categories require individual decisions; a category alone is insufficient. */
+export const PRODUCT_REPAIR_OVERRIDES: Record<string, RepairMode> = {
+  '벽걸이 시계': 'general',
+  '빈티지 라디오': 'electronics',
+  '필름 카메라': 'general',
+  '소장 피규어': 'restoration',
+  '캠핑 의자': 'furniture',
+  '캠핑 버너': 'general',
+  아이스박스: 'general',
+  '덤벨 세트': 'none',
+  만년필: 'general',
+  '휴대용 타자기': 'general',
+  '소형 물류창고': 'building',
+  '산업단지 창고': 'building',
+  '소형 공장': 'building',
+  '천연 다이아몬드': 'none',
+  '컬러 다이아몬드': 'none',
+  '비취 원석 조각': 'none',
+  '역사적 악기 컬렉션': 'instrument',
+  // Known older catalogue titles retain a sensible policy without changing saves.
+  '한정판 레코드': 'none',
+  '서명된 초판본': 'none',
+  '단종 피규어': 'restoration',
+  '빈티지 만년필': 'general',
+  '아날로그 라디오': 'electronics',
+};

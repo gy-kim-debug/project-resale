@@ -25,8 +25,10 @@ await build({
     'tests/daily.test.ts',
     'tests/stockActions.test.ts',
     'tests/chats.test.ts',
+    'tests/repairPolicies.test.ts',
   ],
   bundle: true,
+  loader: { '.png': 'file' },
   external: ['react', 'react-dom/server'],
   platform: 'node',
   format: 'esm',
@@ -58,6 +60,7 @@ const result = spawnSync(
     'work/test-bundles/daily.test.mjs',
     'work/test-bundles/stockActions.test.mjs',
     'work/test-bundles/chats.test.mjs',
+    'work/test-bundles/repairPolicies.test.mjs',
   ],
   { stdio: 'inherit' },
 );
