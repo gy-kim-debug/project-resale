@@ -140,3 +140,9 @@ safe-area·100dvh·최소 44px 버튼·숫자 입력 16px·공통 스크롤 여�
 ## 아바타 조합 호환
 
 PlayerAppearance의 `avatar`와 `clothing`은 선택 필드다. 기존 `outfit`은 옷 색상 의미를 유지하며 누락된 두 새 필드는 렌더링에서 기본 체형/재킷으로 처리한다. 저장 프로필에 기본값을 강제로 추가하지 않는다. 선택 데이터는 content/player.ts, 검증은 domain/player.ts, 모든 도트 모양과 팔레트 조합은 PixelCharacter에 모은다. 외형 분기는 경제 계산이나 게임 RNG와 연결하지 않는다.
+
+## 웹과 네이티브 경계 — 2026-11-12
+
+메인 화면·설정·3개 저장 슬롯·게임 로직·화면 탐색은 웹에서 관리한다. StartMenu는 기존 saveRepository를 사용하며 데이터 형식을 복제하지 않는다. gameOptions의 효과음/모션 설정은 슬롯 외 기기별 localStorage에 저장하고 GameOptions를 메인/게임에서 공유한다. 음원은 기존 Web Audio 연출을 재사용하며 사용자 조작으로 시작한다.
+
+향후 앱은 OS 백그라운드·복귀·시스템 뒤로·권한 등의 이벤트를 수신해 웹으로 전달한다. 저장 큐 완료와 게임 내부 뒤로 처리는 웹이 결정하고 앱은 그 결과에 따라 OS 작업을 수행한다. 아직 네이티브 프로젝트·브리지는 추가하지 않았다. [화면/슬롯 정책](design/ui/START_SCREEN.md)과 [후속 계약](design/ui/NAVIGATION.md#웹앱-역할-확정--2026-11-12)을 따른다.

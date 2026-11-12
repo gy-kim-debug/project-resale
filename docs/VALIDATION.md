@@ -862,3 +862,11 @@ Chromium 320/375/390/430px에서 하루 예산·조기 종료·시계 제거·�
 - 사용자 요청으로 B 작업 전 db0dc4e 커밋의 PixelCharacter/StartMenu/TraderProfile/player 팔레트를 바이트 동일하게 복원했다. PNG 자산과 PNG/SD 프로필 전용 스타일·별도 상대 외형 함수를 제거했다. 기존 SVG 그룹별 애니메이션과 5종 꾸미기 그룹이 복원되며 저장값/경제/최근 수리 분류 로직은 변경하지 않았다.
 - `npm test`: 276개 통과, 실패 0. 아바타/도입부 테스트도 원래 SVG 꾸미기 규칙으로 복원했다. TypeScript·ESLint·Prettier·프로덕션 빌드·`git diff --check` 통과. 기존 단일 청크 크기 경고 외 오류 없이 JS 530.97kB(gzip 172.27kB)와 PNG 없는 오프라인 자산 2개를 패키징했다.
 - `scripts/verify-sprite-polish.py`: Chromium 320×568, 390×844, 430×932, 1024×768 모두 통과. 각 꾸미기 그룹·24×32 캔버스, 생성/인트로/내 정보/실제 행동의 동일 SVG, 저장·새로고침 후 외형 보존과 가로 넘침/오류 없음을 확인했다. `work/restored-character-info-390.png`를 시각 검토했다. PNG 전용 브라우저 검증은 해당 기능과 함께 제거했다.
+
+## 2026-11-12 — 웹 메인 화면·3슬롯·공유 설정
+
+- 기존 IndexedDB 슬롯 3개와 저장 형식을 유지해 메인 4개 메뉴·저장 데이터 카드·삭제 확인을 개편했다. 게임 내 설정과 효과음/모션 옵션을 공유한다. 네이티브 생명주기/시스템 뒤로 브리지는 문서에 후속 작업으로 남겼다.
+- `npm test`: 276개 통과, 실패 0. TypeScript·ESLint·전체 Prettier·프로덕션 빌드·`git diff --check` 통과. JS 536.61kB(gzip 174.03kB)의 기존 청크 크기 경고가 있으며 오프라인 자산 2개를 패키징했다.
+- `scripts/verify-main-menu.py`: Chromium 320×568, 390×844, 430×932, 1024×768 통과. 메뉴 노출·빈 슬롯 생성·전체 사용 시 덮어쓰기 방지·진행 중 최신 슬롯 우선·삭제 취소/Escape·개별 삭제·삭제 자리 생성·자동 저장 후 메뉴/새로고침/이어하기·다른 슬롯 보존·메인/게임 공유 설정·설정 재접속 보존을 확인했다. 손상된 슬롯은 예약 상태로 보존하고 손상된 옵션은 기본값으로 복구한다. 가로 넘침·브라우저 오류·네이티브 팝업이 없다.
+- `scripts/verify-navigation.py`, `scripts/verify-sprite-polish.py`: 같은 4개 화면에서 통과. 내부 스택·복귀·History API 미사용·기존 SVG 전체 꾸미기·스토리/내 정보/행동의 동일 외형·저장 보존을 확인했다. `work/main-menu-empty-390.png`, `work/main-menu-slots-390.png`를 시각 검토했다.
+- 테스트는 웹 Chromium 기준이다. 앱의 실제 OS 백그라운드/복귀·Android 시스템 뒤로·iOS 제스처는 네이티브 연결 후 실기기 검증한다.

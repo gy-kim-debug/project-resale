@@ -1,3 +1,4 @@
+import { reducedGameMotion, preparePreferredAudio } from '../app/gameOptions';
 import { LottoResult } from './LottoResult';
 import { DailyStage } from './DailyStage';
 import { SettlementStage } from './SettlementStage';
@@ -47,7 +48,7 @@ export function StoryPlayer({
     if (!shot) return;
     const timer = setTimeout(
       () => setReadyStep(scene.step),
-      matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1100,
+      reducedGameMotion() ? 0 : 1100,
     );
     return () => clearTimeout(timer);
   }, [shot, scene.step]);
@@ -94,7 +95,9 @@ export function StoryPlayer({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        onPointerDownCapture={preparePreferredAudio}
         onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') preparePreferredAudio();
           if (e.key === 'Escape' && preview) {
             e.preventDefault();
             preview.close();

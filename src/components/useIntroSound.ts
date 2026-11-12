@@ -1,18 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  gameAudioContext,
+  prepareGameAudio,
+  useGameOptions,
+} from '../app/gameOptions';
 import type { IntroShot } from '../content/intro';
 /** Optional local synthesis. No autoplay, downloads, speech or game-state changes. */
 export function useIntroSound(shot?: IntroShot) {
-  const [enabled, setEnabled] = useState(false);
+  const enabled = useGameOptions((s) => s.soundEnabled);
+  const setEnabled = useGameOptions((s) => s.setSound);
   const [unavailable, setUnavailable] = useState(false);
-  const context = useRef<AudioContext | null>(null);
-  useEffect(
-    () => () => {
-      void context.current?.close();
-    },
-    [],
-  );
+  const [audioState, setAudioState] = useState(0);
   useEffect(() => {
-    const ctx = context.current;
+    const ctx = gameAudioContext();
+    if (!ctx) return;
+    const changed = () => setAudioState((n) => n + 1);
+    ctx.addEventListener('statechange', changed);
+    return () => ctx.removeEventListener('statechange', changed);
+  }, [enabled, shot]);
+  useEffect(() => {
+    const ctx = gameAudioContext();
     if (!enabled || !shot || !ctx || ctx.state !== 'running') return;
     const nodes: AudioScheduledSourceNode[] = [];
     const tone = (
@@ -70,17 +77,14 @@ export function useIntroSound(shot?: IntroShot) {
         }
       }
     };
-  }, [shot, enabled]);
+  }, [shot, enabled, audioState]);
   async function toggle() {
-    try {
-      if (!context.current) context.current = new AudioContext();
-      if (enabled) await context.current.suspend();
-      else await context.current.resume();
-      setEnabled(!enabled);
-    } catch {
+    if (!enabled && !(await prepareGameAudio())) {
       setUnavailable(true);
-      setEnabled(false);
+      return;
     }
+    setUnavailable(false);
+    setEnabled(!enabled);
   }
   return { enabled, unavailable, toggle };
 }

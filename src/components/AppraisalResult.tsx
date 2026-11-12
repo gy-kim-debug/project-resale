@@ -1,3 +1,4 @@
+import { reducedGameMotion } from '../app/gameOptions';
 import { visibleItemDescription } from '../domain/conditionGrades';
 import { useEffect, useRef } from 'react';
 import type { Game, Item } from '../domain/game';
@@ -25,9 +26,7 @@ export function AppraisalResult({
     const frame = requestAnimationFrame(() => {
       ref.current?.scrollIntoView({
         block: 'start',
-        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
-          ? 'auto'
-          : 'smooth',
+        behavior: reducedGameMotion() ? 'auto' : 'smooth',
       });
       ref.current?.focus({ preventScroll: true });
     });

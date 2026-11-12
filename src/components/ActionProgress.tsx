@@ -1,3 +1,4 @@
+import { reducedGameMotion } from '../app/gameOptions';
 import { ActionScene } from './ActionScene';
 import { Icon } from './Icon';
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +14,7 @@ import {
 export function ActionBudget({ action }: { action: ActionPresentation }) {
   const [finished, setFinished] = useState(false);
   useEffect(() => {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (reducedGameMotion()) return;
     const timer = setTimeout(() => setFinished(true), action.duration * 0.7);
     return () => clearTimeout(timer);
   }, [action]);

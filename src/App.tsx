@@ -1,3 +1,4 @@
+import { useGameOptions } from './app/gameOptions';
 import { MarketStatus } from './components/MarketStatus';
 import { ChatList, PendingInquiryBar } from './components/ChatViews';
 import { unreadChats } from './domain/chats';
@@ -605,6 +606,15 @@ function GameApp() {
 }
 
 export default function App() {
+  const reducedMotion = useGameOptions((s) => s.reducedMotion);
+  useEffect(() => {
+    document.documentElement.dataset.gameMotion = reducedMotion
+      ? 'reduced'
+      : 'default';
+    return () => {
+      delete document.documentElement.dataset.gameMotion;
+    };
+  }, [reducedMotion]);
   const story = useGameStore((s) => s.game?.story?.active);
   const action = useGameStore((s) => s.action);
   const ready = useGameStore((s) => s.ready);

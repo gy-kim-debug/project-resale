@@ -1,3 +1,4 @@
+import { GameOptions } from './GameOptions';
 import { ChatRoom } from './ChatViews';
 import { buyChatId, sellerChatClosed } from '../domain/chats';
 import { LotteryView, StocksView } from './DailyViews';
@@ -1168,6 +1169,7 @@ export function RouteView({
     case '설정':
       return (
         <>
+          <GameOptions />
           <Button onClick={() => void useGameStore.getState().returnToMenu()}>
             시작 화면으로
           </Button>

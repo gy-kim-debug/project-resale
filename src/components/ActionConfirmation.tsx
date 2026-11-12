@@ -1,10 +1,18 @@
 import { useId, useLayoutEffect, useRef } from 'react';
-import type { useDailyConfirmation } from '../app/useDailyConfirmation';
 /** Styled game modal. HTML dialog supplies top-layer isolation, focus trapping and Escape. */
 export function ActionConfirmation({
   confirmation,
 }: {
-  confirmation: ReturnType<typeof useDailyConfirmation>;
+  confirmation: {
+    pending: {
+      title: string;
+      detail: string;
+      label: string;
+      tone?: 'danger';
+    } | null;
+    cancel(): void;
+    confirm(): Promise<unknown>;
+  };
 }) {
   const ref = useRef<HTMLDialogElement>(null),
     cancelRef = useRef<HTMLButtonElement>(null);
@@ -53,7 +61,7 @@ export function ActionConfirmation({
           취소
         </button>
         <button
-          className="confirmation-submit"
+          className={`confirmation-submit${pending.tone === 'danger' ? ' confirmation-danger' : ''}`}
           onClick={() => {
             ref.current?.close();
             void confirmation.confirm();
