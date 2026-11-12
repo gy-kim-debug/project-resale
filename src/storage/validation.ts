@@ -264,7 +264,9 @@ function validStory(g: Record<string, unknown>): boolean {
       scene.step,
       scene.kind === 'intro' && scene.introVersion === 2
         ? INTRO_BEATS.length - 1
-        : 10,
+        : scene.kind === 'lottery'
+          ? 15
+          : 10,
     ) ||
     (scene.introVersion !== undefined &&
       (scene.kind !== 'intro' || scene.introVersion !== 2)) ||

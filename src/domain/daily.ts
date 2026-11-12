@@ -1,3 +1,4 @@
+import { lotteryShots } from './lotteryPresentation';
 import {
   autoLottoNumbers,
   drawLottoNumbers,
@@ -251,31 +252,7 @@ export function dailyLines(g: Game): StoryLine[] {
   const scene = g.story!.active!.leisure!,
     me = g.player?.nickname ?? '주인공';
   if (scene.kind === 'lottery' && scene.result.winning) {
-    const result = scene.result;
-    return [
-      {
-        speaker: '추첨 방송',
-        text: `${result.week}주차 추첨을 시작합니다. 내 복권을 펼쳐 봅니다.`,
-        motion: 'phone',
-      },
-      ...result.winning!.map((n, i): StoryLine => ({
-        speaker: '추첨 방송',
-        text: `${i + 1}번째 당첨 번호는… ${n}번입니다!`,
-        motion: 'look',
-      })),
-      {
-        speaker: '추첨 방송',
-        text: `보너스 번호는 ${result.bonus}번입니다.`,
-        motion: 'look',
-      },
-      {
-        speaker: me,
-        text: result.ranks[0]
-          ? `${result.ranks[0]}등이다! ${won(result.payout)}이 들어왔네.`
-          : '아쉽네. 이번 주는 낙첨이야.',
-        motion: 'listen',
-      },
-    ];
+    return lotteryShots(scene.result, me).map((shot) => shot.line);
   }
   if (scene.kind === 'lottery')
     return [

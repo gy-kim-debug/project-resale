@@ -180,8 +180,14 @@ test('weekly settlement draws lottery once without advancing stock quotes, then 
         : { type: 'storyChoice', choice: storyChoices(g)[0].id },
     );
   assert.equal(g.story!.active!.kind, 'lottery');
-  assert.match(storyLines(g)[1].text, /1번째 당첨 번호/);
+  assert.match(storyLines(g)[4].text, /1번째 당첨 번호/);
   g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  while (g.story!.active!.step < storyLines(g).length - 1) {
+    g = run(g, { type: 'storyNext' });
+    g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+    assert.equal(g.cash, cash);
+    assert.equal(g.daily!.seed, seed);
+  }
   g = finish(g);
   assert.equal(g.cash, cash);
   assert.deepEqual(g.daily!.stocks, prices);

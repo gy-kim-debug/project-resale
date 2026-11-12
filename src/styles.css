@@ -4264,3 +4264,51 @@ html[data-game-motion='reduced'] *::after {
   background: var(--danger);
   color: #35231e;
 }
+
+.lottery-stage {
+  position: relative;
+}
+.lottery-shot-label {
+  position: absolute;
+  left: 10px;
+  bottom: 6px;
+  padding: 3px 7px;
+  border: 1px solid #526d73;
+  border-radius: 4px;
+  background: #12212be8;
+  color: #d6e5dc;
+  font-size: 10px;
+}
+.lottery-drawn-ball {
+  animation: lotto-ball-pop 0.35s ease-out both;
+  transform-origin: 191px 64px;
+}
+.lottery-ticket-close {
+  animation: lotto-ball-pop 0.35s ease-out both;
+  transform-origin: 120px 64px;
+}
+.lottery-confetti {
+  animation: lottery-confetti 1.4s ease-out both;
+}
+@keyframes lottery-confetti {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lottery-drawn-ball,
+  .lottery-ticket-close,
+  .lottery-confetti {
+    animation: none;
+  }
+}
+.lotto-match-count {
+  color: #a8c9bb;
+  font-size: 11px;
+  margin: 9px 0 0;
+}

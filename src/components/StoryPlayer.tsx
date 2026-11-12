@@ -1,4 +1,5 @@
 import { reducedGameMotion, preparePreferredAudio } from '../app/gameOptions';
+import { lotteryShots } from '../domain/lotteryPresentation';
 import { LottoResult } from './LottoResult';
 import { DailyStage } from './DailyStage';
 import { SettlementStage } from './SettlementStage';
@@ -229,7 +230,14 @@ export function StoryPlayer({
         <div className="story-dialogue">
           {scene.leisure?.kind === 'lottery' &&
             scene.leisure.result.numbers && (
-              <LottoResult result={scene.leisure.result} step={scene.step} />
+              <LottoResult
+                result={scene.leisure.result}
+                step={(() => {
+                  const shots = lotteryShots(scene.leisure.result);
+                  const shot = shots[Math.min(scene.step, shots.length - 1)];
+                  return shot.verdict ? 8 : shot.bonus ? 7 : shot.revealed;
+                })()}
+              />
             )}
           {scene.leisure?.kind === 'lottery' &&
             !scene.leisure.result.numbers && (

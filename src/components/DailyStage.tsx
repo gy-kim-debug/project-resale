@@ -1,3 +1,4 @@
+import { LotteryStage } from './LotteryStage';
 import type { PlayerProfile } from '../content/player';
 import type { DailyScene } from '../domain/daily';
 import { PixelCharacter } from './PixelCharacter';
@@ -11,6 +12,10 @@ export function DailyStage({
   step?: number;
   appearance: PlayerProfile['appearance'];
 }) {
+  if (scene.kind === 'lottery' && scene.result.numbers)
+    return (
+      <LotteryStage result={scene.result} step={step} appearance={appearance} />
+    );
   const lottery = scene.kind === 'lottery';
   return (
     <div

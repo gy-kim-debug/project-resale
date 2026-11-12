@@ -55,9 +55,23 @@ export function LottoResult({
           matches={result.numbers}
         />
       </div>
+      <p className="lotto-match-count">
+        {revealed < 6 ? `${revealed} / 6개 번호 공개` : '기본 번호 공개 완료'}
+        {' · '}
+        {
+          result
+            .winning!.slice(0, revealed)
+            .filter((n) => result.numbers!.includes(n)).length
+        }
+        개 일치
+      </p>
       <div className="lotto-bonus">
         <span>보너스</span>
-        <LottoBalls numbers={[result.bonus!]} revealed={step >= 7 ? 1 : 0} />
+        <LottoBalls
+          numbers={[result.bonus!]}
+          revealed={step >= 7 ? 1 : 0}
+          matches={result.numbers}
+        />
         <strong
           className="lotto-verdict"
           style={{ visibility: step >= 8 ? 'visible' : 'hidden' }}
