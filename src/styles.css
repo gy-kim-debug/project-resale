@@ -1418,19 +1418,6 @@ html {
   font-size: 18px;
   font-weight: 650;
 }
-.action-time {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 22px 0;
-  color: #b1c6bd;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.action-time time {
-  white-space: nowrap;
-}
 .action-progress-track {
   width: 100%;
   height: 4px;
@@ -2066,10 +2053,6 @@ html {
   .action-scene {
     max-width: 230px;
     margin-bottom: 12px;
-  }
-  .action-time {
-    margin-block: 12px;
-    font-size: 11px;
   }
 }
 

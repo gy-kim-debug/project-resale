@@ -3,12 +3,7 @@ import { ActionScene } from './ActionScene';
 import { Icon } from './Icon';
 import { useEffect, useRef, useState } from 'react';
 import type { ActionPresentation } from '../app/actionPresentation';
-import {
-  actionsLeft,
-  weekOf,
-  dayStatus,
-  ACTIONS_PER_WEEK,
-} from '../domain/game';
+import { actionsLeft, weekOf, ACTIONS_PER_WEEK } from '../domain/game';
 
 /** Presentation only: the engine already committed the action and any new day. */
 export function ActionBudget({ action }: { action: ActionPresentation }) {
@@ -97,15 +92,6 @@ export function ActionProgress({ action }: { action: ActionPresentation }) {
         <h2 id="action-title" role="status">
           {action.label}
         </h2>
-        {action.showTimeChange !== false &&
-          (action.before.minute !== action.after.minute ||
-            weekOf(action.before) !== weekOf(action.after)) && (
-            <div className="action-time" aria-label="행동 전후 상태">
-              <time>{dayStatus(action.before)}</time>
-              <span aria-hidden="true">→</span>
-              <time>{dayStatus(action.after)}</time>
-            </div>
-          )}
         <div className="action-progress-track" aria-hidden="true">
           <span />
         </div>

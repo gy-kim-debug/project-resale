@@ -42,7 +42,6 @@ export function actionScene(command: Command): ActionSceneKind {
   }
 }
 export interface ActionPresentation {
-  showTimeChange?: boolean;
   scene: ActionSceneKind;
   id: number;
   label: string;

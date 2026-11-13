@@ -409,7 +409,6 @@ export const useGameStore = create<State>((set, get) => ({
         id,
         label: actionLabel(presentationCommand),
         scene: actionScene(presentationCommand),
-        showTimeChange: presentationCommand.type !== 'refresh',
         before: g,
         after: result.game,
         duration: ACTION_DURATION_MS,
