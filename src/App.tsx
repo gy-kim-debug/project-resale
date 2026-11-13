@@ -359,6 +359,37 @@ function GameApp() {
     g?.chats?.some(
       (thread) => thread.id === currentRoute.id && thread.status !== 'active',
     );
+  const previousInventory = useRef(g?.inventory);
+  const receivedItem = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = previousInventory.current;
+    previousInventory.current = g?.inventory;
+    if (!g) return;
+    const purchaseId =
+      currentRoute?.kind === '매물'
+        ? currentRoute.id
+        : currentRoute?.kind === '채팅방'
+          ? g.chats?.find(
+              (thread) =>
+                thread.id === currentRoute.id && thread.side === 'buy',
+            )?.itemId
+          : undefined;
+    if (
+      previous &&
+      purchaseId &&
+      !previous.some((item) => item.id === purchaseId) &&
+      g.inventory.some((item) => item.id === purchaseId)
+    )
+      receivedItem.current = purchaseId;
+    // Purchases may finish through a story choice rather than the buy button.
+    // Wait for both the action presentation and its dialogue to finish.
+    if (receivedItem.current && !state.action && !g.story?.active) {
+      const id = receivedItem.current;
+      receivedItem.current = null;
+      if (g.inventory.some((item) => item.id === id))
+        navigate([{ kind: '물품', id }], '보관함');
+    }
+  }, [g, currentRoute, state.action, navigate]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [state.tab]);
@@ -369,6 +400,10 @@ function GameApp() {
   };
   async function act(c: Parameters<typeof state.act>[0]) {
     const ok = await state.act(c);
+    if (ok && c.type === 'post') {
+      navigate([], '활동');
+      return ok;
+    }
     if (
       ok &&
       ['accept', 'break', 'reject', 'counter', 'payInterest'].includes(
