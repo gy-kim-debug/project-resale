@@ -263,7 +263,7 @@ test('listing capacity, immutable price, inventory slots preserved, cancel permi
       false,
     );
 });
-test('pending inquiries block actions; breaking one chat preserves listing and other buyers', () => {
+test('pending inquiries permit other activities; breaking one chat preserves listing and other buyers', () => {
   let g = pending();
   assert.ok(g.inquiries.length >= 2);
   const serialized = parseSave(
@@ -272,10 +272,13 @@ test('pending inquiries block actions; breaking one chat preserves listing and o
   assert.deepEqual(serialized.game, g);
   for (const c of [
     { type: 'repay', amount: 100 },
-    { type: 'discard', id: g.inventory[0].id },
     { type: 'refresh' },
   ] as Command[])
-    assert.equal(execute(g, c).ok, false);
+    assert.equal(execute(g, c).ok, true);
+  assert.equal(
+    execute(g, { type: 'discard', id: g.inventory[0].id }).ok,
+    false,
+  );
   const id = g.inventory[0].id;
   const sale = structuredClone(g.sales[0]);
   const other = structuredClone(g.inquiries[1]);

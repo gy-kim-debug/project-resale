@@ -108,7 +108,7 @@ export function canAttemptRepair(item: Item) {
     ? item.checked && !item.repaired && ['B', 'C'].includes(item.stateGrade)
     : item.checked && !item.repaired && item.condition !== '양호';
 }
-/** Execution gate only; UI uses canAttemptRepair to avoid revealing the content rule. */
+/** Shared eligibility for the repair panel and execution; classification stays internal. */
 export function canRepair(item: Item) {
   return canAttemptRepair(item) && repairMode(item) !== 'none';
 }

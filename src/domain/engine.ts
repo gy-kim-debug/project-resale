@@ -377,16 +377,23 @@ function endDay(g: Game) {
   board(g);
 }
 function expire(g: Game) {
-  const protectedIds = new Set(g.inquiries.map((q) => q.saleId));
-  const expired = g.sales.filter(
-    (s) => s.expires <= g.minute && !protectedIds.has(s.id),
-  );
-  for (const s of expired)
+  const expired = g.sales.filter((s) => s.expires <= g.minute);
+  for (const s of expired) {
     log(
       g,
       `${g.inventory.find((i) => i.id === s.itemId)?.title ?? '물품'} 판매 글이 만료됐습니다.`,
     );
-  g.sales = g.sales.filter((s) => !expired.some((e) => e.id === s.id));
+    for (const q of g.inquiries.filter((q) => q.saleId === s.id))
+      archiveInquiry(
+        g,
+        q,
+        'expired',
+        q.chat ?? [
+          { speaker: 'other', text: `${won(q.price)}에 거래할 수 있을까요?` },
+        ],
+      );
+    finishSale(g, s.id);
+  }
   g.board = g.board.filter((i) => i.expires > g.minute);
   if (g.quotes && g.minute - g.quotes.at >= ACTION_TICK * 2) g.quotes = null;
   if (g.event && g.event.expires <= g.minute) {
@@ -814,23 +821,6 @@ function executeCommand(
     }
     if (g.story?.active) throw Error('진행 중인 대화를 마쳐 주세요.');
     if (g.status !== 'playing') throw Error('종료된 게임입니다.');
-    if (
-      !interestPending(g) &&
-      g.inquiries.length &&
-      ([
-        'buy',
-        'refresh',
-        'wait',
-        'dailyWork',
-        'walk',
-        'post',
-        'cancel',
-        'outletSell',
-        'repay',
-      ].includes(command.type) ||
-        (command.type === 'event' && command.choice === 'yes'))
-    )
-      throw Error('채팅에서 구매 문의에 먼저 답변해 주세요.');
     if (interestPending(g) && !['repay', 'payInterest'].includes(command.type))
       throw Error('주간 이자 납부가 필요합니다.');
     if (!sceneResolved && g.story && ['buy', 'accept'].includes(command.type)) {

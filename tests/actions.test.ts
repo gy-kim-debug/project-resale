@@ -551,7 +551,7 @@ test('legacy saves gain no tutorial retrospectively and malformed or duplicate l
   assert.throws(() => parseSave({ version: 2, game: bad, favoriteIds: [] }));
 });
 
-test('unanswered inquiries allow tab and market navigation; reading persists silently while paid actions stay blocked', async () => {
+test('unanswered inquiries allow tab and market navigation; reading persists silently while other actions remain available', async () => {
   setup();
   const g = newGame(42),
     item = g.board.shift()!;
@@ -584,7 +584,7 @@ test('unanswered inquiries allow tab and market navigation; reading persists sil
   useGameStore.getState().selectMarket('computers');
   assert.equal(useGameStore.getState().selectedMarket, 'computers');
   assert.strictEqual(useGameStore.getState().game, g);
-  assert.equal(await useGameStore.getState().act({ type: 'wait' }), false);
+  assert.equal(await useGameStore.getState().act({ type: 'wait' }), true);
   assert.equal(useGameStore.getState().action, null);
   assert.equal(
     await useGameStore
@@ -594,7 +594,7 @@ test('unanswered inquiries allow tab and market navigation; reading persists sil
   );
   assert.equal(useGameStore.getState().action, null);
   assert.equal(useGameStore.getState().notice, '');
-  assert.equal(useGameStore.getState().game!.minute, g.minute);
+  assert.equal(useGameStore.getState().game!.minute, g.minute + ACTION_TICK);
   assert.equal(useGameStore.getState().game!.cash, g.cash);
   assert.equal(useGameStore.getState().game!.chats![0].unread, false);
   await flushSaves();

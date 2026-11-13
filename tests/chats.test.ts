@@ -11,7 +11,7 @@ import {
 import { parseSave } from '../src/storage/saveRepository';
 import { isGame } from '../src/storage/validation';
 import { parseResumeIntent } from '../src/app/resumeSession';
-import type { Game, Command } from '../src/domain/game';
+import { ACTION_TICK, type Game, type Command } from '../src/domain/game';
 function run(g: Game, c: Command) {
   const r = execute(g, c);
   assert.ok(r.ok, r.message);
@@ -208,7 +208,7 @@ test('buyer walkaway preserves the actual last counterproposal, response and act
   assert.match(t.messages[1].text, /100,000/);
   assert.match(t.messages[2].text, /어려울/);
 });
-test('unanswered inquiries allow viewing, reading, seller chat and free valuation but block actual actions', () => {
+test('unanswered inquiries allow other actions and keep the original negotiation available', () => {
   let g = parseSave({ version: 2, game: buyer(), favoriteIds: [] }).game;
   const original = structuredClone(g);
   for (const c of [
@@ -220,8 +220,10 @@ test('unanswered inquiries allow viewing, reading, seller chat and free valuatio
     { type: 'repay', amount: 100 },
   ] as Command[]) {
     const r = execute(g, c);
-    assert.equal(r.ok, false);
-    assert.strictEqual(r.game, g);
+    assert.equal(r.ok, true, r.message);
+    assert.equal(r.game.minute, g.minute + ACTION_TICK);
+    assert.deepEqual(r.game.inquiries, g.inquiries);
+    assert.ok(isGame(r.game));
   }
   assert.deepEqual(g, original);
   g = run(g, { type: 'readChat', id: sellChatId('buyer-1') });
@@ -291,4 +293,102 @@ test('archive capacity prunes old closed rooms, retaining all current live conve
   assert.equal(g.chats!.length, CHAT_LIMIT);
   assert.ok(g.chats!.some((t) => t.id === live.id));
   assert.ok(isGame(g));
+});
+
+test('ignoring inquiries lets their listing expire, archives each chat, and preserves other sales and all owned assets', () => {
+  let g = buyer();
+  g.sales[0].expires = ACTION_TICK * 2;
+  const other = g.board.shift()!;
+  g.inventory.push({ ...other, acquiredFor: other.price });
+  g.sales.push({
+    id: 'other-sale',
+    itemId: other.id,
+    price: 100000,
+    created: 0,
+    expires: ACTION_TICK * 12,
+    nextCheck: ACTION_TICK * 12,
+  });
+  g.inquiries.push({
+    ...g.inquiries[0],
+    id: 'other-buyer',
+    saleId: 'other-sale',
+  });
+  g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  const history = structuredClone(
+    g.chats!.find((t) => t.id === sellChatId('buyer-1'))!.messages,
+  );
+  const inventory = structuredClone(g.inventory),
+    cash = g.cash;
+  g = run(g, { type: 'walk' });
+  assert.equal(g.inquiries.length, 2);
+  g = run(g, { type: 'walk' });
+  assert.deepEqual(
+    g.sales.map((s) => s.id),
+    ['other-sale'],
+  );
+  assert.deepEqual(
+    g.inquiries.map((q) => q.id),
+    ['other-buyer'],
+  );
+  const archived = g.chats!.find((t) => t.id === sellChatId('buyer-1'))!;
+  assert.equal(archived.status, 'expired');
+  assert.deepEqual(archived.messages, history);
+  assert.equal(
+    g.chats!.find((t) => t.id === sellChatId('other-buyer'))!.status,
+    'active',
+  );
+  assert.deepEqual(g.inventory, inventory);
+  assert.equal(g.cash, cash);
+  assert.ok(isGame(g));
+  for (const type of ['accept', 'counter', 'reject'] as const) {
+    const r = execute(g, {
+      type,
+      id: 'buyer-1',
+      ...(type === 'counter' ? { price: 100000 } : {}),
+    } as Command);
+    assert.equal(r.ok, false);
+    assert.strictEqual(r.game, g);
+  }
+  assert.deepEqual(
+    parseSave(
+      JSON.parse(JSON.stringify({ version: 2, game: g, favoriteIds: [] })),
+    ).game,
+    g,
+  );
+});
+
+test('pending inquiries do not block posting or selling other items, while cancelling their own listing closes the related chats', () => {
+  let g = buyer();
+  const extra = g.board.find(
+    (i) => i.marketId === 'street' && i.stateGrade !== 'F',
+  )!;
+  g.board = g.board.filter((i) => i.id !== extra.id);
+  g.inventory.push({ ...extra, acquiredFor: extra.price });
+  g = parseSave({ version: 2, game: g, favoriteIds: [] }).game;
+  const original = structuredClone(g);
+  for (const command of [
+    { type: 'post', id: extra.id, price: 100000 },
+    { type: 'outletSell', id: extra.id },
+    { type: 'cancel', id: g.inventory[0].id },
+  ] as Command[]) {
+    const after = run(g, command);
+    assert.equal(after.weekActions, 1);
+    if (command.type === 'cancel') {
+      assert.equal(after.inquiries.length, 0);
+      assert.equal(after.sales.length, 0);
+      assert.deepEqual(after.inventory, g.inventory);
+      assert.equal(
+        after.chats!.find((t) => t.id === sellChatId('buyer-1'))!.status,
+        'expired',
+      );
+    } else {
+      assert.deepEqual(after.inquiries, g.inquiries);
+      assert.ok(after.sales.some((s) => s.id === 'sale-1'));
+      assert.equal(
+        after.inventory.some((i) => i.id === extra.id),
+        command.type === 'post',
+      );
+    }
+    assert.deepEqual(g, original);
+  }
 });

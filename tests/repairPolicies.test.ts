@@ -113,7 +113,7 @@ test('catalogue lookup supports missing old categories while unknown legacy asse
   );
   assert.equal(repairMode({ title: '__proto__', kind: '생활' }), 'general');
 });
-test('UI action eligibility does not reveal structural eligibility, while grade, appraisal and one-attempt gates remain', () => {
+test('grade eligibility stays separate from structural eligibility, while appraisal and one-attempt gates remain', () => {
   const a = sample(),
     b = sample('문학 전집', 'books');
   assert.equal(canAttemptRepair(a.i), true);
@@ -171,11 +171,15 @@ test('supported repair retains cost, success ceiling, XP, no-action behavior, au
   assert.equal(repeat.ok, false);
   assert.strictEqual(repeat.game, r.game);
 });
-test('owned UI keeps the same repair action/quote and never renders internal modes or eligibility forecasts', () => {
+test('owned UI omits unsupported repair panels and never renders internal modes or outcome forecasts', () => {
   for (const { g, i } of [sample(), sample('문학 전집', 'books')]) {
     const markup = html(g, i);
-    assert.match(markup, />수리하기<\/button>/);
-    assert.match(markup, /비용.*10,000/);
+    if (canRepair(i)) {
+      assert.match(markup, />수리하기<\/button>/);
+      assert.match(markup, /비용.*10,000/);
+    } else {
+      assert.doesNotMatch(markup, />수리하기<\/button>|비용.*10,000/);
+    }
     assert.doesNotMatch(
       markup,
       /수리 가능합니다|수리 대상|수리할 수 없는|성공률|성공 시|repairMode|repairable/,

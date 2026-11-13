@@ -6,7 +6,7 @@ import { LotteryView, StocksView } from './DailyViews';
 import { WELCOME_LETTER } from '../content/welcomeLetter';
 import { MARKET_SKILLS } from '../content/conditionGrades';
 import {
-  canAttemptRepair,
+  canRepair,
   repairName,
   marketProgress,
 } from '../domain/conditionGrades';
@@ -728,7 +728,7 @@ export function OwnedView({
           가치 확인 · {won(checkCost(g, item))}
         </Button>
       )}
-      {canAttemptRepair(item) && (
+      {canRepair(item) && (
         <section className="card">
           <h3>{repairName(item)}</h3>
           <p>비용 {won(repairCost(item))}</p>

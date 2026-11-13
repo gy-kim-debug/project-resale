@@ -301,7 +301,7 @@ test('daily save validation rejects corrupt prices, duplicate draw weeks, invali
     assert.equal(isGame(copy), false);
   }
 });
-test('pending inquiries block paid actions while free finance stays available; settlement still restricts finance', () => {
+test('pending inquiries allow daily activities and finance; settlement still restricts both', () => {
   const pending = newGame(5);
   const item = pending.board.shift()!;
   item.acquiredFor = item.price;
@@ -325,8 +325,9 @@ test('pending inquiries block paid actions while free finance stays available; s
   assert.ok(isGame(pending));
   for (const c of [{ type: 'dailyWork' }, { type: 'walk' }] as const) {
     const r = execute(pending, c);
-    assert.equal(r.ok, false);
-    assert.strictEqual(r.game, pending);
+    assert.equal(r.ok, true, r.message);
+    assert.equal(r.game.weekActions, 1);
+    assert.equal(r.game.inquiries.length, 1);
   }
   for (const c of [
     { type: 'buyLottery', count: 1 },
