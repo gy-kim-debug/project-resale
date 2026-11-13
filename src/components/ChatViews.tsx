@@ -50,6 +50,9 @@ export function ChatList({ g, open }: { g: Game; open: Open }) {
       {g.inquiries.length > 0 && (
         <p className="chat-pending-notice">
           답변할 구매 문의 {g.inquiries.length}건
+          {g.inquiries.length > 1 && (
+            <Button onClick={() => open({ kind: '문의' })}>문의 비교</Button>
+          )}
         </p>
       )}
       {threads.length ? (
@@ -160,7 +163,11 @@ export function PendingInquiryBar({ g, open }: { g: Game; open: Open }) {
       <span>답변할 구매 문의 {g.inquiries.length}건</span>
       <Button
         onClick={() =>
-          open(first ? { kind: '채팅방', id: first.id } : { kind: '문의' })
+          open(
+            g.inquiries.length > 1 || !first
+              ? { kind: '문의' }
+              : { kind: '채팅방', id: first.id },
+          )
         }
       >
         문의 확인

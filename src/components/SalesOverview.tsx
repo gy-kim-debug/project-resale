@@ -52,9 +52,14 @@ export function SalesOverview({ g, open }: { g: Game; open: Open }) {
                     aria-label={`${item.title} 판매 상세`}
                     onClick={() =>
                       open(
-                        inquiries.length
-                          ? { kind: '채팅방', id: sellChatId(inquiries[0].id) }
-                          : { kind: '물품', id: item.id },
+                        inquiries.length > 1
+                          ? { kind: '문의', id: sale.id }
+                          : inquiries.length
+                            ? {
+                                kind: '채팅방',
+                                id: sellChatId(inquiries[0].id),
+                              }
+                            : { kind: '물품', id: item.id },
                       )
                     }
                   >
@@ -80,7 +85,7 @@ export function SalesOverview({ g, open }: { g: Game; open: Open }) {
                         {expired
                           ? '만료'
                           : inquiries.length
-                            ? `문의 ${inquiries.length}건`
+                            ? `문의 ${inquiries.length}건${inquiries.length > 1 ? ' · 비교' : ''}`
                             : '판매 중'}
                       </span>
                       <span className="sale-overview-arrow" aria-hidden="true">

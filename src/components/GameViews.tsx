@@ -1,4 +1,5 @@
 import { GameOptions } from './GameOptions';
+import { InquiryComparison } from './InquiryComparison';
 import { ChatRoom } from './ChatViews';
 import { buyChatId, sellChatId, sellerChatClosed } from '../domain/chats';
 import { useChatReplies } from '../app/chatReplies';
@@ -1145,11 +1146,7 @@ export function RouteView({
     case '즉시 판매':
       return <InstantSaleView g={g} act={act} />;
     case '문의':
-      return g.inquiries.length ? (
-        <InquiriesView g={g} act={act} />
-      ) : (
-        <p>남은 문의가 없습니다.</p>
-      );
+      return <InquiryComparison g={g} open={open} saleId={route.id} />;
     case '특별 제안':
       return g.event ? (
         <>

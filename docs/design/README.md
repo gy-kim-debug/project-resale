@@ -13,6 +13,9 @@
 
 ## 현재 구현 원칙
 
+- [현재 물건/주식 시세 변동 점검 — 현행 계산과 미확정 완화안](economy/MARKET_MOVEMENT_REVIEW.md)
+- [구매 문의 비교와 채팅 이어가기](trading/CHAT_THREADS.md#구매-문의-비교--2026-11-13)
+
 - [물품 특성별 숨은 수리 분류](items/REPAIR_POLICY.md)
 - [물품 상태 등급·수리 — 확정 규칙과 구현 정책](items/CONDITION_GRADES_PROPOSAL.md)
 

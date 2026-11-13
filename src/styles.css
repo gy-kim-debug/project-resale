@@ -4343,3 +4343,64 @@ fieldset.conversation-composer {
     animation: none;
   }
 }
+
+.inquiry-group + .inquiry-group {
+  margin-top: 28px;
+}
+.inquiry-product {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.inquiry-product > div {
+  min-width: 0;
+}
+.inquiry-product h2 {
+  margin: 0 0 5px;
+  overflow-wrap: anywhere;
+}
+.inquiry-product small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.inquiry-product p {
+  margin: 6px 0;
+}
+.inquiry-offers {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+.inquiry-offer-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+}
+.inquiry-offer-price span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.inquiry-offer-price strong {
+  font-size: 20px;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+.chat-pending-notice:has(.action-button) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chat-pending-notice .action-button {
+  width: auto;
+  margin: 0;
+  padding: 10px 12px;
+}
+.inquiry-offer .trader-profile {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
