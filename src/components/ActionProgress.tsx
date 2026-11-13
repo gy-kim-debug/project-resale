@@ -97,14 +97,15 @@ export function ActionProgress({ action }: { action: ActionPresentation }) {
         <h2 id="action-title" role="status">
           {action.label}
         </h2>
-        {(action.before.minute !== action.after.minute ||
-          weekOf(action.before) !== weekOf(action.after)) && (
-          <div className="action-time" aria-label="행동 전후 상태">
-            <time>{dayStatus(action.before)}</time>
-            <span aria-hidden="true">→</span>
-            <time>{dayStatus(action.after)}</time>
-          </div>
-        )}
+        {action.showTimeChange !== false &&
+          (action.before.minute !== action.after.minute ||
+            weekOf(action.before) !== weekOf(action.after)) && (
+            <div className="action-time" aria-label="행동 전후 상태">
+              <time>{dayStatus(action.before)}</time>
+              <span aria-hidden="true">→</span>
+              <time>{dayStatus(action.after)}</time>
+            </div>
+          )}
         <div className="action-progress-track" aria-hidden="true">
           <span />
         </div>

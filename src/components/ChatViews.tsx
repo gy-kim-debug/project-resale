@@ -14,12 +14,14 @@ import { TradeChat } from './TradeChat';
 import { useChatReplies } from '../app/chatReplies';
 export function ChatList({ g, open }: { g: Game; open: Open }) {
   const replies = useChatReplies((s) => s.pending);
-  const [filter, setFilter] = useState<'all' | 'buy' | 'sell' | 'ended'>('all');
+  const [filter, setFilter] = useState<'active' | 'buy' | 'sell' | 'ended'>(
+    'active',
+  );
   const threads = [...(g.chats ?? [])]
-    .filter(
-      (t) =>
-        filter === 'all' ||
-        (filter === 'ended' ? t.status !== 'active' : t.side === filter),
+    .filter((t) =>
+      filter === 'ended'
+        ? t.status !== 'active'
+        : t.status === 'active' && (filter === 'active' || t.side === filter),
     )
     .sort((a, b) => b.updated - a.updated);
   return (
@@ -30,7 +32,7 @@ export function ChatList({ g, open }: { g: Game; open: Open }) {
       <div className="chat-filters" role="group" aria-label="채팅 분류">
         {(
           [
-            ['all', '전체'],
+            ['active', '진행 중'],
             ['buy', '구매'],
             ['sell', '판매'],
             ['ended', '종료'],
@@ -82,7 +84,11 @@ export function ChatList({ g, open }: { g: Game; open: Open }) {
         </ul>
       ) : (
         <div className="empty">
-          <h2>아직 대화가 없어요.</h2>
+          <h2>
+            {filter === 'ended'
+              ? '종료된 채팅이 없어요.'
+              : '진행 중인 채팅이 없어요.'}
+          </h2>
         </div>
       )}
     </>
