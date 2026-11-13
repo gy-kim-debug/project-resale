@@ -11,7 +11,9 @@ import {
 } from './GameViews';
 import { ItemArt } from './ItemArt';
 import { TradeChat } from './TradeChat';
+import { useChatReplies } from '../app/chatReplies';
 export function ChatList({ g, open }: { g: Game; open: Open }) {
+  const replies = useChatReplies((s) => s.pending);
   const [filter, setFilter] = useState<'all' | 'buy' | 'sell' | 'ended'>('all');
   const threads = [...(g.chats ?? [])]
     .filter(
@@ -66,7 +68,9 @@ export function ChatList({ g, open }: { g: Game; open: Open }) {
                     )}
                   </strong>
                   <span>{t.title}</span>
-                  <small>{t.messages.at(-1)?.text}</small>
+                  <small>
+                    {replies[t.id] ? '입력 중…' : t.messages.at(-1)?.text}
+                  </small>
                 </span>
                 <span className="chat-row-status">
                   <b>{t.side === 'buy' ? '구매' : '판매'}</b>
@@ -85,6 +89,7 @@ export function ChatList({ g, open }: { g: Game; open: Open }) {
   );
 }
 function ArchivedConversation({ thread }: { thread: TradeThread }) {
+  const replying = useChatReplies((s) => !!s.pending[thread.id]);
   return (
     <section className="archived-conversation">
       <div className="chat-room-summary">
@@ -94,11 +99,15 @@ function ArchivedConversation({ thread }: { thread: TradeThread }) {
           <p>{thread.title}</p>
           <strong>{won(thread.price)}</strong>
           <span className="chat-ended-status">
-            {chatStatusText(thread.status)}
+            {replying ? '답변 대기' : chatStatusText(thread.status)}
           </span>
         </div>
       </div>
-      <TradeChat name={thread.name} messages={thread.messages} />
+      <TradeChat
+        threadId={thread.id}
+        name={thread.name}
+        messages={thread.messages}
+      />
     </section>
   );
 }

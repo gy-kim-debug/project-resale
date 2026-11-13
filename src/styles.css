@@ -4312,3 +4312,51 @@ html[data-game-motion='reduced'] *::after {
   font-size: 11px;
   margin: 9px 0 0;
 }
+
+fieldset.conversation-composer,
+.chat-reply-controls {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+fieldset.conversation-composer {
+  border-top: 1px solid var(--border);
+}
+.chat-typing p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 40px;
+  width: 58px;
+}
+.chat-typing i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: chat-typing 1s ease-in-out infinite;
+}
+.chat-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.chat-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes chat-typing {
+  0%,
+  70%,
+  100% {
+    opacity: 0.4;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-typing i {
+    animation: none;
+  }
+}

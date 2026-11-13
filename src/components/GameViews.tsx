@@ -1,6 +1,7 @@
 import { GameOptions } from './GameOptions';
 import { ChatRoom } from './ChatViews';
-import { buyChatId, sellerChatClosed } from '../domain/chats';
+import { buyChatId, sellChatId, sellerChatClosed } from '../domain/chats';
+import { useChatReplies } from '../app/chatReplies';
 import { LotteryView, StocksView } from './DailyViews';
 import { WELCOME_LETTER } from '../content/welcomeLetter';
 import { MARKET_SKILLS } from '../content/conditionGrades';
@@ -582,6 +583,7 @@ export function ListingView({
   const toggle = useGameStore((s) => s.toggleFavorite);
   const [confirm, setConfirm] = useState(false);
   const [chatOpen, setChatOpen] = useState(conversation);
+  const replying = useChatReplies((s) => !!s.pending[buyChatId(item.id)]);
   const price = item.negotiatedPrice ?? item.price;
   return (
     <>
@@ -637,6 +639,7 @@ export function ListingView({
           <Button
             primary
             disabled={
+              replying ||
               sellerChatClosed(item) ||
               g.cash < price ||
               g.inventory.length >= RULES.capacity
@@ -651,6 +654,7 @@ export function ListingView({
             <p>{won(price)}</p>
             <Button
               disabled={
+                replying ||
                 sellerChatClosed(item) ||
                 g.cash < price ||
                 g.inventory.length >= RULES.capacity
@@ -862,6 +866,7 @@ export function InquiriesView({
   act: Act;
   onlyId?: string;
 }) {
+  const replies = useChatReplies((s) => s.pending);
   return (
     <>
       {g.inquiries
@@ -910,6 +915,7 @@ export function InquiriesView({
               {item && <ItemComparison g={g} item={item} />}
 
               <TradeChat
+                threadId={sellChatId(q.id)}
                 name={q.name}
                 messages={
                   q.chat ?? [
@@ -920,34 +926,39 @@ export function InquiriesView({
                   ]
                 }
               />
-              {sale &&
-                q.rounds < SALE_BARGAINING.maxRounds &&
-                q.price < sale.price && (
-                  <AmountChoice
-                    key={`${q.id}-${q.rounds}`}
-                    presets={presets}
-                    title="가격 제안"
-                    label="제안할 판매 가격 (원)"
-                    min={q.price + MONEY_UNIT}
-                    max={sale.price}
-                    submit={(price) =>
-                      act({ type: 'counter', id: q.id, price })
-                    }
-                  />
-                )}
-              <Button
-                primary
-                actionCost={1}
-                onClick={() => act({ type: 'accept', id: q.id })}
+              <fieldset
+                className="chat-reply-controls"
+                disabled={!!replies[sellChatId(q.id)]}
               >
-                수락하고 거래
-              </Button>
-              <Button onClick={() => act({ type: 'reject', id: q.id })}>
-                거절
-              </Button>
-              <Button danger onClick={() => act({ type: 'break', id: q.id })}>
-                거래 파토
-              </Button>
+                {sale &&
+                  q.rounds < SALE_BARGAINING.maxRounds &&
+                  q.price < sale.price && (
+                    <AmountChoice
+                      key={`${q.id}-${q.rounds}`}
+                      presets={presets}
+                      title="가격 제안"
+                      label="제안할 판매 가격 (원)"
+                      min={q.price + MONEY_UNIT}
+                      max={sale.price}
+                      submit={(price) =>
+                        act({ type: 'counter', id: q.id, price })
+                      }
+                    />
+                  )}
+                <Button
+                  primary
+                  actionCost={1}
+                  onClick={() => act({ type: 'accept', id: q.id })}
+                >
+                  수락하고 거래
+                </Button>
+                <Button onClick={() => act({ type: 'reject', id: q.id })}>
+                  거절
+                </Button>
+                <Button danger onClick={() => act({ type: 'break', id: q.id })}>
+                  거래 파토
+                </Button>
+              </fieldset>
             </section>
           );
         })}

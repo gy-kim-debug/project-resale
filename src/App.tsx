@@ -1,4 +1,5 @@
 import { useGameOptions } from './app/gameOptions';
+import { useChatReplies } from './app/chatReplies';
 import { MarketStatus } from './components/MarketStatus';
 import { ChatList, PendingInquiryBar } from './components/ChatViews';
 import { unreadChats } from './domain/chats';
@@ -354,7 +355,13 @@ function GameApp() {
   // Debt settlement is mandatory; unanswered inquiries are handled in the chat tab.
   const shownRoutes: Route[] = due ? [{ kind: '주간 정산' }] : routes;
   const currentRoute = shownRoutes.at(-1);
+  const chatReplying = useChatReplies((s) =>
+    currentRoute?.kind === '채팅방' && currentRoute.id
+      ? !!s.pending[currentRoute.id]
+      : false,
+  );
   const endedChat =
+    !chatReplying &&
     currentRoute?.kind === '채팅방' &&
     g?.chats?.some(
       (thread) => thread.id === currentRoute.id && thread.status !== 'active',

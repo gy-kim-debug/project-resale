@@ -6,6 +6,8 @@ import type { DialogueTopic } from '../content/tradeDialogue';
 import type { Act } from '../app/store';
 import { TradeChat } from './TradeChat';
 import { ItemArt } from './ItemArt';
+import { buyChatId } from '../domain/chats';
+import { useChatReplies } from '../app/chatReplies';
 
 const labels: Record<DialogueTopic, string> = {
   greet: '인사하기',
@@ -30,6 +32,7 @@ export function SellerConversation({
   onProduct: () => void;
 }) {
   const [panel, setPanel] = useState<'questions' | 'offers'>('questions');
+  const replying = useChatReplies((s) => !!s.pending[buyChatId(item.id)]);
   const root = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const container = root.current?.closest('.sheet-content');
@@ -58,6 +61,7 @@ export function SellerConversation({
           <button
             className="conversation-end"
             type="button"
+            disabled={replying}
             onClick={() => act({ type: 'closeChat', id: item.id })}
           >
             대화 종료
@@ -72,10 +76,11 @@ export function SellerConversation({
         </span>
       </div>
       <TradeChat
+        threadId={buyChatId(item.id)}
         name={item.seller}
         messages={item.chat ?? dialogueOpening(item)}
       />
-      <div className="conversation-composer">
+      <fieldset className="conversation-composer" disabled={replying}>
         {(choices.length > 0 || offers.length > 0) && (
           <>
             <div
@@ -153,14 +158,14 @@ export function SellerConversation({
             </div>
           </>
         )}
-        {item.chatSettled && (
+        {item.chatSettled && !replying && (
           <p className="chat-ended">
             {item.purchaseBargain?.walked
               ? '판매자가 거래를 종료했습니다.'
               : '대화 종료'}
           </p>
         )}
-      </div>
+      </fieldset>
     </section>
   );
 }

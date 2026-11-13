@@ -1,3 +1,4 @@
+import { clearChatReplies, useChatReplies } from '../src/app/chatReplies';
 import { enableStory } from '../src/domain/story';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,6 +27,7 @@ saveRepository.save = async (data) => {
   writes.push(structuredClone(data));
 };
 function setup() {
+  clearChatReplies();
   writes.length = 0;
   useGameStore.setState({
     game: newGame(42),
@@ -121,7 +123,8 @@ test('date boundaries and changed fields use actual engine deltas', () => {
   });
 });
 
-test('chat replies and closure save immediately without time or loading', async () => {
+test('chat replies save once immediately, block early commands, and unlock after presentation without time or loading', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   setup();
   const s = useGameStore;
   const g = s.getState().game!;
@@ -135,6 +138,14 @@ test('chat replies and closure save immediately without time or loading', async 
   assert.equal(s.getState().notice, '');
   await flushSaves();
   assert.equal(writes.at(-1)?.game.board[0].chat?.length, 3);
+  assert.ok(useChatReplies.getState().pending[`buy:${i.id}`]);
+  const after = structuredClone(s.getState().game);
+  assert.equal(await s.getState().act({ type: 'closeChat', id: i.id }), false);
+  assert.equal(await s.getState().act({ type: 'buy', id: i.id }), false);
+  assert.deepEqual(s.getState().game, after);
+  for (let n = 0; n < 5; n++) t.mock.timers.tick(1100);
+  assert.equal(useChatReplies.getState().pending[`buy:${i.id}`], undefined);
+  assert.deepEqual(s.getState().game, after);
   const completion = s.getState().act({ type: 'closeChat', id: i.id });
   assert.equal(s.getState().action, null);
   assert.equal(await s.getState().act({ type: 'closeChat', id: i.id }), false);

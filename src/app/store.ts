@@ -1,4 +1,10 @@
 import { resumeSession, type ResumeTab } from './resumeSession';
+import {
+  clearChatReplies,
+  presentChatReply,
+  replyThreadId,
+  useChatReplies,
+} from './chatReplies';
 import { enableStory } from '../domain/story';
 import type { PlayerProfile } from '../content/player';
 import { isPlayer } from '../domain/player';
@@ -184,6 +190,7 @@ export const useGameStore = create<State>((set, get) => ({
         throw Error('이전 진행 저장을 확인한 뒤 다시 시도하세요.');
       const data = await saveRepository.load(id);
       if (!data) throw Error('비어 있는 슬롯입니다.');
+      clearChatReplies();
       clearTimeout(highlightTimer);
       set({
         activeSlot: id,
@@ -226,6 +233,7 @@ export const useGameStore = create<State>((set, get) => ({
         readNotificationIds: [],
       };
       await saveRepository.create(data, id);
+      clearChatReplies();
       const slots = await saveRepository.listSlots();
       clearTimeout(highlightTimer);
       set({
@@ -291,6 +299,7 @@ export const useGameStore = create<State>((set, get) => ({
       await flushSaves();
       if (get().unsaved) return false;
       const slots = await saveRepository.listSlots();
+      clearChatReplies();
       set({ screen: 'menu', slots, notice: '', changes: {} });
       resumeSession.save({ screen: 'menu' });
       return true;
@@ -312,11 +321,14 @@ export const useGameStore = create<State>((set, get) => ({
       current.screen !== 'game'
     )
       return false;
+    const threadId = replyThreadId(command);
+    if (threadId && useChatReplies.getState().pending[threadId]) return false;
     const result = execute(g, command);
     if (!result.ok) {
       set({ notice: result.message, noticeId: get().noticeId + 1, ok: false });
       return false;
     }
+    presentChatReply(g, result.game, command);
     if (command.type !== 'readChat')
       set({
         discarded:
@@ -524,6 +536,7 @@ export const useGameStore = create<State>((set, get) => ({
     if (get().action || get().slotBusy) return false;
     try {
       const data = parseSave(JSON.parse(raw));
+      clearChatReplies();
       clearTimeout(highlightTimer);
       set({
         changes: {},
@@ -557,6 +570,7 @@ export const useGameStore = create<State>((set, get) => ({
   },
   startOver() {
     if (get().action || get().slotBusy) return;
+    clearChatReplies();
     clearTimeout(highlightTimer);
     set({ changes: {} });
     set({
