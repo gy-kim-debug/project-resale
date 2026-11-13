@@ -1,3 +1,4 @@
+import { MARKET_REFRESH_COUNT } from '../src/content/markets';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EVENT_KINDS } from '../src/content/story';
@@ -205,7 +206,16 @@ test('market tips refresh only their named market for one action without cash, r
     g.board.filter((i) => i.marketId !== 'computers'),
     others,
   );
-  assert.equal(g.board.filter((i) => i.marketId === 'computers').length, 12);
+  assert.equal(
+    g.board.filter((i) => i.marketId === 'computers').length,
+    original.board.filter((i) => i.marketId === 'computers').length +
+      MARKET_REFRESH_COUNT,
+  );
+  for (const item of original.board)
+    assert.deepEqual(
+      g.board.find((i) => i.id === item.id),
+      item,
+    );
   assert.equal(g.story!.active!.outcome, 'discovered');
 });
 test('follow-up and branch corruption is rejected, and completed outcomes survive imports without paying again', () => {

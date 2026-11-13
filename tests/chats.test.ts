@@ -126,7 +126,7 @@ test('purchase completion persists as read-only history after resale and rejects
   assert.equal(g.chats!.find((t) => t.id === id)!.status, 'completed');
   assert.deepEqual(g.chats!.find((t) => t.id === id)!.messages, transcript);
 });
-test('explicit seller cancellation and refreshed/expired listings preserve history and cannot restart', () => {
+test('explicit cancellation and real expiry end chats, while discovery preserves live conversations', () => {
   let g = seller();
   const i = g.board.find((i) => i.marketId === 'street')!;
   g = run(g, { type: 'startChat', id: i.id });
@@ -137,6 +137,13 @@ test('explicit seller cancellation and refreshed/expired listings preserve histo
   let active = seller();
   const listing = active.board.find((i) => i.marketId === 'street')!;
   active = run(active, { type: 'startChat', id: listing.id });
+  active = run(active, { type: 'refresh', marketId: 'street' });
+  assert.equal(
+    active.chats!.find((t) => t.id === buyChatId(listing.id))!.status,
+    'active',
+  );
+  active.board.find((i) => i.id === listing.id)!.expires =
+    active.minute + ACTION_TICK;
   active = run(active, { type: 'refresh', marketId: 'street' });
   const t = active.chats!.find((t) => t.id === buyChatId(listing.id))!;
   assert.equal(t.status, 'expired');

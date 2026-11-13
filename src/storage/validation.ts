@@ -39,11 +39,7 @@ import {
   SELLER_TAGS,
   SELLER_PROFILES,
 } from '../content/listingTags';
-import {
-  isMarketId,
-  marketDefinition,
-  LEGACY_BOARD_LIMIT,
-} from '../content/markets';
+import { isMarketId, marketDefinition, BOARD_LIMIT } from '../content/markets';
 import { auctionStep } from '../domain/auction';
 import { AUCTION_RULES } from '../content/auction';
 import { RULES } from '../content/rules';
@@ -659,7 +655,7 @@ export function isGame(v: unknown): v is Game {
     return false;
   if (
     !Array.isArray(v.board) ||
-    v.board.length > LEGACY_BOARD_LIMIT ||
+    v.board.length > BOARD_LIMIT ||
     !v.board.every(item)
   )
     return false;

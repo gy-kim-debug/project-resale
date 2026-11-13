@@ -62,8 +62,14 @@ export const MARKETS = MARKET_DEFINITIONS.filter(
 export const isActiveMarketId = (value: unknown): value is MarketId =>
   MARKETS.some((market) => market.id === value);
 export const MARKET_LISTING_COUNT = 12;
+export const MARKET_REFRESH_COUNT = 4;
+export const MARKET_BOARD_LIMIT = 60;
 export const LEGACY_BOARD_LIMIT =
   MARKET_DEFINITIONS.length * MARKET_LISTING_COUNT + 1;
+export const BOARD_LIMIT = Math.max(
+  LEGACY_BOARD_LIMIT,
+  MARKETS.length * MARKET_BOARD_LIMIT,
+);
 export const marketOf = (item: Pick<Item, 'marketId'>): MarketId =>
   item.marketId ?? 'street';
 export const marketDefinition = (id: MarketId) =>

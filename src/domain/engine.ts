@@ -78,6 +78,8 @@ import {
 } from './listingTags';
 import {
   MARKETS,
+  MARKET_BOARD_LIMIT,
+  MARKET_REFRESH_COUNT,
   MARKET_LISTING_COUNT,
   marketOf,
   marketDefinition,
@@ -308,13 +310,20 @@ function makeItem(
   return item;
 }
 function board(g: Game, selected?: MarketId) {
-  const list: Item[] = selected
-    ? g.board.filter((item) => marketOf(item) !== selected)
-    : [];
+  const list = g.board.filter((item) => item.expires > g.minute);
+  const retainedCount = list.length;
   for (const market of MARKETS.filter((m) => !selected || m.id === selected)) {
+    const existing = list.filter((item) => marketOf(item) === market.id).length;
+    const count = selected
+      ? Math.min(
+          Math.max(MARKET_REFRESH_COUNT, MARKET_LISTING_COUNT - existing),
+          Math.max(0, MARKET_BOARD_LIMIT - existing),
+        )
+      : Math.max(0, MARKET_LISTING_COUNT - existing);
+    if (!count) continue;
     const marketStart = list.length;
     const pool = [...market.products];
-    for (let n = 0; n < MARKET_LISTING_COUNT && pool.length; n++) {
+    for (let n = 0; n < count && pool.length; n++) {
       const choices =
         n === 0
           ? pool.filter((p) => (p.min ?? market.min) === market.min)
@@ -360,7 +369,9 @@ function board(g: Game, selected?: MarketId) {
       }
     }
   }
-  g.board = list;
+  g.board = selected
+    ? [...list.slice(retainedCount), ...list.slice(0, retainedCount)]
+    : list;
 }
 function daily(g: Game) {
   if (g.marketDay !== dayOf(g)) {
@@ -706,9 +717,8 @@ function executeCommand(
         };
       }
       if (scene.kind === 'marketTip' && command.choice === 'look') {
-        const beforeDay = dayOf(g);
         advance(g, 1);
-        if (beforeDay === dayOf(g)) board(g, scene.marketId ?? 'street');
+        board(g, scene.marketId ?? 'street');
         afterAction(g, command, original);
         return {
           game: finishWithReaction(g, scene, 'discovered', command.choice),
@@ -882,9 +892,8 @@ function executeCommand(
       case 'refresh': {
         const target = command.marketId ?? 'street';
         if (!isActiveMarketId(target)) throw Error('없는 시장입니다.');
-        const beforeDay = dayOf(g);
         advance(g, 1);
-        if (beforeDay === dayOf(g)) board(g, target);
+        board(g, target);
         message = `${marketDefinition(target).name}에서 새 매물을 찾았습니다.`;
         log(g, message);
         break;

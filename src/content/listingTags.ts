@@ -9,8 +9,8 @@ export const TAG_RULES = {
   vintageValuePercent: 115,
   replicaValuePercent: 8,
   urgentAskPercent: 90,
-  normalLifetimeActions: 3,
-  shortLifetimeActions: 2,
+  normalLifetimeActions: 12,
+  shortLifetimeActions: 6,
 };
 export const TAG_LABELS: Record<ListingTag, string> = {
   household: '생활용품',

@@ -42,6 +42,9 @@ import type { ListingTag, SellerTrait } from '../src/domain/game';
 import { auctionBidOptions } from '../src/domain/auction';
 import {
   MARKET_LISTING_COUNT,
+  MARKET_REFRESH_COUNT,
+  MARKET_BOARD_LIMIT,
+  BOARD_LIMIT,
   MARKETS,
   marketOf,
 } from '../src/content/markets';
@@ -1451,14 +1454,16 @@ test('real urgency adjusts price and deadline while false urgency does not guara
       const duration = (item.expires - g.minute) / ACTION_TICK;
       assert.equal(
         duration,
-        seller === 'urgent' || seller === 'moving' ? 2 : 3,
+        seller === 'urgent' || seller === 'moving'
+          ? TAG_RULES.shortLifetimeActions
+          : TAG_RULES.normalLifetimeActions,
       );
       assert.equal(item.price % 100, 0);
       if (item.listing!.tags.includes('urgent')) {
         if (seller === 'urgent') real++;
         else {
           falseClaim++;
-          assert.equal(duration, 3);
+          assert.equal(duration, TAG_RULES.normalLifetimeActions);
         }
       }
     }
@@ -1546,7 +1551,7 @@ test('invalid listing metadata is rejected without replacing saves', () => {
   }
 });
 
-test('market-specific refresh costs one action and keeps other unexpired boards and ongoing chats', () => {
+test('market-specific refresh adds new listings and preserves every unexpired item and ongoing chat', () => {
   let g = newGame(42);
   const item = g.board.find((i) => i.marketId === 'computers')!;
   g = run(g, { type: 'offer', id: item.id, price: item.offers[0] });
@@ -1559,10 +1564,14 @@ test('market-specific refresh costs one action and keeps other unexpired boards 
     after.board.filter((i) => i.marketId !== 'cars'),
     before.board.filter((i) => i.marketId !== 'cars'),
   );
-  assert.ok(
-    after.board
-      .filter((i) => i.marketId === 'cars')
-      .every((i) => !before.board.some((old) => old.id === i.id)),
+  for (const item of before.board)
+    assert.deepEqual(
+      after.board.find((i) => i.id === item.id),
+      item,
+    );
+  assert.equal(
+    after.board.filter((i) => i.marketId === 'cars').length,
+    MARKET_LISTING_COUNT + MARKET_REFRESH_COUNT,
   );
   const invalid = execute(before, {
     type: 'refresh',
@@ -1639,11 +1648,14 @@ test('legacy boards and assets are retained; new markets are introduced by an ac
   assert.equal(parsed.board[0].price, 1234600);
   const after = run(parsed, { type: 'refresh', marketId: 'property' });
   assert.ok(after.board.some((i) => i.marketId === 'property'));
-  assert.equal(after.board[0].price, 1234600);
+  assert.equal(
+    after.board.find((i) => i.id === parsed.board[0].id)!.price,
+    1234600,
+  );
   assert.equal(after.minute, old.minute + ACTION_TICK);
 });
 
-test('day-end refresh includes all active markets and preserves purchased assets and valid backups', () => {
+test('day-end refresh retains live listings, replenishes markets and adds selected listings while preserving owned assets', () => {
   let g = newGame(1);
   const item = g.board[0];
   g = run(g, { type: 'buy', id: item.id });
@@ -1654,8 +1666,15 @@ test('day-end refresh includes all active markets and preserves purchased assets
     assert.equal(
       after.board.filter((i) => marketOf(i) === market.id && i.price > 0)
         .length,
-      MARKET_LISTING_COUNT,
+      MARKET_LISTING_COUNT +
+        (market.id === 'property' ? MARKET_REFRESH_COUNT : 0),
     );
+  for (const listing of g.board)
+    if (listing.expires > after.minute)
+      assert.deepEqual(
+        after.board.find((i) => i.id === listing.id),
+        listing,
+      );
   assert.equal(after.inventory[0].id, item.id);
   const backup = JSON.parse(
     JSON.stringify({
@@ -1668,9 +1687,10 @@ test('day-end refresh includes all active markets and preserves purchased assets
   assert.deepEqual(parseSave(backup).game, JSON.parse(JSON.stringify(after)));
   assert.equal(parseSave(backup).selectedMarket, 'property');
   const invalid = structuredClone(after);
-  invalid.board[0].marketId = 'invalid' as never;
+  const invalidIndex = invalid.board.findIndex((i) => marketOf(i) === 'street');
+  invalid.board[invalidIndex].marketId = 'invalid' as never;
   assert.equal(isGame(invalid), false);
-  invalid.board[0].marketId = 'property';
+  invalid.board[invalidIndex].marketId = 'property';
   assert.equal(isGame(invalid), false);
   assert.throws(() => parseSave({ ...backup, selectedMarket: 'invalid' }));
 });
@@ -2504,9 +2524,15 @@ test('special discounts preserve hidden facts, collectors are not guaranteed gen
   )!;
   const original = structuredClone(item);
   item.listing!.facts.seller = 'ordinary';
+  item.expires = g.minute + TAG_RULES.normalLifetimeActions * ACTION_TICK;
   const clearance = applySpecialListing(item, 'clearance', 10000);
   assert.ok(clearance.price < item.price);
-  assert.equal(clearance.expires, item.expires - ACTION_TICK);
+  assert.equal(
+    clearance.expires,
+    item.expires -
+      (TAG_RULES.normalLifetimeActions - TAG_RULES.shortLifetimeActions) *
+        ACTION_TICK,
+  );
   assert.equal(
     clearance.listing!.facts.authentic,
     item.listing!.facts.authentic,
@@ -2919,4 +2945,92 @@ test('old owned values and acquisition prices survive imports and inspection wit
   assert.equal(checked.minute, g.minute);
   assert.equal(checked.weekActions, g.weekActions);
   assert.deepEqual(g, original);
+});
+
+test('new listings use longer content-defined lives and discovery never resets existing deadlines or negotiated prices', () => {
+  let g = newGame(42);
+  for (const item of g.board) {
+    const urgent =
+      item.listing && ['urgent', 'moving'].includes(item.listing.facts.seller);
+    assert.equal(item.expires - g.minute, ACTION_TICK * (urgent ? 6 : 12));
+  }
+  const target = g.board.find(
+    (i) => i.marketId === 'street' && i.expires > ACTION_TICK * 6,
+  )!;
+  g = run(g, { type: 'startChat', id: target.id });
+  const before = structuredClone(g.board.find((i) => i.id === target.id)!);
+  for (let n = 0; n < 4; n++) {
+    g = run(g, { type: 'refresh', marketId: 'street' });
+    assert.deepEqual(
+      g.board.find((i) => i.id === target.id),
+      before,
+    );
+    assert.equal(
+      g.chats!.find((t) => t.itemId === target.id)!.status,
+      'active',
+    );
+    assert.ok(g.board.length <= BOARD_LIMIT);
+    assert.ok(
+      g.board.filter((i) => marketOf(i) === 'street').length <=
+        MARKET_BOARD_LIMIT,
+    );
+  }
+  assert.deepEqual(
+    parseSave(
+      JSON.parse(
+        JSON.stringify({ version: 2, game: g, favoriteIds: [target.id] }),
+      ),
+    ).game,
+    g,
+  );
+});
+
+test('only expired board items disappear during discovery; live favorites and chats remain and generated IDs stay bounded and unique', () => {
+  let g = newGame(42);
+  const target = g.board.find((i) => i.marketId === 'street')!;
+  target.expires = ACTION_TICK;
+  g = run(g, { type: 'startChat', id: target.id });
+  const owned = g.board.find((i) => i.marketId === 'computers')!;
+  g.inventory.push({ ...owned, acquiredFor: owned.price });
+  g.board = g.board.filter((i) => i.id !== owned.id);
+  const snapshot = structuredClone(g.inventory);
+  for (let n = 0; n < 20; n++) {
+    g = run(g, { type: 'refresh', marketId: 'street' });
+    assert.ok(g.board.every((i) => i.expires > g.minute));
+    assert.ok(g.board.length <= BOARD_LIMIT);
+    assert.ok(
+      g.board.filter((i) => marketOf(i) === 'street').length <=
+        MARKET_BOARD_LIMIT,
+    );
+    assert.equal(new Set(g.board.map((i) => i.id)).size, g.board.length);
+    assert.deepEqual(g.inventory, snapshot);
+  }
+  assert.ok(!g.board.some((i) => i.id === target.id));
+  assert.equal(g.chats!.find((t) => t.itemId === target.id)!.status, 'expired');
+  assert.ok(isGame(g));
+});
+
+test('weekly settlement preserves a recent live listing and its chat without renewing its deadline', () => {
+  let g = newGame(42);
+  g.cash = 10000000;
+  g.stats.peakCash = g.cash;
+  for (let n = 0; n < 10; n++)
+    g = run(g, { type: 'refresh', marketId: 'street' });
+  const item = g.board.find(
+    (i) => i.marketId === 'street' && i.expires > 20 * ACTION_TICK,
+  )!;
+  assert.ok(item);
+  g = run(g, { type: 'startChat', id: item.id });
+  const before = structuredClone(g.board.find((i) => i.id === item.id)!);
+  g = run(g, { type: 'startSettlement' });
+  g = run(g, { type: 'repay', amount: mandatoryPrincipal(g) });
+  g = run(g, { type: 'payInterest' });
+  assert.equal(weekOf(g), 2);
+  assert.equal(g.weekActions, 0);
+  assert.deepEqual(
+    g.board.find((i) => i.id === item.id),
+    before,
+  );
+  assert.equal(g.chats!.find((t) => t.itemId === item.id)!.status, 'active');
+  assert.ok(isGame(g));
 });
