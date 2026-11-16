@@ -3056,7 +3056,7 @@ test('fixed-price offers have explicit rare acceptance, high walk and unchanged-
     item.offers = openingPurchaseOffers(item.price, market.id);
     const before = structuredClone(item);
     assert.equal(canPurchaseOffer(item), true);
-    for (const draw of [0, 0.009999, 0.01, 0.8, 0.81, 0.999999]) {
+    for (const draw of [0, 0.099999, 0.1, 0.699999, 0.7, 0.999999]) {
       const reply = purchaseReply(item, item.offers[0], () => draw, 10).item;
       assert.equal(reply.purchaseBargain!.rounds, 1);
       assert.equal(reply.value, item.value);
@@ -3083,7 +3083,7 @@ test('fixed-price offers have explicit rare acceptance, high walk and unchanged-
   }
 });
 
-test('fixed-price response partitions 1000 evenly spaced draws into 1% accepted, 80% walked and 19% held', () => {
+test('fixed-price response partitions 1000 evenly spaced draws into 10% accepted, 60% walked and 30% held', () => {
   const item = bargainFixture('street');
   item.listing!.facts.seller = 'firm';
   item.negotiation = 'none';
@@ -3102,5 +3102,5 @@ test('fixed-price response partitions 1000 evenly spaced draws into 1% accepted,
     else if (reply.purchaseBargain!.walked) counts.walked++;
     else counts.held++;
   }
-  assert.deepEqual(counts, { accepted: 10, walked: 800, held: 190 });
+  assert.deepEqual(counts, { accepted: 100, walked: 600, held: 300 });
 });

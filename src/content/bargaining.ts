@@ -68,4 +68,4 @@ export const BARGAINING_MARKETS: Record<
 };
 export const SALE_BARGAINING = { maxRounds: 2, walkChance: 0.3 };
 /** Fixed-price sellers can exceptionally accept, but usually end the trade. */
-export const FIRM_BARGAINING = { acceptChance: 0.01, walkChance: 0.8 };
+export const FIRM_BARGAINING = { acceptChance: 0.1, walkChance: 0.6 };

@@ -161,4 +161,4 @@ PlayerAppearance의 `avatar`와 `clothing`은 선택 필드다. 기존 `outfit`�
 
 ## 가격고정 판매자의 제안 — 2026-11-16
 
-UI/엔진 공통 canPurchaseOffer에서 가격고정 인물의 일괄 차단을 제거했다. isFirmSeller가 실제 인물/판매자 성향을 함께 판정하고 purchaseReply가 FIRM_BARGAINING의 1% 수락/80% 파토/19% 정가 유지 분기를 사용한다. 일반 판매자의 기존 계산/난수 호출 경로는 유지한다. 가격고정의 희박 수락은 기존 게시가 floor 아래 합의를 허용하는 명시적 예외이며 저장 형식/기존 결과/숨은 가치/인내심은 바꾸지 않는다.
+UI/엔진 공통 canPurchaseOffer에서 가격고정 인물의 일괄 차단을 제거했다. isFirmSeller가 실제 인물/판매자 성향을 함께 판정하고 purchaseReply가 FIRM_BARGAINING의 10% 수락/60% 파토/30% 정가 유지 분기를 사용한다. 일반 판매자의 기존 계산/난수 호출 경로는 유지한다. 가격고정의 희박 수락은 기존 게시가 floor 아래 합의를 허용하는 명시적 예외이며 저장 형식/기존 결과/숨은 가치/인내심은 바꾸지 않는다.

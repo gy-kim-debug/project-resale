@@ -1,3 +1,5 @@
+import process from 'node:process';
+import console from 'node:console';
 import { build } from 'esbuild';
 import { writeFile } from 'node:fs/promises';
 await build({
@@ -35,7 +37,7 @@ for (let seed = 0; seed < 10000 && Object.keys(fixtures).length < 3; seed++) {
         ? 'walked'
         : 'held';
   fixtures[outcome] ??= {
-    save: { version: 2, game: structuredClone(g), favoriteIds: [] },
+    save: { version: 2, game: globalThis.structuredClone(g), favoriteIds: [] },
     itemId: item.id,
     offer: item.offers[0],
     asking: item.price,
