@@ -4,26 +4,26 @@ React·TypeScript·Vite·Tailwind CSS v4·Zustand·IndexedDB(idb) 기반 클라�
 
 ## 책임
 
-| 위치                             | 책임                                                             |
-| -------------------------------- | ---------------------------------------------------------------- |
-| src/domain/game.ts               | 직렬화 가능한 게임/아이템/명령/결과 타입·정수 금액/시각 표시     |
-| src/content/bargaining.ts        | 일반 시장별 흥정 프로필·초기 가격·전략·판매 문의 제한            |
-| src/domain/bargaining.ts         | 구매/판매 문의의 순수 상태 전이·채팅 응답                        |
-| src/domain/purchaseBargaining.ts | 시장/판매 성향 결합·가격 선택지·접근 방식·UI/엔진 공통 가능 조건 |
-| src/domain/engine.ts             | 순수 명령 실행·시드 난수·시간·거래·이자·이벤트·능력치            |
-| src/content/market.ts            | 카테고리 기준 가치·가격 단계·매입가 범위·나눔/수집 금액          |
-| src/content/rules.ts             | 행동·즉시 판매 비율·등급·콘텐츠·밸런스                           |
-| src/app/store.ts                 | 명령 결과 반영, 탐색 탭, 관심 상태, 저장 직렬화·오류·복원        |
-| src/storage                      | 저장 인터페이스·IndexedDB·전체 스냅샷 검증·이전 저장 보존        |
-| src/App.tsx                      | 공통 3줄 헤더·홈·5개 탭·하단 창 스택·필수 문의·종료 화면         |
-| src/components/GameViews.tsx     | 각 화면·입력·구매/판매 확인·결과·백업 파일 조작                  |
-| src/components/Icon.tsx          | 로컬 SVG 아이콘                                                  |
-| src/styles.css                   | 모바일·safe-area·고정 헤더·하단 탐색·스크롤·하단 창              |
-| scripts/build-offline.mjs        | 빌드 결과 해시를 사용한 앱 파일 캐시·서비스 워커 생성            |
-| tests/engine.test.ts             | 도메인 규칙·무변경 실패·장기 플레이·저장 검증                    |
-| scripts/verify-screens.py        | 모바일 Chromium UI·저장/복원·오프라인·종료 검증                  |
-| docs/design                      | 사용자 확정 규칙·주제별 개발자 위임 결정·UI·v1 정책              |
-| work                             | 커밋 제외 번들·스냅샷·검증 스크린샷·배포 아카이브                |
+| 위치                             | 책임                                                               |
+| -------------------------------- | ------------------------------------------------------------------ |
+| src/domain/game.ts               | 직렬화 가능한 게임/아이템/명령/결과 타입·정수 금액/시각 표시       |
+| src/content/bargaining.ts        | 일반 시장별 흥정 프로필·초기 가격·전략·판매 문의 제한              |
+| src/domain/bargaining.ts         | 구매/판매 문의의 순수 상태 전이·채팅 응답                          |
+| src/domain/purchaseBargaining.ts | 시장/판매 성향 결합·가격 선택지·접근 방식·UI/엔진 공통 가능 조건   |
+| src/domain/engine.ts             | 순수 명령 실행·시드 난수·시간·거래·이자·이벤트·능력치              |
+| src/content/market.ts            | 카테고리 기준 가치·가격 단계·매입가 범위·나눔/수집 금액            |
+| src/content/rules.ts             | 행동·즉시 판매 비율·등급·콘텐츠·밸런스                             |
+| src/app/store.ts                 | 명령 결과 반영, 탐색 탭, 구 저장 메타데이터, 저장 직렬화·오류·복원 |
+| src/storage                      | 저장 인터페이스·IndexedDB·전체 스냅샷 검증·이전 저장 보존          |
+| src/App.tsx                      | 공통 3줄 헤더·홈·5개 탭·하단 창 스택·필수 문의·종료 화면           |
+| src/components/GameViews.tsx     | 각 화면·입력·구매/판매 확인·결과·백업 파일 조작                    |
+| src/components/Icon.tsx          | 로컬 SVG 아이콘                                                    |
+| src/styles.css                   | 모바일·safe-area·고정 헤더·하단 탐색·스크롤·하단 창                |
+| scripts/build-offline.mjs        | 빌드 결과 해시를 사용한 앱 파일 캐시·서비스 워커 생성              |
+| tests/engine.test.ts             | 도메인 규칙·무변경 실패·장기 플레이·저장 검증                      |
+| scripts/verify-screens.py        | 모바일 Chromium UI·저장/복원·오프라인·종료 검증                    |
+| docs/design                      | 사용자 확정 규칙·주제별 개발자 위임 결정·UI·v1 정책                |
+| work                             | 커밋 제외 번들·스냅샷·검증 스크린샷·배포 아카이브                  |
 
 ## 게임 실행
 
@@ -150,3 +150,7 @@ PlayerAppearance의 `avatar`와 `clothing`은 선택 필드다. 기존 `outfit`�
 ## 문의 선택 응답·수리 UI 일치 — 2026-11-13
 
 엔진의 미응답 문의에 대한 전역 행동 차단을 제거했다. expire는 문의 유무와 무관하게 판매 글 기한을 적용하고 관련 대화를 expired로 보존한 뒤 finishSale로 참조를 정리한다. 다른 판매 글·보유 물품은 보존한다. 수리 상세 화면과 실행은 같은 canRepair 판정을 사용하고 품목 분류는 설명/태그로 공개하지 않는다. 기존 비용·확률·행동·저장 스키마는 변경하지 않는다.
+
+## 관심 기능 제거와 구 저장 호환 — 2026-11-16
+
+관심 버튼/필터·marketUi.onlyFavorites·store.toggleFavorite를 제거한다. favoriteIds는 기존 v2 저장·백업/복원 호환을 위해 비활성 메타데이터로만 전달한다. UI와 게임 계산에 사용하지 않으며 새 게임의 값은 빈 배열이다. 저장 스키마는 변경하지 않는다.

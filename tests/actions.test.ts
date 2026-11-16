@@ -65,7 +65,6 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.equal(active.notice, '');
   assert.equal(await active.act({ type: 'wait' }), false);
   active.setTab('보관함');
-  active.toggleFavorite('x');
   active.selectMarket('cars');
   assert.equal(store.getState().selectedMarket, 'street');
   active.startOver();
@@ -83,12 +82,11 @@ test('action is committed once, briefly presented, then highlighted; all input p
   assert.equal(store.getState().changes.minute, ACTION_TICK);
   assert.match(store.getState().notice, /구매 완료/);
 });
-test('navigation, favorites and rejected actions do not show presentation or consume time', async () => {
+test('navigation and rejected actions do not show presentation or consume time', async () => {
   setup();
   const s = useGameStore;
   const minute = s.getState().game!.minute;
   s.getState().setTab('채팅');
-  s.getState().toggleFavorite('x');
   assert.equal(s.getState().action, null);
   assert.equal(await s.getState().act({ type: 'buy', id: 'missing' }), false);
   assert.equal(s.getState().action, null);

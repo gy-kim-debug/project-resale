@@ -471,7 +471,7 @@ export function MarketView({
   marketId?: MarketId;
 }) {
   const filterKey = marketId;
-  const { category, onlyFavorites } = useMarketUi(
+  const { category } = useMarketUi(
     (state) => state.filters[filterKey] ?? DEFAULT_MARKET_FILTERS,
   );
   const update = (patch: Partial<MarketFilters>) =>
@@ -487,13 +487,11 @@ export function MarketView({
     ]),
   ];
   const act = useGameStore((s) => s.act);
-  const favorites = useGameStore((s) => s.favoriteIds);
   const listings = g.board.filter(
     (i) =>
       marketOf(i) === market.id &&
       i.price > 0 &&
-      (category === '전체' || i.category === category || i.kind === category) &&
-      (!onlyFavorites || favorites.includes(i.id)),
+      (category === '전체' || i.category === category || i.kind === category),
   );
   return (
     <div className="market-list-layout">
@@ -520,15 +518,6 @@ export function MarketView({
         </div>
         <div className="market-list-actions">
           <div className="market-list-meta">
-            <label className="check-label">
-              <input
-                type="checkbox"
-                aria-label="관심 매물만 보기"
-                checked={onlyFavorites}
-                onChange={(e) => update({ onlyFavorites: e.target.checked })}
-              />
-              관심만
-            </label>
             <span>{listings.length}개</span>
           </div>
           <Button
@@ -580,8 +569,6 @@ export function ListingView({
   open: Open;
   conversation?: boolean;
 }) {
-  const favorites = useGameStore((s) => s.favoriteIds);
-  const toggle = useGameStore((s) => s.toggleFavorite);
   const [confirm, setConfirm] = useState(false);
   const [chatOpen, setChatOpen] = useState(conversation);
   const replying = useChatReplies((s) => !!s.pending[buyChatId(item.id)]);
@@ -613,9 +600,6 @@ export function ListingView({
           <Details>
             <p>매물 유효 기간: {durationText(item.expires - g.minute)} 남음</p>
           </Details>
-          <Button onClick={() => toggle(item.id)}>
-            {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
-          </Button>
           {item.marketId !== 'auction' && (
             <section className="card negotiation-card">
               <Button
@@ -996,8 +980,8 @@ export function StorageView() {
   return (
     <>
       <p className="lead">
-        매 행동과 관심 매물 변경 후 이 브라우저에 자동 저장합니다. 다른 폰으로
-        옮기려면 백업을 사용하세요.
+        매 행동 후 이 브라우저에 자동 저장합니다. 다른 폰으로 옮기려면 백업을
+        사용하세요.
       </p>
       <Button onClick={download}>백업 파일 내보내기</Button>
       <label className="file-input">
@@ -1295,8 +1279,6 @@ export function AuctionListingView({
   act: Act;
 }) {
   const [confirm, setConfirm] = useState(false);
-  const favorites = useGameStore((s) => s.favoriteIds);
-  const toggle = useGameStore((s) => s.toggleFavorite);
   const auction = item.auction;
   if (!auction) return <p>경매가 종료됐습니다.</p>;
   const wonAuction = auction.status === 'won';
@@ -1324,9 +1306,6 @@ export function AuctionListingView({
         </div>
       </dl>
       <p>매물 유효 기간: {durationText(item.expires - g.minute)} 남음</p>
-      <Button onClick={() => toggle(item.id)}>
-        {favorites.includes(item.id) ? '관심 해제' : '관심 저장'}
-      </Button>
       <TradeChat name="경매 진행" messages={auction.history} />
       {auctionBidOptions(item).map((amount) => (
         <Button

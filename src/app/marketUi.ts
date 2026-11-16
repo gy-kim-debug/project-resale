@@ -3,11 +3,9 @@ import { create } from 'zustand';
 import type { Kind } from '../domain/game';
 export interface MarketFilters {
   category: Kind | ProductCategory | '전체';
-  onlyFavorites: boolean;
 }
 export const DEFAULT_MARKET_FILTERS: MarketFilters = {
   category: '전체',
-  onlyFavorites: false,
 };
 /** Temporary view state survives detail/back navigation, never modifies game saves. */
 export const useMarketUi = create<{

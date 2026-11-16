@@ -52,6 +52,7 @@ interface State {
   notice: string;
   noticeId: number;
   ok: boolean;
+  /** Inert v2 metadata retained for legacy save/backup round trips. */
   favoriteIds: string[];
   selectedMarket: MarketId;
   selectMarket(id: MarketId): void;
@@ -65,7 +66,6 @@ interface State {
   actionId: number;
   act: Act;
   setTab(tab: Tab): void;
-  toggleFavorite(id: string): void;
   dismiss(expectedId?: number): void;
   save(): void;
   importSave(raw: string): boolean;
@@ -437,16 +437,6 @@ export const useGameStore = create<State>((set, get) => ({
     set({ tab, notice: '' });
     if (get().screen === 'game')
       resumeSession.save({ screen: 'game', slot: get().activeSlot, tab });
-  },
-  toggleFavorite(id) {
-    if (!get().ready || get().action || get().slotBusy) return;
-    const ids = get().favoriteIds;
-    set({
-      favoriteIds: ids.includes(id)
-        ? ids.filter((i) => i !== id)
-        : [...ids, id].slice(-100),
-    });
-    get().save();
   },
   selectMarket(id) {
     const current = get();

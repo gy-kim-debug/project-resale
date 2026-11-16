@@ -791,14 +791,7 @@ progress {
   color: var(--muted);
   font-size: 11px;
 }
-.check-label {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-height: 44px;
-  color: #a8b4c5;
-  font-size: 12px;
-}
+
 input[type='checkbox'] {
   width: 17px;
   height: 17px;
