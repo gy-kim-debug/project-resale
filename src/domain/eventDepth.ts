@@ -1,4 +1,9 @@
 import {
+  selectedDelivery,
+  physicalDelivery,
+  type DeliveryMethod,
+} from './delivery';
+import {
   eventQuestionSpeech,
   eventDecisionSpeech,
   eventQuestionReply,
@@ -43,10 +48,27 @@ export function sceneItem(g: Game, s: StoryScene): Item | undefined {
   const sale = g.sales.find((x) => x.id === q?.saleId);
   return g.inventory.find((i) => i.id === sale?.itemId);
 }
+/** Public delivery context only; no hidden item data enters event dialogue. */
+export function sceneDelivery(
+  g: Game,
+  s: StoryScene,
+): DeliveryMethod | undefined {
+  if (s.tradeMethod) return s.tradeMethod;
+  const item = sceneItem(g, s);
+  if (s.resume?.type === 'buy' && item) return selectedDelivery(item);
+  const q = g.inquiries.find((q) => q.id === s.target);
+  const sale = g.sales.find((sale) => sale.id === q?.saleId);
+  const method =
+    q?.delivery ??
+    sale?.delivery ??
+    (item ? physicalDelivery(item) : undefined);
+  return method === 'both' ? undefined : method;
+}
 export function deepLines(g: Game): StoryLine[] | null {
   const s = g.story!.active!;
   if (s.variant === undefined || !isEventKind(s.kind)) return null;
   const kind = s.kind;
+  const parcel = sceneDelivery(g, s) === 'parcel';
   const name = s.name ?? (kind === 'creditor' ? '채권 담당자' : '거래 상대');
   const me = g.player?.nickname ?? '주인공';
   const line = (
@@ -61,25 +83,40 @@ export function deepLines(g: Game): StoryLine[] | null {
           ? '시간 내 주셔서 감사합니다. 다음에 필요한 물건이 있으면 서로 연락하죠.'
           : '물건과 대금을 확인했습니다. 거래 감사합니다.',
       sold:
-        kind === 'reunion'
-          ? '다시 만나게 될 줄은 몰랐네요. 이번에는 오래 가지고 있겠습니다.'
-          : '대금 보내 드렸습니다. 물건 잘 쓰겠습니다.',
+        kind === 'rehaggle' && s.decision === 'continue'
+          ? '알겠습니다. 처음 합의한 금액으로 거래하죠. 물건 잘 쓰겠습니다.'
+          : kind === 'inspection' && s.decision === 'wait'
+            ? '기다려 주셔서 감사합니다. 확인했으니 약속한 금액으로 거래하겠습니다.'
+            : kind === 'reunion'
+              ? '다시 만나게 될 줄은 몰랐네요. 이번에는 오래 가지고 있겠습니다.'
+              : '대금 보내 드렸습니다. 물건 잘 쓰겠습니다.',
       cancelled: '알겠습니다. 이번 거래는 여기까지 하죠.',
       declined: '조건이 맞지 않을 수도 있죠. 다음에 기회가 있으면 뵙겠습니다.',
-      reported:
-        '대화를 정리하고 신고 내용을 남겼다. 돈을 먼저 보내지는 않았다.',
+      reported: '수상한 요구에 대한 신고를 남기고 대화를 끝냈다.',
       promised:
-        kind === 'reservation'
-          ? '잠깐만 기다려 주세요. 일정이 되면 다시 연락드리겠습니다.'
-          : '소개받은 분께 연락해 두겠습니다. 물건이 남아 있으면 다시 이야기해요.',
+        kind === 'creditor'
+          ? '네, 이번 납부는 처리됐습니다. 다음 정산 기한에 다시 연락하겠습니다.'
+          : kind === 'reservation'
+            ? '일정이 정해지면 다시 연락드릴게요. 그때 물건이 남아 있으면 이야기해요.'
+            : '필요한 분이 있으면 소개해 드릴게요. 다음에 같은 종류를 구하시면 연락 주세요.',
       discovered:
         '알려 준 시장에서 새 매물을 확인했다. 좋은 거래인지는 직접 판단해야 한다.',
     };
     return [
-      line(me, eventDecisionSpeech(kind, s.decision), 'look'),
+      line(
+        me,
+        kind === 'creditor'
+          ? '납부 내역 확인했습니다. 다음 정산 때 연락드릴게요.'
+          : parcel && kind === 'scam' && s.decision === 'continue'
+            ? '예약금은 보내지 않겠습니다. 원래 합의한 택배 조건으로만 거래할게요.'
+            : eventDecisionSpeech(kind, s.decision),
+        'look',
+      ),
       line(
         s.outcome === 'reported' || s.outcome === 'discovered' ? '' : name,
-        text[s.outcome],
+        parcel && s.outcome === 'purchased'
+          ? '결제 확인했습니다. 약속한 물건은 택배로 전달하겠습니다.'
+          : text[s.outcome],
         'exchange',
       ),
     ];
@@ -105,20 +142,57 @@ export function deepLines(g: Game): StoryLine[] | null {
               ? `제안한 금액은 ${won(s.price)}입니다. 대화하는 동안 조건을 몰래 바꾸지는 않겠습니다.`
               : '지금 이야기한 조건에서 결정하시면 됩니다. 부담되시면 거래하지 않으셔도 돼요.',
       past:
-        kind === 'memory' || kind === 'reunion'
-          ? '생활이 달라지면 자주 쓰던 물건도 한동안 손이 안 가더라고요. 막상 보내고 나니 생각이 났습니다.'
-          : '이전 거래에서 약속을 지켜 주셨다는 이야기를 들었습니다. 이번에도 서로 조건을 확인하고 결정하면 좋겠어요.',
+        kind === 'memory'
+          ? '자주 쓰던 물건이라 함께한 기억이 많아요. 정리하기로 했지만 아쉬운 마음이 드네요.'
+          : kind === 'reunion'
+            ? '생활이 달라지면 자주 쓰던 물건도 한동안 손이 안 가더라고요. 막상 보내고 나니 생각이 났습니다.'
+            : '이전 거래에서 약속을 지켜 주셨다는 이야기를 들었습니다. 이번에도 서로 조건을 확인하고 결정하면 좋겠어요.',
     };
     return [
-      line(me, eventQuestionSpeech(kind, s.branch), 'look'),
+      line(
+        me,
+        parcel && kind === 'rehaggle' && s.branch === 'reason'
+          ? '합의한 금액을 다시 바꾸고 싶으신 이유가 있나요?'
+          : parcel && kind === 'scam' && s.branch === 'terms'
+            ? '예약금 없이 원래 택배 조건으로 거래할 수 있나요?'
+            : eventQuestionSpeech(kind, s.branch),
+        'look',
+      ),
       line(
         name,
-        eventQuestionReply(kind, s.branch, s.variant) ?? answers[s.branch],
+        s.branch === 'terms' && kind === 'bundle'
+          ? `${title}과 ${g.board.find((i) => i.id === s.extra)?.title ?? '함께 제안한 물건'}, 두 개 합쳐 ${won(s.price!)}입니다. 원래 물건만 사셔도 됩니다.`
+          : s.branch === 'terms' && kind === 'competitor'
+            ? `${(s.targets ?? [s.target!]).map((id) => g.inventory.find((i) => i.id === id)?.title ?? '제안한 물건').join(', ')}을 합쳐 ${won(s.price!)}입니다. 목록 밖의 물건은 포함하지 않습니다.`
+            : parcel && kind === 'scam' && s.branch === 'terms'
+              ? '예약금 없이 원래 합의한 택배 거래로 진행해도 됩니다.'
+              : kind === 'model' && item?.kind === '부동산'
+                ? '주소와 면적 등 제가 가진 자료는 보여드릴 수 있습니다. 권리 관계나 설비 상태까지 보증하는 건 아닙니다.'
+                : (eventQuestionReply(kind, s.branch, s.variant) ??
+                  answers[s.branch]),
         'listen',
       ),
     ];
   }
-  const [first, second] = EVENT_VARIANTS[kind][s.variant];
+  let [first, second] = EVENT_VARIANTS[kind][s.variant];
+  if (kind === 'model' && item?.kind === '부동산') {
+    first = '계약 전에 주소와 면적, 안내한 조건을 다시 확인하고 싶습니다.';
+    second =
+      '제가 가진 자료는 설명드릴 수 있어요. 권리 관계와 실제 상태는 별도로 확인하셔야 합니다.';
+  }
+  if (
+    kind === 'memory' &&
+    s.variant === 2 &&
+    ['자동차', '부동산'].includes(item?.kind ?? '')
+  ) {
+    first =
+      item?.kind === '자동차'
+        ? '자주 타던 차인데 요즘은 주차장에만 세워 두었네요.'
+        : '한동안 비워 둔 곳인데 다시 둘러보니 생각이 많아지네요.';
+    second = '아쉽지만 이제 정리하려고 합니다. 좋은 분께 넘어갔으면 해요.';
+  }
+  if (kind === 'missing' && item?.caseId === 'unopened')
+    first = '미개봉 본품과 별도로 드리려던 외부 구성품 하나가 보이지 않네요.';
   const format = (text: string) =>
     text.replaceAll(
       '{price}',
@@ -130,12 +204,25 @@ export function deepLines(g: Game): StoryLine[] | null {
       `${title === '물건' ? '' : `${title}. `}${kind === 'creditor' ? '정산 뒤 연락이 왔다.' : s.resume?.type === 'accept' ? '구매자와 마지막 조건을 확인한다.' : s.resume ? '거래를 마무리하려는 순간, 상대가 말을 꺼낸다.' : '새 연락이 도착했다.'}`,
       'look',
     ),
-    line(name, format(first)),
     line(
       name,
-      kind === 'model' && s.explained
-        ? '품목명과 외관은 등록된 설명대로예요. 내부 상태와 실제 가치는 구매한 뒤 확인하셔야 합니다.'
-        : format(second),
+      format(
+        parcel && kind === 'rehaggle' && s.variant === 0
+          ? '설치를 생각해 보니 제가 쓸 공간과 맞지 않을까 고민됩니다.'
+          : first,
+      ),
+    ),
+    line(
+      kind === 'scam' ? '' : name,
+      kind === 'model' && s.explained && item?.kind === '부동산'
+        ? '주소와 면적 등 안내한 자료는 다시 말씀드릴 수 있습니다. 별도의 권리 확인을 대신하는 설명은 아닙니다.'
+        : kind === 'model' && s.explained
+          ? '품목명과 외관은 등록된 설명대로예요. 내부 상태와 실제 가치는 구매한 뒤 확인하셔야 합니다.'
+          : format(
+              parcel && kind === 'rehaggle' && s.variant === 1
+                ? '마무리 직전에 죄송하지만 {price}에 맞춰 주실 수 있을까요?'
+                : second,
+            ),
       'listen',
     ),
   ];
@@ -191,14 +278,20 @@ export function depthChoices(
       break;
     case 'scam':
       choices = [
-        { ...buy, label: '현장에서만 결제하고 거래' },
+        {
+          ...buy,
+          label:
+            sceneDelivery(g, s) === 'parcel'
+              ? '예약금 없이 원래 조건으로 구매'
+              : '선입금 없이 현장에서 거래',
+        },
         { id: 'report', label: '신고하고 거래 종료' },
         cancel,
       ];
       break;
     case 'reservation':
       choices = [
-        { id: 'hold', label: '잠시 예약해 두기' },
+        { id: 'hold', label: '물건이 남으면 재연락 받기' },
         { ...buy, label: '지금 거래하기' },
         cancel,
       ];
@@ -240,6 +333,7 @@ export function finishWithReaction(
     name: s.name,
     outcome,
     decision,
+    ...(sceneDelivery(g, s) ? { tradeMethod: sceneDelivery(g, s) } : {}),
   };
   g.story!.lastAt = g.minute;
   return g;

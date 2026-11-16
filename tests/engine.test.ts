@@ -647,7 +647,7 @@ test('purchase chat and closure are free; only purchase consumes transaction tim
   });
   for (const key of ['minute', 'cash', 'interest', 'lastEvent'] as const)
     assert.equal(chat[key], before[key]);
-  assert.equal(chat.board[0].chat?.length, 3);
+  assert.equal(chat.board[0].chat?.length, 4);
   const restored = parseSave(
     JSON.parse(JSON.stringify({ version: 2, game: chat, favoriteIds: [] })),
   ).game;
@@ -1287,7 +1287,7 @@ test('purchase bargaining continues for several rounds, saves hidden seller limi
     assert.equal(g.cash, start.cash);
     assert.deepEqual(g.inventory, start.inventory);
     assert.equal(g.board[0].price, start.board[0].price);
-    assert.equal(g.board[0].chat?.length, 1 + 2 * rounds);
+    assert.equal(g.board[0].chat?.length, 2 + 2 * rounds);
     assert.ok(isGame(g));
     const restored = parseSave(
       JSON.parse(JSON.stringify({ version: 2, game: g, favoriteIds: [] })),
@@ -1989,7 +1989,7 @@ test('all five ordinary markets share free repeated purchase negotiations and ma
     assert.equal(g.weekActions, before.weekActions);
     const live = g.board.find((i) => i.id === item.id)!;
     assert.ok(live.purchaseBargain);
-    assert.equal(live.chat!.length, 3);
+    assert.equal(live.chat!.length, 4);
     assert.equal(live.purchaseBargain!.previousOffer, item.offers[1]);
     assert.deepEqual(
       parseSave({ version: 2, game: g, favoriteIds: [] }).game,

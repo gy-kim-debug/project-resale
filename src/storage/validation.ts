@@ -351,6 +351,13 @@ function validStory(g: Record<string, unknown>): boolean {
   )
     return false;
   if (
+    scene.tradeMethod !== undefined &&
+    (!isEventKind(scene.kind) ||
+      typeof scene.tradeMethod !== 'string' ||
+      !['meet', 'parcel'].includes(scene.tradeMethod))
+  )
+    return false;
+  if (
     scene.outcome !== undefined &&
     (!isEventKind(scene.kind) ||
       scene.variant === undefined ||

@@ -12,7 +12,11 @@ import { useId, useLayoutEffect, useRef, useEffect, useState } from 'react';
 import { useGameStore, type Act } from '../app/store';
 import type { Game } from '../domain/game';
 import { STORY_TITLES } from '../content/story';
-import { storyChoices, storyLines } from '../domain/story';
+import {
+  storyChoices,
+  storyChoiceAffordable,
+  storyLines,
+} from '../domain/story';
 import { playerOf } from '../domain/player';
 import { PixelCharacter } from './PixelCharacter';
 import { Icon } from './Icon';
@@ -319,6 +323,7 @@ export function StoryPlayer({
                   key={choice.id}
                   disabled={
                     !ready ||
+                    !storyChoiceAffordable(game, choice) ||
                     (!!choice.actions && actionsLeft(game) < choice.actions)
                   }
                   data-story-primary={index === 0 ? true : undefined}

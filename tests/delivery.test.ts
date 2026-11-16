@@ -272,13 +272,13 @@ test('chat wording is varied between items, stable on reload, and remains releva
     const item = { ...structuredClone(i), id: `wording-${n}` };
     openings.add(dialogueOpening(item)[0].text);
     const reply = dialogueReply(item, 'reason');
-    questions.add(reply.chat![1].text);
-    replies.add(reply.chat![2].text);
+    questions.add(reply.chat![2].text);
+    replies.add(reply.chat![3].text);
     assert.deepEqual(
       dialogueReply(JSON.parse(JSON.stringify(item)), 'reason').chat,
       reply.chat,
     );
-    assert.match(reply.chat![2].text, /정리|이사|재고|모델|내놓|올렸|팔아/);
+    assert.match(reply.chat![3].text, /정리|이사|재고|모델|내놓|올렸|팔아/);
   }
   assert.ok(openings.size >= 3 && questions.size >= 3 && replies.size >= 3);
 });

@@ -56,7 +56,7 @@ const QUESTIONS: Record<EventKind, Partial<Record<EventQuestion, string>>> = {
   },
   returnBuyer: {
     past: '그동안 일정은 잘 정리되셨어요?',
-    terms: '예약할 때 이야기한 금액과 조건 그대로 거래하시는 거죠?',
+    terms: '지난번 문의 때 이야기한 금액과 조건 그대로 거래하시는 거죠?',
   },
   collector: {
     proof: '어떤 정보를 보고 이 물건을 찾으신 건가요?',
@@ -94,7 +94,7 @@ export function eventDecisionSpeech(
   if (decision === 'report')
     return '먼저 돈을 보내지는 않겠습니다. 이 거래는 여기서 끝낼게요.';
   if (decision === 'hold')
-    return '잠시 예약해 둘게요. 일정이 정해지면 다시 연락해 주세요.';
+    return '일정이 정해지면 다시 연락 주세요. 그때도 물건이 남아 있으면 거래해요.';
   if (decision === 'request')
     return '다음에 같은 종류를 구하면 연락드릴게요. 필요한 분이 있으면 소개해 주세요.';
   if (decision === 'look')
@@ -110,9 +110,11 @@ export function eventDecisionSpeech(
   if (decision === 'decline')
     return kind === 'marketTip'
       ? '소식은 고맙지만 지금은 다른 일을 먼저 볼게요.'
-      : kind === 'competitor'
-        ? '제안은 고맙지만 지금은 개별로 판매해 볼게요.'
-        : '말씀은 고맙지만 조금 더 가지고 있을게요. 이번에는 거래하지 않겠습니다.';
+      : kind === 'regular'
+        ? '다음 거래까지 약속하기는 어려워요. 이번에는 부탁을 받지 않을게요.'
+        : kind === 'competitor'
+          ? '제안은 고맙지만 지금은 개별로 판매해 볼게요.'
+          : '말씀은 고맙지만 조금 더 가지고 있을게요. 이번에는 거래하지 않겠습니다.';
   if (decision === 'deal') {
     const speech: Partial<Record<EventKind, string>> = {
       missing: '빠진 구성을 감안해서 조정해 주신 금액으로 구매할게요.',
@@ -122,7 +124,7 @@ export function eventDecisionSpeech(
       competitor: '그럼 목록에 있는 물건을 한 번에 넘겨드릴게요.',
       reunion:
         '많이 아쉬우셨겠어요. 말씀하신 조건으로 다시 가져가셔도 괜찮아요.',
-      returnBuyer: '아직 가지고 있어요. 예약 때 약속한 금액으로 거래해요.',
+      returnBuyer: '아직 가지고 있어요. 지난번 이야기한 금액으로 거래해요.',
       collector:
         '찾으시던 물건이라니 다행이네요. 제안하신 조건으로 거래할게요.',
       referral:
@@ -131,6 +133,8 @@ export function eventDecisionSpeech(
     return speech[kind] ?? '제안하신 금액으로 거래할게요.';
   }
   const speech: Partial<Record<EventKind, string>> = {
+    rehaggle: '추가 할인은 어렵습니다. 원래 합의한 금액이라면 거래할게요.',
+    creditor: '납부 내역 확인했습니다. 다음 정산 때 연락드릴게요.',
     missing: '빠진 구성은 제가 따로 구해 볼게요. 처음 약속한 가격으로 살게요.',
     bundle: '묶음 말고 처음 말씀드렸던 물건만 구매할게요.',
     rush: '서두르기보다는 처음 합의한 조건대로 거래하고 싶어요.',
@@ -152,6 +156,46 @@ export function eventQuestionReply(
   question: EventQuestion,
   variant: 0 | 1 | 2,
 ): string | undefined {
+  const terms: Partial<Record<EventKind, string>> = {
+    missing:
+      '빠진 구성품 없이 받으시면 말씀드린 조정 금액으로 드리겠습니다. 본품 외에 다른 구성까지 더해 드릴 수는 없어요.',
+    rehaggle:
+      '제가 방금 제안한 금액에 맞춰 주시면 좋겠지만, 어렵다면 원래 합의한 금액으로 결정하겠습니다.',
+    regular:
+      '이번 물건과 같은 종류를 구하시면 연락 주세요. 그때 물건과 금액을 보고 다시 결정하면 됩니다.',
+    model:
+      '등록된 품목명과 제가 알고 있는 사용 이력은 설명드릴 수 있어요. 확인하지 않은 부분까지 보증할 수는 없습니다.',
+    appointment:
+      '제가 원래 장소로 가는 걸 기다리시거나, 지금 서로 갈 수 있는 가까운 곳에서 만나면 됩니다. 물건과 금액은 그대로예요.',
+    inspection:
+      '물건을 조금 더 살펴볼 시간을 부탁드리는 거예요. 가격을 더 깎으려는 건 아니고, 지금 거래하셔야 한다면 원래 조건으로 결정하겠습니다.',
+    reservation:
+      '일정이 정해지면 다시 연락드릴게요. 다른 분과 먼저 거래하셔도 괜찮습니다. 물건이 남아 있을 때만 다시 이야기해요.',
+    returnBuyer:
+      '네, 그때 이야기한 금액 그대로입니다. 아직 보관 중이시면 그 조건으로 사고 싶어요.',
+    referral:
+      '소개를 받았어도 이번 금액과 물건은 서로 새로 확인하고 거래하면 됩니다.',
+  };
+  const proof: Partial<Record<EventKind, string>> = {
+    model:
+      '등록한 이름과 외관을 기준으로 설명드린 거예요. 별도 감정서나 내부 검사 결과는 없습니다.',
+    rush: '급하다는 건 제 사정이에요. 게시글과 제가 확인한 범위는 말씀드릴 수 있지만, 확인하지 않은 상태를 보증할 수는 없습니다.',
+    collector:
+      '공개된 품목 설명과 보관 상태를 보고 관심이 생겼어요. 제가 제안한 가격이 감정 결과라는 뜻은 아닙니다.',
+    marketTip: [
+      '지인에게 매물을 올렸다는 연락을 받았어요. 물건을 직접 검사한 건 아닙니다.',
+      '거래하던 분에게 들은 소식이에요. 제가 모든 글을 직접 확인한 것은 아니에요.',
+      '새 글이 올라온 건 봤어요. 실제 상태나 진품 여부까지 확인한 건 아닙니다.',
+    ][variant],
+  };
+  if (question === 'terms' && terms[kind]) return terms[kind];
+  if (question === 'proof' && proof[kind]) return proof[kind];
+  if (question === 'past' && kind === 'regular')
+    return [
+      '지난번에 약속대로 마무리해 주셔서 기억하고 있어요. 같은 종류를 찾는 지인에게 소개하고 싶습니다.',
+      '지인이 지난번 거래한 물건 이야기를 듣고 비슷한 걸 찾고 있어요.',
+      '연락이 잘 되고 약속을 지켜 주셔서 다시 이야기해 보고 싶었습니다.',
+    ][variant];
   if (kind === 'creditor' && question === 'terms')
     return '네, 이번 납부는 정상적으로 반영됐습니다. 다음 정산에서도 남은 원금에 맞춰 의무 원금과 이자를 준비하시면 됩니다.';
   if (kind === 'regular' && question === 'terms')

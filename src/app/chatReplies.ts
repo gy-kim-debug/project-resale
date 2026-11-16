@@ -14,6 +14,7 @@ export const useChatReplies = create<{ pending: Record<string, Reply> }>(
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 export function replyThreadId(command: Command): string | undefined {
   switch (command.type) {
+    case 'startChat':
     case 'chooseDelivery':
     case 'inspectOnsite':
     case 'onsiteOffer':
@@ -40,6 +41,7 @@ export function clearChatReplies() {
 export function presentChatReply(before: Game, after: Game, command: Command) {
   if (
     ![
+      'startChat',
       'chooseDelivery',
       'inspectOnsite',
       'onsiteOffer',

@@ -79,8 +79,8 @@ test('seller conversations start once, resume exact options/history after save a
   g = run(g, { type: 'startChat', id: i.id });
   assert.equal(g.chats!.length, 1);
   assert.equal(unreadChats(g), 0);
-  g = run(g, { type: 'dialogue', id: i.id, topic: 'greet' });
-  assert.equal(g.chats![0].messages.length, 3);
+  g = run(g, { type: 'dialogue', id: i.id, topic: 'contents' });
+  assert.equal(g.chats![0].messages.length, 4);
   assert.equal(unreadChats(g), 1);
   const beforeOffer = g.board.find((x) => x.id === i.id)!;
   const price = beforeOffer.offers[0];

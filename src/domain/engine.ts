@@ -37,6 +37,7 @@ import {
   finishWithReaction,
   queueFollowup,
   sceneItem,
+  sceneDelivery,
   PRIVATE_SALE_EVENTS,
 } from './eventDepth';
 import { EVENT_QUESTIONS, type EventQuestion } from '../content/eventScenes';
@@ -666,6 +667,7 @@ function executeCommand(
         // An explanation is a separate persisted dialogue beat, not a hidden-value inspection.
         if (scene.explained) throw Error('이미 설명을 들었습니다.');
         scene.explained = true;
+        scene.step = 0;
         return { game: g, ok: true, message: '' };
       }
       const finish = (target: Game) => {
@@ -679,6 +681,7 @@ function executeCommand(
           state.endingDone = true;
       };
       const relatedItem = sceneItem(g, scene);
+      scene.tradeMethod ??= sceneDelivery(g, scene);
       finish(g);
       if (['weekly', 'lottery', 'stroll'].includes(scene.kind)) {
         startDailyScene(g);
@@ -686,6 +689,16 @@ function executeCommand(
       }
       if (['cancel', 'decline'].includes(command.choice)) {
         if (scene.resume?.type === 'accept') endInquiry(g, scene.resume.id);
+        if (scene.resume?.type === 'buy') {
+          const item = preItem(g, scene.resume.id);
+          item.chat ??= dialogueOpening(item);
+          item.chat.push({
+            speaker: 'player',
+            text: '이번 거래는 하지 않을게요.',
+          });
+          item.chatClosed = true;
+          item.chatSettled = true;
+        }
         return {
           game: finishWithReaction(
             g,
@@ -723,7 +736,14 @@ function executeCommand(
         );
         sale.nextCheck = g.minute + 5 * ACTION_TICK;
         sale.expires = Math.max(sale.expires, g.minute + 6 * ACTION_TICK);
-        g.inquiries = g.inquiries.filter((x) => x.saleId !== sale.id);
+        archiveInquiry(g, q, 'cancelled', [
+          ...(q.chat ?? []),
+          {
+            speaker: 'player',
+            text: '지금 거래는 마치고, 물건이 남아 있으면 다시 이야기해요.',
+          },
+        ]);
+        g.inquiries = g.inquiries.filter((x) => x.id !== q.id);
         log(g, `${relatedItem.title}의 예약 문의를 받았습니다.`);
         return {
           game: finishWithReaction(g, scene, 'promised', command.choice),

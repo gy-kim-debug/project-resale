@@ -41,12 +41,12 @@ test('dialogue is persisted and free without consuming RNG, money, stats or reve
   ] as const)
     assert.deepEqual(after[key], g[key]);
   const item = after.board.find((x) => x.id === i.id)!;
-  assert.equal(item.chat?.length, 3);
+  assert.equal(item.chat?.length, 4);
   assert.equal(item.checked, false);
   assert.equal(item.value, i.value);
   assert.equal(item.base, i.base);
   assert.deepEqual(item.dialogue?.topics, ['greet']);
-  assert.equal(item.chat?.[1].speaker, 'player');
+  assert.equal(item.chat?.[2].speaker, 'player');
   const loaded = JSON.parse(JSON.stringify(after));
   assert.ok(isGame(loaded));
   assert.deepEqual(
@@ -131,9 +131,9 @@ test('tag claims cannot become an authentication oracle', () => {
 test('unopened, untested, vehicle and property questions use the appropriate context', () => {
   const { i } = fixture();
   i.caseId = 'unopened';
-  assert.match(dialogueReply(i, 'condition').chat![2].text, /내부 작동/);
+  assert.match(dialogueReply(i, 'condition').chat![3].text, /내부 작동/);
   i.special = 'unverified';
-  assert.match(dialogueReply(i, 'condition').chat![2].text, /보증하지 않는/);
+  assert.match(dialogueReply(i, 'condition').chat![3].text, /보증하지 않는/);
   const g = newGame();
   for (const m of ['cars', 'property']) {
     const x = g.board.find((i) => i.marketId === m)!;

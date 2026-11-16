@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [이벤트 18종·54개 상황의 선택/결과 일치 점검](events/EVENT_CONSISTENCY_REVIEW.md)
+
 - [거래 방식·택배 가능 품목·직거래 현장 확인과 네고](trading/DELIVERY_AND_ONSITE.md)
 
 - [매물 유지 기간과 기존 매물을 보존하는 추가 탐색](markets/LISTING_RETENTION.md)

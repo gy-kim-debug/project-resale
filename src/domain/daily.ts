@@ -287,7 +287,9 @@ export function dailyLines(g: Game): StoryLine[] {
             ? '혼자였으면 꽤 힘들었겠어.'
             : scene.event === 'rain'
               ? '비가 그쳤다. 이제 돌아가 볼까.'
-              : '다음에도 마주칠 수 있을까.',
+              : scene.event === 'cat'
+                ? '다음에도 마주칠 수 있을까.'
+                : '조용하네. 이제 돌아가자.',
       motion: 'leave',
     },
     ...(scene.reward

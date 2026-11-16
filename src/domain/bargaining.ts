@@ -1,3 +1,4 @@
+import { dialogueOpening } from './tradeDialogue';
 import { BUYER_LINES } from '../content/chatTemplates';
 import { chatWording } from './chatWording';
 import { MONEY_UNIT, roundMoney } from './money';
@@ -59,9 +60,7 @@ export function purchaseReply(
   const current = item.negotiatedPrice ?? item.price;
   state.rounds++;
   const approach = purchaseApproach(item, price, state.rounds);
-  item.chat ??= [
-    { speaker: 'other', text: `판매 가격은 ${won(item.price)}입니다.` },
-  ];
+  item.chat ??= dialogueOpening(item);
   item.chat.push({
     speaker: 'player',
     text: `${won(price)}에 거래할 수 있을까요?`,

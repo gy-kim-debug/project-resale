@@ -45,7 +45,10 @@ test('independent threads continue offscreen; reset cancels all pending timers',
 });
 test('existing transcripts and commands without a new reply never replay', () => {
   presentChatReply(result.game, result.game, command);
-  presentChatReply(before, result.game, { type: 'startChat', id: item.id });
+  presentChatReply(result.game, result.game, {
+    type: 'startChat',
+    id: item.id,
+  });
   assert.deepEqual(useChatReplies.getState().pending, {});
 });
 test('capped transcripts still reveal the new turn and split consecutive replies', (t) => {
@@ -67,4 +70,22 @@ test('capped transcripts still reveal the new turn and split consecutive replies
   assert.equal(useChatReplies.getState().pending[id].visible, 127);
   t.mock.timers.tick(1000);
   assert.equal(useChatReplies.getState().pending[id], undefined);
+});
+
+test('new buying chat presents the player first and delays the opening seller reply without changing its saved transcript', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  clearChatReplies();
+  const c: Command = { type: 'startChat', id: item.id };
+  const opened = execute(before, c);
+  assert.ok(opened.ok);
+  const saved = structuredClone(opened.game);
+  presentChatReply(before, opened.game, c);
+  assert.equal(useChatReplies.getState().pending[id].visible, 1);
+  assert.equal(
+    useChatReplies.getState().pending[id].messages[0].speaker,
+    'player',
+  );
+  t.mock.timers.tick(1100);
+  assert.equal(useChatReplies.getState().pending[id], undefined);
+  assert.deepEqual(opened.game, saved);
 });

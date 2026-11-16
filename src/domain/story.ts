@@ -13,6 +13,7 @@ import { settlementReceipt } from './settlementEvents';
 import { INTRO_BEATS } from '../content/intro';
 import {
   deepLines,
+  sceneDelivery,
   depthChoices,
   type SceneOutcome,
   type StoryFollowup,
@@ -36,6 +37,7 @@ import {
 import { moneyRatio } from './money';
 import { RULES } from '../content/rules';
 export interface StoryScene {
+  tradeMethod?: import('./delivery').DeliveryMethod;
   leisure?: DailyScene;
   settlement?: SettlementReceipt;
   weeklyReply?: 'ask' | 'end';
@@ -345,6 +347,8 @@ export function storyChoices(g: Game): StoryChoice[] {
   ];
 }
 export function enrichScene(g: Game, scene: StoryScene): StoryScene {
+  const method = sceneDelivery(g, scene);
+  if (method) scene.tradeMethod = method;
   return {
     ...scene,
     variant: (hash(
@@ -407,7 +411,9 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
   const kinds: EventKind[] = [
     'model',
     'memory',
-    ...(selectedDelivery(i) === 'parcel' || i.delivery?.inspected
+    ...(i.kind === '부동산' ||
+    selectedDelivery(i) === 'parcel' ||
+    i.delivery?.inspected
       ? []
       : (['appointment'] as const)),
   ];
@@ -425,7 +431,7 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
     )
   )
     kinds.push('scam');
-  if (i.kind !== '부동산') kinds.push('missing');
+  if (i.kind !== '부동산' && i.caseId !== 'unopened') kinds.push('missing');
   const extra = g.board.find(
     (x) =>
       x.id !== i.id &&
@@ -642,3 +648,16 @@ export const isSceneKind = (v: unknown): v is SceneKind =>
     'stroll',
     ...EVENT_KINDS,
   ].includes(v);
+
+/** Disable unaffordable scene choices using public prices; execution independently revalidates payment. */
+export function storyChoiceAffordable(g: Game, choice: StoryChoice): boolean {
+  const scene = g.story?.active;
+  if (!scene || !choice.actions || scene.resume?.type !== 'buy') return true;
+  const item = g.board.find((i) => i.id === scene.resume!.id);
+  if (!item) return false;
+  const price =
+    choice.id === 'deal' && ['missing', 'rush', 'bundle'].includes(scene.kind)
+      ? scene.price!
+      : (item.negotiatedPrice ?? item.price);
+  return price <= g.cash;
+}

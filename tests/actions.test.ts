@@ -135,7 +135,7 @@ test('chat replies save once immediately, block early commands, and unlock after
   assert.equal(s.getState().game!.minute, g.minute);
   assert.equal(s.getState().notice, '');
   await flushSaves();
-  assert.equal(writes.at(-1)?.game.board[0].chat?.length, 3);
+  assert.equal(writes.at(-1)?.game.board[0].chat?.length, 4);
   assert.ok(useChatReplies.getState().pending[`buy:${i.id}`]);
   const after = structuredClone(s.getState().game);
   assert.equal(await s.getState().act({ type: 'closeChat', id: i.id }), false);

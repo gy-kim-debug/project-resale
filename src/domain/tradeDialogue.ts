@@ -74,6 +74,14 @@ function voice(i: Item, text: string, topic: DialogueTopic) {
 export function dialogueOpening(i: Item): ChatMessage[] {
   return [
     {
+      speaker: 'player',
+      text: chatWording(i, 'opening:player', [
+        `안녕하세요. ${i.title} 보고 연락드려요. 아직 거래 가능한가요?`,
+        `${i.title} 게시글 보고 문의드려요. 아직 판매 중인가요?`,
+        `안녕하세요! 올리신 ${i.title}, 아직 구할 수 있을까요?`,
+      ]),
+    },
+    {
       speaker: 'other',
       text: voice(
         i,
@@ -134,7 +142,11 @@ export function dialogueChoices(
   if (done.length) options.push('thanks');
   if (i.price > 0 && i.negotiation !== 'accepted') options.push('quickDeal');
   return options
-    .filter((id) => !done.includes(id))
+    .filter(
+      (id) =>
+        !done.includes(id) &&
+        !(id === 'greet' && i.chat?.[0]?.speaker === 'player'),
+    )
     .map((id) => ({ id, text: dialogueChoiceText(i, id) }));
 }
 function dialogueChoiceText(i: Item, topic: DialogueTopic): string {
