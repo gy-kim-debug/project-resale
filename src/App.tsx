@@ -40,6 +40,7 @@ import type {
 } from './app/actionPresentation';
 import { unreadCount } from './app/notifications';
 import { MARKETS, marketDefinition } from './content/markets';
+import { recommendedMarket } from './domain/marketRecommendation';
 import {
   interestPending,
   interestAmount,
@@ -273,6 +274,7 @@ function ActivityHome({
   open: (r: Route) => void;
   settle: () => void;
 }) {
+  const recommended = recommendedMarket(g.cash);
   return (
     <>
       <div className="page-heading">
@@ -308,8 +310,12 @@ function ActivityHome({
                 : 'bag';
               return (
                 <button
-                  className={market?.id === 'street' ? 'market-featured' : ''}
                   aria-label={activity.label}
+                  aria-describedby={
+                    market && market.id === recommended?.id
+                      ? 'recommended-market'
+                      : undefined
+                  }
                   key={activity.label}
                   onClick={() => open(activity.route)}
                 >
@@ -320,9 +326,19 @@ function ActivityHome({
                     <strong>{activity.label}</strong>
                     {market && <small>{won(market.min)}부터</small>}
                   </span>
-                  <span className="activity-arrow" aria-hidden="true">
-                    ↗
-                  </span>
+                  {(!market || market.id !== recommended?.id) && (
+                    <span className="activity-arrow" aria-hidden="true">
+                      ↗
+                    </span>
+                  )}
+                  {market && market.id === recommended?.id && (
+                    <span
+                      className="market-recommendation"
+                      id="recommended-market"
+                    >
+                      추천
+                    </span>
+                  )}
                 </button>
               );
             })}

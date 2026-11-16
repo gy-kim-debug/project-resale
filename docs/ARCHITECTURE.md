@@ -154,3 +154,7 @@ PlayerAppearance의 `avatar`와 `clothing`은 선택 필드다. 기존 `outfit`�
 ## 관심 기능 제거와 구 저장 호환 — 2026-11-16
 
 관심 버튼/필터·marketUi.onlyFavorites·store.toggleFavorite를 제거한다. favoriteIds는 기존 v2 저장·백업/복원 호환을 위해 비활성 메타데이터로만 전달한다. UI와 게임 계산에 사용하지 않으며 새 게임의 값은 빈 배열이다. 저장 스키마는 변경하지 않는다.
+
+## 시장 추천 — 2026-11-16
+
+활동 홈의 고정 강조를 제거하고 domain/marketRecommendation.ts가 현재 현금과 content/markets.ts의 활성 시장 최저가만으로 추천을 계산한다. 모든 카드는 중립 스타일이며 추천 배지만 조건부 표시한다. 추천 계산은 읽기 전용이며 거래 가능 조건·가격/시세·확률·게임 저장과 분리한다. 현금이 바뀌면 React 렌더에서 재계산한다.
