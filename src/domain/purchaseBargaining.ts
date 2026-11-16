@@ -5,6 +5,9 @@ import { BARGAINING_MARKETS } from '../content/bargaining';
 import { traderStyle } from './traders';
 import { sellerProfile } from './listingTags';
 
+export const isFirmSeller = (item: Item) =>
+  traderStyle(item) === 'firm' || item.listing?.facts.seller === 'firm';
+
 export const bargainingMarket = (marketId?: MarketId) =>
   BARGAINING_MARKETS[
     marketId && marketId !== 'auction' && marketId !== 'aircraft'
@@ -28,7 +31,7 @@ export function purchaseProfile(item: Item, buyingLevel = 0) {
   const seller = sellerProfile(item);
   const market = bargainingMarket(item.marketId);
   const style = traderStyle(item);
-  const firm = style === 'firm' || item.listing?.facts.seller === 'firm';
+  const firm = isFirmSeller(item);
   const rapport = (item.dialogue?.rapport ?? 0) / 100;
   const character = TRADER_STYLES[style ?? 'ordinary'];
   const clamp = (value: number) => Math.min(1, Math.max(0, value));
@@ -101,7 +104,6 @@ export function purchaseApproach(item: Item, price: number, round: number) {
 }
 export const canPurchaseOffer = (item: Item) =>
   item.marketId !== 'auction' &&
-  traderStyle(item) !== 'firm' &&
   item.price > 0 &&
   !item.chatSettled &&
   item.negotiation !== 'accepted' &&

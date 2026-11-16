@@ -67,12 +67,12 @@ test('seller personalities alter negotiation without touching hidden item values
   assert.ok(profiles.patient.patienceMin >= profiles.ordinary.patienceMin);
   for (const t of TRADERS) {
     const item = { ...base, traderId: t.id };
-    assert.equal(canPurchaseOffer(item), t.style !== 'firm');
+    assert.equal(canPurchaseOffer(item), true);
     assert.deepEqual(
       purchaseProfile(item),
       purchaseProfile({ ...item, base: 100, value: 100, condition: '고장' }),
     );
-    if (t.style !== 'firm') {
+    {
       const first = purchaseReply(item, item.offers[0], () => 0.99);
       if (first.item.offers.length) {
         const second = purchaseReply(

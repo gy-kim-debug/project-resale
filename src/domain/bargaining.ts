@@ -12,9 +12,10 @@ import {
   nextPurchaseOffers,
   purchaseApproach,
   purchaseProfile,
+  isFirmSeller,
 } from './purchaseBargaining';
 import { buyerWalkChance } from './traders';
-import { SALE_BARGAINING } from '../content/bargaining';
+import { FIRM_BARGAINING, SALE_BARGAINING } from '../content/bargaining';
 
 function counterText(item: Item, price: number, favorable: boolean) {
   if (!favorable) return `${won(price)}까지는 맞춰드릴게요. 어떠세요?`;
@@ -37,6 +38,7 @@ export function purchaseReply(
     throw Error('선택할 수 없는 구매 제안입니다.');
   const item = structuredClone(original);
   const profile = purchaseProfile(item, buyingLevel);
+  const firm = isFirmSeller(item);
   const market = bargainingMarket(item.marketId);
   const state = (item.purchaseBargain ??= {
     rounds: 0,
@@ -63,28 +65,34 @@ export function purchaseReply(
     text: `${won(price)}에 거래할 수 있을까요?`,
   });
   let message: string;
+  const firmDraw = firm ? random() : 0;
   const lowball =
     item.listing?.facts.seller !== 'firm' &&
     price < item.price * market.lowballRatio;
-  if (price >= state.floor) {
+  if (firm ? firmDraw < FIRM_BARGAINING.acceptChance : price >= state.floor) {
     item.negotiation = 'accepted';
     item.negotiatedPrice = price;
     item.offers = [];
-    message = `좋아요. ${won(price)}에 거래해요.`;
+    message = firm
+      ? `이번만 맞춰드릴게요. ${won(price)}에 거래해요.`
+      : `좋아요. ${won(price)}에 거래해요.`;
   } else if (
-    (lowball && random() < market.lowballWalkChance) ||
-    (state.rounds >= state.patience && random() < 0.3)
+    firm
+      ? firmDraw < FIRM_BARGAINING.acceptChance + FIRM_BARGAINING.walkChance
+      : (lowball && random() < market.lowballWalkChance) ||
+        (state.rounds >= state.patience && random() < 0.3)
   ) {
     state.walked = true;
     item.negotiation = 'rejected';
     item.negotiatedPrice = null;
     item.offers = [];
     item.chatSettled = true;
-    message = lowball
-      ? '제시하신 가격은 차이가 너무 크네요. 이번 거래는 하지 않겠습니다.'
-      : '가격이 안 맞네요. 이번 거래는 여기까지 할게요.';
+    message = firm
+      ? '가격 고정이라고 말씀드렸는데요. 이번 거래는 하지 않겠습니다.'
+      : lowball
+        ? '제시하신 가격은 차이가 너무 크네요. 이번 거래는 하지 않겠습니다.'
+        : '가격이 안 맞네요. 이번 거래는 여기까지 할게요.';
   } else {
-    const firm = item.listing?.facts.seller === 'firm';
     const holdChance = firm
       ? 1
       : Math.max(0, profile.holdChance - approach.holdReduction);

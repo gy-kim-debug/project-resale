@@ -69,7 +69,7 @@ import {
   purchaseProfile,
   nextPurchaseOffers,
 } from '../src/domain/purchaseBargaining';
-import { BARGAINING_MARKETS } from '../src/content/bargaining';
+import { BARGAINING_MARKETS, FIRM_BARGAINING } from '../src/content/bargaining';
 import { instantSalePrice } from '../src/domain/instantSale';
 import { acquisitionCost, compareItem } from '../src/domain/inventory';
 // Existing engine regressions use legacy NPC-free fixtures. Trader behavior is
@@ -1362,6 +1362,7 @@ test('seller holds, concessions, agreements, final prices and walkaways vary wit
 
 test('old purchase chats stay loadable and closed chats cannot restart; malformed seller state is rejected', () => {
   let g = rich(17);
+  g.board[0].listing!.facts.seller = 'ordinary';
   const id = g.board[0].id;
   g = run(g, { type: 'offer', id, price: g.board[0].offers[0] });
   const closed = run(g, { type: 'closeChat', id });
@@ -1471,7 +1472,7 @@ test('real urgency adjusts price and deadline while false urgency does not guara
   assert.ok(real > falseClaim && falseClaim > 0);
 });
 
-test('bargaining uses actual seller traits; false firm tags can negotiate and true firm sellers hold the asking price', () => {
+test('bargaining uses actual seller traits; false firm tags use normal rules and true firm sellers risk walking', () => {
   const outcomes: Partial<Record<SellerTrait, number>> = {};
   for (const trait of ['ordinary', 'urgent', 'negotiable', 'firm'] as const) {
     const g = rich(42);
@@ -1489,7 +1490,10 @@ test('bargaining uses actual seller traits; false firm tags can negotiate and tr
       result.purchaseBargain!.floor >=
         Math.floor(item.price * profile.floorMin),
     );
-    if (trait === 'firm') assert.equal(result.negotiatedPrice, item.price);
+    if (trait === 'firm') {
+      assert.equal(result.purchaseBargain!.walked, true);
+      assert.equal(result.negotiatedPrice, null);
+    }
   }
   assert.ok(outcomes.urgent! < outcomes.ordinary!);
   assert.ok(outcomes.negotiable! < outcomes.firm!);
@@ -2068,7 +2072,7 @@ test('cars favor a decisive raise and computers favor close quotes but may walk 
   );
 });
 
-test('true firm sellers never discount in any ordinary market and market tactics cannot bypass price floors', () => {
+test('firm sellers hold their asking price in the hold outcome across all ordinary markets and retain finite patience', () => {
   for (const market of MARKETS.filter((m) => m.id !== 'auction')) {
     let item = bargainFixture(market.id);
     delete item.purchaseBargain;
@@ -3033,4 +3037,70 @@ test('weekly settlement preserves a recent live listing and its chat without ren
   );
   assert.equal(g.chats!.find((t) => t.itemId === item.id)!.status, 'active');
   assert.ok(isGame(g));
+});
+
+test('fixed-price offers have explicit rare acceptance, high walk and unchanged-price outcomes in every ordinary market', () => {
+  for (const market of MARKETS.filter((m) => m.id !== 'auction')) {
+    const item = bargainFixture(market.id);
+    item.traderId = 'price31';
+    item.listing!.facts.seller = 'firm';
+    item.negotiation = 'none';
+    item.negotiatedPrice = null;
+    item.chatSettled = false;
+    item.purchaseBargain = {
+      rounds: 0,
+      floor: item.price,
+      patience: 4,
+      walked: false,
+    };
+    item.offers = openingPurchaseOffers(item.price, market.id);
+    const before = structuredClone(item);
+    assert.equal(canPurchaseOffer(item), true);
+    for (const draw of [0, 0.009999, 0.01, 0.8, 0.81, 0.999999]) {
+      const reply = purchaseReply(item, item.offers[0], () => draw, 10).item;
+      assert.equal(reply.purchaseBargain!.rounds, 1);
+      assert.equal(reply.value, item.value);
+      assert.deepEqual(reply.listing, item.listing);
+      if (draw < FIRM_BARGAINING.acceptChance) {
+        assert.equal(reply.negotiation, 'accepted');
+        assert.equal(reply.negotiatedPrice, item.offers[0]);
+        assert.equal(reply.purchaseBargain!.walked, false);
+      } else if (
+        draw <
+        FIRM_BARGAINING.acceptChance + FIRM_BARGAINING.walkChance
+      ) {
+        assert.equal(reply.chatSettled, true);
+        assert.equal(reply.purchaseBargain!.walked, true);
+        assert.equal(reply.negotiatedPrice, null);
+        assert.equal(canPurchaseOffer(reply), false);
+      } else {
+        assert.equal(reply.negotiatedPrice, item.price);
+        assert.equal(reply.purchaseBargain!.walked, false);
+        assert.equal(canPurchaseOffer(reply), true);
+      }
+      assert.deepEqual(item, before);
+    }
+  }
+});
+
+test('fixed-price response partitions 1000 evenly spaced draws into 1% accepted, 80% walked and 19% held', () => {
+  const item = bargainFixture('street');
+  item.listing!.facts.seller = 'firm';
+  item.negotiation = 'none';
+  item.chatSettled = false;
+  item.purchaseBargain = {
+    rounds: 0,
+    floor: item.price,
+    patience: 4,
+    walked: false,
+  };
+  item.offers = openingPurchaseOffers(item.price, 'street');
+  const counts = { accepted: 0, walked: 0, held: 0 };
+  for (let n = 0; n < 1000; n++) {
+    const reply = purchaseReply(item, item.offers[0], () => n / 1000).item;
+    if (reply.negotiation === 'accepted') counts.accepted++;
+    else if (reply.purchaseBargain!.walked) counts.walked++;
+    else counts.held++;
+  }
+  assert.deepEqual(counts, { accepted: 10, walked: 800, held: 190 });
 });
