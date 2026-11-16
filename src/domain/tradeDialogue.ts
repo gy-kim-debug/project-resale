@@ -1,3 +1,5 @@
+import { TOPIC_CLOSINGS, PLAYER_LINES } from '../content/chatTemplates';
+import { chatWording } from './chatWording';
 import {
   DIALOGUE_RULES,
   DIALOGUE_TOPICS,
@@ -55,7 +57,8 @@ function featureClaim(i: Item) {
 function voice(i: Item, text: string, topic: DialogueTopic) {
   const t = profile(i);
   // Identity-specific phrasing is independent of demographic stereotypes.
-  const variant = hash(`${t.id}:${t.age}:${t.gender}:${topic}`) % 3;
+  const variant =
+    hash(`${i.id}:${i.caseId}:${t.id}:${t.age}:${t.gender}:${topic}`) % 3;
   const prefixes =
     t.style === 'quick'
       ? ['짧게 말씀드리면, ', '', '네, ']
@@ -64,7 +67,9 @@ function voice(i: Item, text: string, topic: DialogueTopic) {
         : t.style === 'firm'
           ? ['네. ', '', '말씀드리면, ']
           : ['네, ', '', '말씀드릴게요. '];
-  return prefixes[variant] + text;
+  return (
+    prefixes[variant] + text + chatWording(i, topic, TOPIC_CLOSINGS[topic])
+  );
 }
 export function dialogueOpening(i: Item): ChatMessage[] {
   return [
@@ -74,7 +79,12 @@ export function dialogueOpening(i: Item): ChatMessage[] {
         i,
         i.price === 0
           ? '나눔 문의 주세요.'
-          : '상품 문의 있으시면 말씀해 주세요.',
+          : chatWording(i, 'opening', [
+              '상품 문의 있으시면 말씀해 주세요.',
+              `${i.title} 보고 연락 주셨나요? 궁금한 점 말씀해 주세요.`,
+              '아직 판매 중이에요. 어떤 점이 궁금하세요?',
+              '문의 감사합니다. 조건 보시고 편하게 물어보세요.',
+            ]),
         'greet',
       ),
     },
@@ -139,7 +149,9 @@ function dialogueChoiceText(i: Item, topic: DialogueTopic): string {
     return '확인할 수 있는 자료가 있나요?';
   if (topic === 'feature' && i.listing?.tags.includes('limited'))
     return '한정판이라는 근거가 있나요?';
-  return DIALOGUE_TOPICS[topic];
+  return PLAYER_LINES[topic]
+    ? chatWording(i, `player:${topic}`, PLAYER_LINES[topic])
+    : DIALOGUE_TOPICS[topic];
 }
 export function dialogueReply(original: Item, topic: DialogueTopic): Item {
   if (!dialogueChoices(original).some((c) => c.id === topic))

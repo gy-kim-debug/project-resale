@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [거래 방식·택배 가능 품목·직거래 현장 확인과 네고](trading/DELIVERY_AND_ONSITE.md)
+
 - [매물 유지 기간과 기존 매물을 보존하는 추가 탐색](markets/LISTING_RETENTION.md)
 
 - [현재 물건/주식 시세 변동 점검 — 현행 계산과 미확정 완화안](economy/MARKET_MOVEMENT_REVIEW.md)

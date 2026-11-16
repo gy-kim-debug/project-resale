@@ -162,3 +162,7 @@ PlayerAppearance의 `avatar`와 `clothing`은 선택 필드다. 기존 `outfit`�
 ## 가격고정 판매자의 제안 — 2026-11-16
 
 UI/엔진 공통 canPurchaseOffer에서 가격고정 인물의 일괄 차단을 제거했다. isFirmSeller가 실제 인물/판매자 성향을 함께 판정하고 purchaseReply가 FIRM_BARGAINING의 10% 수락/60% 파토/30% 정가 유지 분기를 사용한다. 일반 판매자의 기존 계산/난수 호출 경로는 유지한다. 가격고정의 희박 수락은 기존 게시가 floor 아래 합의를 허용하는 명시적 예외이며 저장 형식/기존 결과/숨은 가치/인내심은 바꾸지 않는다.
+
+## 거래 방식·현장 대화 — 2026-11-16
+
+`content/delivery.ts`의 품목별 일반 택배 정책과 개별 대형 품목 예외를 `domain/delivery.ts`가 공통 판정한다. 매물/판매 글/문의의 선택적 필드로 방식과 현장 진행을 저장하고 `storage/validation.ts`에서 불가능한 조합을 거절한다. 선택·확인·흥정은 순수 상태 전이로 구현하고 엔진이 성공 결과만 저장·채팅 보관에 반영한다. 현장 확인은 구매 후 감정 상태와 분리한다. `content/chatTemplates.ts`와 `domain/chatWording.ts`의 문장 선택은 경제 난수와 독립적이며 판매자 주제 대화·거래 방식·구매자 응답에서 공유한다. 새 명령도 기존 `app/chatReplies.ts`의 답장 지연과 방별 중복 방지를 사용한다. [세부 정책](design/trading/DELIVERY_AND_ONSITE.md)을 참조한다.

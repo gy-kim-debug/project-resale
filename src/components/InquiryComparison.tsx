@@ -1,3 +1,4 @@
+import { deliveryName, physicalDelivery } from '../domain/delivery';
 import { useChatReplies } from '../app/chatReplies';
 import { marketDefinition, marketOf } from '../content/markets';
 import { sellChatId } from '../domain/chats';
@@ -59,6 +60,11 @@ export function InquiryComparison({
                     name={q.name}
                     role="구매자"
                   />
+                  <span className="delivery-badge">
+                    {deliveryName(
+                      q.delivery ?? sale.delivery ?? physicalDelivery(item),
+                    )}
+                  </span>
                   <div className="inquiry-offer-price">
                     <span>제안 금액</span>
                     <strong>{replying ? '답변 대기' : won(q.price)}</strong>

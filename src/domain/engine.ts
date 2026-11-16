@@ -1,3 +1,16 @@
+import { buyerOpening } from './bargaining';
+import {
+  chooseDelivery,
+  inspectOnsite,
+  onsiteOffer,
+  listingDelivery,
+  selectedDelivery,
+  physicalDelivery,
+  deliveryMethods,
+  deliveryName,
+  onsiteFinding,
+  deliveryTranscript,
+} from './delivery';
 import { archiveInquiry, syncTradeChats, sellerChatClosed } from './chats';
 import { dialogueOpening } from './tradeDialogue';
 import { DAILY_RULES, WALK_EVENTS } from '../content/daily';
@@ -307,6 +320,7 @@ function makeItem(
     item.auction = createAuction(item.price, () => roll(g));
     item.offers = [];
   }
+  item.delivery = { available: listingDelivery(item) };
   return item;
 }
 function board(g: Game, selected?: MarketId) {
@@ -439,14 +453,15 @@ function inquiries(g: Game) {
       const inquiryId = id(g);
       const trader = chooseTrader(`${g.seed}:${inquiryId}`);
       const terms = buyerTerms(trader.id, sale.price, max, price);
-      g.inquiries.push({
+      const inquiry = {
         id: inquiryId,
         traderId: trader.id,
         saleId: sale.id,
         name: trader.name,
         ...terms,
         rounds: 0,
-      });
+      };
+      g.inquiries.push({ ...inquiry, chat: buyerOpening(inquiry) });
     }
     log(g, `${item.title}에 구매 문의 ${g.inquiries.length}건이 왔습니다.`);
     return;
@@ -932,6 +947,63 @@ function executeCommand(
         log(g, message);
         break;
       }
+      case 'chooseDelivery':
+      case 'inspectOnsite':
+      case 'onsiteOffer': {
+        const item = preItem(g, command.id);
+        const next =
+          command.type === 'chooseDelivery'
+            ? chooseDelivery(item, command.method)
+            : command.type === 'inspectOnsite'
+              ? inspectOnsite(item)
+              : onsiteOffer(item, command.price, () => roll(g));
+        g.board = g.board.map((i) => (i.id === item.id ? next : i));
+        message = '답변이 도착했습니다.';
+        break;
+      }
+      case 'saleDelivery':
+      case 'saleInspect': {
+        const q = g.inquiries.find((q) => q.id === command.id);
+        const sale = g.sales.find((s) => s.id === q?.saleId);
+        if (!q || !sale) throw Error('종료된 문의입니다.');
+        const item = owned(g, sale.itemId);
+        const available = sale.delivery ?? physicalDelivery(item);
+        q.chat ??= [
+          { speaker: 'other', text: `${won(q.price)}에 거래할 수 있을까요?` },
+        ];
+        if (command.type === 'saleDelivery') {
+          if (
+            q.inspected ||
+            q.delivery === command.method ||
+            !deliveryMethods(available).includes(command.method)
+          )
+            throw Error('선택할 수 없는 거래 방식입니다.');
+          q.delivery = command.method;
+          q.chat.push(deliveryTranscript(command.method), {
+            speaker: 'other',
+            text:
+              command.method === 'parcel'
+                ? '좋아요. 포장해서 보내주세요.'
+                : '네, 만나서 물건을 보고 거래하겠습니다.',
+          });
+        } else {
+          const method =
+            q.delivery ?? (available === 'both' ? undefined : available);
+          if (method !== 'meet' || q.inspected)
+            throw Error('현장에서 확인할 수 없습니다.');
+          q.delivery = 'meet';
+          q.inspected = true;
+          q.chat.push(
+            { speaker: 'player', text: '직접 물건 보시고 결정하세요.' },
+            {
+              speaker: 'other',
+              text: `${onsiteFinding(item)} 가격도 이 상태를 기준으로 이야기하죠.`,
+            },
+          );
+        }
+        message = '답변이 도착했습니다.';
+        break;
+      }
       case 'dialogue': {
         const item = preItem(g, command.id);
         const reply = dialogueReply(item, command.topic);
@@ -993,6 +1065,21 @@ function executeCommand(
           mainCost = moneyRatio(mainCost, 95);
           extraCost = cost - mainCost;
         }
+        const method =
+          selectedDelivery(item) ?? deliveryMethods(listingDelivery(item))[0];
+        if (extra && !deliveryMethods(listingDelivery(extra)).includes(method))
+          throw Error('묶음 물품의 거래 방식이 맞지 않습니다.');
+        item.delivery = {
+          ...item.delivery,
+          available: listingDelivery(item),
+          selected: method,
+        };
+        if (extra)
+          extra.delivery = {
+            ...extra.delivery,
+            available: listingDelivery(extra),
+            selected: method,
+          };
         affordable(g, cost);
         money(g, -cost);
         const received = {
@@ -1003,7 +1090,7 @@ function executeCommand(
         if (received.chat && !received.chatSettled) {
           received.chat.push({
             speaker: 'player',
-            text: `${won(cost)}에 거래할게요.`,
+            text: `${deliveryName(method)}로 ${won(cost)}에 거래할게요.`,
           });
           received.chatSettled = true;
         }
@@ -1085,7 +1172,14 @@ function executeCommand(
           throw Error('판매 가격은 100원 이상 1,000조 원 이하여야 합니다.');
         if (g.sales.length >= listingLimit(g))
           throw Error('동시 판매 등록 한도에 도달했습니다.');
+        const available = command.delivery ?? physicalDelivery(item);
+        if (
+          !['meet', 'parcel', 'both'].includes(available) ||
+          (physicalDelivery(item) === 'meet' && available !== 'meet')
+        )
+          throw Error('선택할 수 없는 거래 방식입니다.');
         const sale = {
+          delivery: available,
           marketId: marketOf(item),
           id: id(g),
           itemId: command.id,
@@ -1126,7 +1220,10 @@ function executeCommand(
               text: `${won(q.price)}에 거래할 수 있을까요?`,
             },
           ]),
-          { speaker: 'player', text: `네, ${won(q.price)}에 거래할게요.` },
+          {
+            speaker: 'player',
+            text: `네, ${deliveryName(q.delivery ?? deliveryMethods(sale.delivery ?? physicalDelivery(i))[0])}로 ${won(q.price)}에 거래할게요.`,
+          },
         ]);
         money(g, q.price);
         unlockItem(g, i);
@@ -1361,6 +1458,12 @@ export function execute(
     bundleId,
     tradeActions,
   );
-  if (result.ok) syncTradeChats(result.game, original, command);
+  if (result.ok) {
+    for (const item of [...result.game.board, ...result.game.inventory])
+      if (item.chat && item.chat.length > 64) item.chat = item.chat.slice(-64);
+    for (const q of result.game.inquiries)
+      if (q.chat && q.chat.length > 64) q.chat = q.chat.slice(-64);
+    syncTradeChats(result.game, original, command);
+  }
   return result;
 }

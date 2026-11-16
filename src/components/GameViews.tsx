@@ -1,3 +1,10 @@
+import { DeliveryBadge, DeliveryControls } from './DeliveryControls';
+import {
+  deliveryName,
+  deliveryMethods,
+  physicalDelivery,
+  selectedDelivery,
+} from '../domain/delivery';
 import { GameOptions } from './GameOptions';
 import { InquiryComparison } from './InquiryComparison';
 import { ChatRoom } from './ChatViews';
@@ -209,11 +216,13 @@ export function ItemRow({
   item,
   detail,
   comparison,
+  showDelivery,
   onClick,
 }: {
   item: Item;
   detail: string;
   comparison?: ReactNode;
+  showDelivery?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -224,6 +233,7 @@ export function ItemRow({
         <small>{categoryLabel(item.category ?? item.kind)}</small>
         <span className="item-row-price">{detail}</span>
         <ItemTags item={item} />
+        {showDelivery && <DeliveryBadge item={item} />}
         {comparison}
       </span>
       <span aria-hidden="true">›</span>
@@ -539,6 +549,7 @@ export function MarketView({
             <ItemRow
               key={i.id}
               item={i}
+              showDelivery
               detail={
                 i.auction
                   ? `${i.auction.currentBid ? '현재가' : '시작가'} ${won(i.auction.currentBid || i.price)}`
@@ -585,6 +596,7 @@ export function ListingView({
         <>
           <ItemArt item={item} large />
           <h2>{item.title}</h2>
+          <DeliveryBadge item={item} />
           <ItemTags item={item} />
           <p className="asset-market">
             {marketDefinition(marketOf(item)).name}
@@ -620,11 +632,15 @@ export function ListingView({
         </>
       )}
       <div className="purchase-dock">
+        {!sellerChatClosed(item) && (
+          <DeliveryControls item={item} act={act} disabled={replying} />
+        )}
         {!confirm ? (
           <Button
             primary
             disabled={
               replying ||
+              !selectedDelivery(item) ||
               sellerChatClosed(item) ||
               g.cash < price ||
               g.inventory.length >= RULES.capacity
@@ -635,11 +651,17 @@ export function ListingView({
           </Button>
         ) : (
           <section className="card">
-            <h3>지불·수령 확인</h3>
+            <h3>
+              {selectedDelivery(item)
+                ? deliveryName(selectedDelivery(item)!)
+                : '거래 방식 선택'}{' '}
+              · 지불 확인
+            </h3>
             <p>{won(price)}</p>
             <Button
               disabled={
                 replying ||
+                !selectedDelivery(item) ||
                 sellerChatClosed(item) ||
                 g.cash < price ||
                 g.inventory.length >= RULES.capacity
@@ -915,13 +937,54 @@ export function InquiriesView({
                 className="chat-reply-controls"
                 disabled={!!replies[sellChatId(q.id)]}
               >
+                {sale && item && (
+                  <>
+                    <div
+                      className="delivery-controls"
+                      role="group"
+                      aria-label="판매 거래 방식 선택"
+                    >
+                      {deliveryMethods(
+                        sale.delivery ?? physicalDelivery(item),
+                      ).map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          aria-pressed={
+                            (q.delivery ??
+                              ((sale.delivery ?? physicalDelivery(item)) ===
+                              'both'
+                                ? undefined
+                                : (sale.delivery ??
+                                  physicalDelivery(item)))) === method
+                          }
+                          disabled={!!q.inspected || q.delivery === method}
+                          onClick={() =>
+                            act({ type: 'saleDelivery', id: q.id, method })
+                          }
+                        >
+                          {deliveryName(method)}
+                        </button>
+                      ))}
+                    </div>
+                    {(q.delivery ?? sale.delivery ?? physicalDelivery(item)) ===
+                      'meet' &&
+                      !q.inspected && (
+                        <Button
+                          onClick={() => act({ type: 'saleInspect', id: q.id })}
+                        >
+                          현장에서 물건 보여주기
+                        </Button>
+                      )}
+                  </>
+                )}
                 {sale &&
                   q.rounds < SALE_BARGAINING.maxRounds &&
                   q.price < sale.price && (
                     <AmountChoice
                       key={`${q.id}-${q.rounds}`}
                       presets={presets}
-                      title="가격 제안"
+                      title={q.inspected ? '현장 가격 제안' : '가격 제안'}
                       label="제안할 판매 가격 (원)"
                       min={q.price + MONEY_UNIT}
                       max={sale.price}
@@ -933,6 +996,12 @@ export function InquiriesView({
                 <Button
                   primary
                   actionCost={1}
+                  disabled={
+                    !!sale &&
+                    !!item &&
+                    !q.delivery &&
+                    (sale.delivery ?? physicalDelivery(item)) === 'both'
+                  }
                   onClick={() => act({ type: 'accept', id: q.id })}
                 >
                   수락하고 거래
@@ -1106,18 +1175,11 @@ export function RouteView({
             <p>
               현재 가치 {currentValue === null ? '미확인' : won(currentValue)}
             </p>
-            <AmountChoice
-              key={item.id}
-              presets={listingPresets(
-                currentValue,
-                purchaseCost,
-                marketDefinition(marketOf(item)).min,
-              )}
-              title="판매 글 등록 확정"
-              actionCost={1}
-              label="판매 가격 (원)"
-              max={RULES.maxMoney}
-              submit={(price) => act({ type: 'post', id: item.id, price })}
+            <SaleRegistration
+              item={item}
+              currentValue={currentValue}
+              purchaseCost={purchaseCost}
+              act={act}
             />
             {g.sales.some((s) => s.itemId === item.id) && (
               <p className="success">판매 글이 등록됐습니다.</p>
@@ -1279,6 +1341,7 @@ export function AuctionListingView({
   act: Act;
 }) {
   const [confirm, setConfirm] = useState(false);
+  const replying = useChatReplies((s) => !!s.pending[buyChatId(item.id)]);
   const auction = item.auction;
   if (!auction) return <p>경매가 종료됐습니다.</p>;
   const wonAuction = auction.status === 'won';
@@ -1286,6 +1349,7 @@ export function AuctionListingView({
     <>
       <ItemArt item={item} large />
       <h2>{item.title}</h2>
+      <DeliveryBadge item={item} />
       <ItemTags item={item} />
       <p className="asset-market">고가 경매시장</p>
       <TraderProfile
@@ -1306,7 +1370,14 @@ export function AuctionListingView({
         </div>
       </dl>
       <p>매물 유효 기간: {durationText(item.expires - g.minute)} 남음</p>
-      <TradeChat name="경매 진행" messages={auction.history} />
+      <TradeChat
+        threadId={buyChatId(item.id)}
+        name="경매 진행"
+        messages={item.chat ?? auction.history}
+      />
+      {wonAuction && (
+        <DeliveryControls item={item} act={act} disabled={replying} />
+      )}
       {auctionBidOptions(item).map((amount) => (
         <Button
           key={amount}
@@ -1327,6 +1398,8 @@ export function AuctionListingView({
             <p>{won(auction.currentBid)}</p>
             <Button
               disabled={
+                replying ||
+                !selectedDelivery(item) ||
                 g.cash < auction.currentBid ||
                 g.inventory.length >= RULES.capacity
               }
@@ -1355,6 +1428,58 @@ export function AuctionListingView({
       {wonAuction && g.inventory.length >= RULES.capacity && (
         <p className="warning">보관함이 가득 찼습니다.</p>
       )}
+    </>
+  );
+}
+
+function SaleRegistration({
+  item,
+  currentValue,
+  purchaseCost,
+  act,
+}: {
+  item: Item;
+  currentValue: number | null;
+  purchaseCost: number;
+  act: Act;
+}) {
+  const [method, setMethod] = useState(physicalDelivery(item));
+  return (
+    <>
+      <div
+        className="delivery-controls"
+        role="group"
+        aria-label="판매 가능 거래 방식"
+      >
+        {(physicalDelivery(item) === 'both'
+          ? (['both', 'meet', 'parcel'] as const)
+          : (['meet'] as const)
+        ).map((value) => (
+          <button
+            type="button"
+            key={value}
+            aria-pressed={method === value}
+            onClick={() => setMethod(value)}
+          >
+            {deliveryName(value)}
+          </button>
+        ))}
+      </div>
+      <AmountChoice
+        key={item.id}
+        presets={listingPresets(
+          currentValue,
+          purchaseCost,
+          marketDefinition(marketOf(item)).min,
+        )}
+        title="판매 글 등록 확정"
+        actionCost={1}
+        label="판매 가격 (원)"
+        max={RULES.maxMoney}
+        submit={(price) =>
+          act({ type: 'post', id: item.id, price, delivery: method })
+        }
+      />
     </>
   );
 }

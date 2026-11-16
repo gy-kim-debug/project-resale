@@ -1,3 +1,9 @@
+import {
+  selectedDelivery,
+  deliveryMethods,
+  listingDelivery,
+  physicalDelivery,
+} from './delivery';
 import { dailyLines, startDailyScene, type DailyScene } from './daily';
 import {
   settlementLines,
@@ -367,7 +373,17 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
         : style === 'patient'
           ? ['inspection', 'inspection', 'reservation', 'rehaggle']
           : ['rehaggle', 'inspection', 'reservation'];
-    const kind = kinds[hash(signature + ':buyer') % kinds.length];
+    const sale = g.sales.find((s) => s.id === q.saleId);
+    const owned = g.inventory.find((i) => i.id === sale?.itemId);
+    const method =
+      q.delivery ??
+      sale?.delivery ??
+      (owned ? physicalDelivery(owned) : undefined);
+    const eligible =
+      method === 'parcel' || q.inspected
+        ? kinds.filter((kind) => kind !== 'inspection')
+        : kinds;
+    const kind = eligible[hash(signature + ':buyer') % eligible.length];
     return enrichScene(g, {
       kind,
       step: 0,
@@ -388,7 +404,13 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
     i.purchaseBargain?.walked
   )
     return null;
-  const kinds: EventKind[] = ['model', 'memory', 'appointment'];
+  const kinds: EventKind[] = [
+    'model',
+    'memory',
+    ...(selectedDelivery(i) === 'parcel' || i.delivery?.inspected
+      ? []
+      : (['appointment'] as const)),
+  ];
   const style = traderById(i.traderId)?.style;
   if (
     style === 'quick' ||
@@ -407,6 +429,9 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
   const extra = g.board.find(
     (x) =>
       x.id !== i.id &&
+      deliveryMethods(listingDelivery(x)).includes(
+        selectedDelivery(i) ?? deliveryMethods(listingDelivery(i))[0],
+      ) &&
       x.price > 0 &&
       !x.purchaseBargain?.walked &&
       x.marketId === i.marketId &&

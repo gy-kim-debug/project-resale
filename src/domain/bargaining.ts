@@ -1,3 +1,5 @@
+import { BUYER_LINES } from '../content/chatTemplates';
+import { chatWording } from './chatWording';
 import { MONEY_UNIT, roundMoney } from './money';
 import {
   isMoney,
@@ -129,6 +131,18 @@ export function purchaseReply(
   return { item, message };
 }
 
+export function buyerOpening(q: Inquiry): ChatMessage[] {
+  return [
+    {
+      speaker: 'other',
+      text: chatWording(q, 'buyer:opening', BUYER_LINES.opening).replace(
+        '{price}',
+        won(q.price),
+      ),
+    },
+  ];
+}
+
 /** Shared buyer reply for counteroffers and rejection; never touches listings or assets. */
 export function saleReply(
   original: Inquiry,
@@ -165,7 +179,11 @@ export function saleReply(
     q.price = proposed!;
     q.chat.push({
       speaker: 'other',
-      text: `좋아요. ${won(q.price)}에 거래해요.`,
+      text: chatWording(
+        q,
+        `buyer:accepted:${q.rounds}`,
+        BUYER_LINES.accepted,
+      ).replace('{price}', won(q.price)),
     });
     return {
       inquiry: q,
@@ -184,7 +202,7 @@ export function saleReply(
         ...q.chat,
         {
           speaker: 'other',
-          text: '이번 거래는 어려울 것 같아요. 다른 분께 판매해 주세요.',
+          text: chatWording(q, `buyer:walked:${q.rounds}`, BUYER_LINES.walked),
         },
       ],
       message: '구매자가 거래를 파토냈습니다. 판매 글은 유지됩니다.',
@@ -199,9 +217,11 @@ export function saleReply(
   );
   q.chat.push({
     speaker: 'other',
-    text: counter
-      ? `그 가격은 어렵습니다. ${won(q.price)}은 어떠세요?`
-      : `그러면 ${won(q.price)}은 어떠세요?`,
+    text: chatWording(
+      q,
+      `buyer:counter:${q.rounds}`,
+      BUYER_LINES.counter,
+    ).replace('{price}', won(q.price)),
   });
   return {
     inquiry: q,

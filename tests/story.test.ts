@@ -34,6 +34,10 @@ function buyScene(kind: StoryScene['kind']) {
   const extra = g.board.find(
     (x) => x.marketId === 'street' && x.price > 0 && x.id !== i.id,
   )!;
+  if (kind === 'bundle') {
+    i.delivery = { available: 'meet', selected: 'meet' };
+    extra.delivery = { available: 'meet' };
+  }
   return attach(g, {
     kind,
     step: 0,

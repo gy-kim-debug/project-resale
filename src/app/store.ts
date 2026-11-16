@@ -346,6 +346,11 @@ export const useGameStore = create<State>((set, get) => ({
           'storyNext',
           'storyChoice',
           'startSettlement',
+          'chooseDelivery',
+          'inspectOnsite',
+          'onsiteOffer',
+          'saleDelivery',
+          'saleInspect',
           'dialogue',
           'offer',
           'bid',
@@ -367,6 +372,13 @@ export const useGameStore = create<State>((set, get) => ({
           command.type === 'startChat' ||
           command.type === 'storyNext' ||
           (command.type === 'storyChoice' && result.message === '') ||
+          [
+            'chooseDelivery',
+            'inspectOnsite',
+            'onsiteOffer',
+            'saleDelivery',
+            'saleInspect',
+          ].includes(command.type) ||
           command.type === 'dialogue' ||
           command.type === 'offer' ||
           command.type === 'bid' ||

@@ -1,3 +1,9 @@
+import { DeliveryBadge } from './DeliveryControls';
+import {
+  selectedDelivery,
+  onsiteOffers,
+  deliveryName,
+} from '../domain/delivery';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { dialogueChoices, dialogueOpening } from '../domain/tradeDialogue';
 import { canPurchaseOffer } from '../domain/purchaseBargaining';
@@ -31,7 +37,9 @@ export function SellerConversation({
   act: Act;
   onProduct: () => void;
 }) {
-  const [panel, setPanel] = useState<'questions' | 'offers'>('questions');
+  const [panel, setPanel] = useState<'questions' | 'offers' | 'delivery'>(
+    'questions',
+  );
   const replying = useChatReplies((s) => !!s.pending[buyChatId(item.id)]);
   const root = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
@@ -42,6 +50,8 @@ export function SellerConversation({
   }, [item.chat?.length, panel]);
   const choices = dialogueChoices(item);
   const offers = canPurchaseOffer(item) ? item.offers : [];
+  const onsite = onsiteOffers(item);
+  const closed = !!item.chatClosed || !!item.purchaseBargain?.walked;
   const pending = choices.some((c) => c.id === 'eventAccept');
   return (
     <section
@@ -73,6 +83,7 @@ export function SellerConversation({
         <span>
           <strong>{item.title}</strong>
           <b>{won(item.negotiatedPrice ?? item.price)}</b>
+          <DeliveryBadge item={item} />
         </span>
       </div>
       <TradeChat
@@ -81,7 +92,7 @@ export function SellerConversation({
         messages={item.chat ?? dialogueOpening(item)}
       />
       <fieldset className="conversation-composer" disabled={replying}>
-        {(choices.length > 0 || offers.length > 0) && (
+        {!closed && (
           <>
             <div
               className="conversation-tabs"
@@ -102,9 +113,39 @@ export function SellerConversation({
               >
                 가격 제안{offers.length > 0 && <span>{offers.length}</span>}
               </button>
+              <button
+                type="button"
+                aria-pressed={panel === 'delivery'}
+                disabled={selectedDelivery(item) !== 'meet'}
+                onClick={() => setPanel('delivery')}
+              >
+                현장 확인
+              </button>
             </div>
             <div className="conversation-choices">
-              {panel === 'questions' ? (
+              {panel === 'delivery' ? (
+                <div className="onsite-controls">
+                  {selectedDelivery(item) && (
+                    <span className="delivery-badge">
+                      {deliveryName(selectedDelivery(item)!)}
+                    </span>
+                  )}
+                  {selectedDelivery(item) === 'meet' &&
+                    !item.delivery?.inspected && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          act({ type: 'inspectOnsite', id: item.id })
+                        }
+                      >
+                        현장에서 상태 확인
+                      </button>
+                    )}
+                  {item.delivery?.inspected && (
+                    <p className="onsite-finding">현장 확인 완료</p>
+                  )}
+                </div>
+              ) : panel === 'questions' ? (
                 choices.length ? (
                   <div
                     className={`dialogue-options ${pending ? 'dialogue-response' : ''}`}
@@ -131,6 +172,25 @@ export function SellerConversation({
                 ) : (
                   <p className="conversation-empty">질문을 모두 나눴습니다.</p>
                 )
+              ) : onsite.length ? (
+                <div
+                  className="offer-options"
+                  role="group"
+                  aria-label="현장 가격 제안"
+                >
+                  {onsite.map((price) => (
+                    <button
+                      type="button"
+                      key={price}
+                      onClick={() =>
+                        act({ type: 'onsiteOffer', id: item.id, price })
+                      }
+                    >
+                      {won(price)}
+                      <small>현장 제안</small>
+                    </button>
+                  ))}
+                </div>
               ) : offers.length ? (
                 <div
                   className="offer-options"

@@ -61,6 +61,11 @@ export function changesBetween(before: Game, after: Game): Changes {
 }
 export function actionLabel(command: Command): string {
   const labels: Record<Command['type'], string> = {
+    chooseDelivery: '거래 방식을 정하는 중…',
+    inspectOnsite: '현장에서 확인하는 중…',
+    onsiteOffer: '현장에서 흥정하는 중…',
+    saleDelivery: '거래 방식을 정하는 중…',
+    saleInspect: '현장에서 확인하는 중…',
     startChat: '채팅을 여는 중…',
     readChat: '채팅을 읽는 중…',
     dailyWork: '일하는 중…',

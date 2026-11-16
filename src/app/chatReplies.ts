@@ -14,11 +14,16 @@ export const useChatReplies = create<{ pending: Record<string, Reply> }>(
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 export function replyThreadId(command: Command): string | undefined {
   switch (command.type) {
+    case 'chooseDelivery':
+    case 'inspectOnsite':
+    case 'onsiteOffer':
     case 'dialogue':
     case 'offer':
     case 'closeChat':
     case 'buy':
       return buyChatId(command.id);
+    case 'saleDelivery':
+    case 'saleInspect':
     case 'counter':
     case 'reject':
     case 'break':
@@ -33,7 +38,19 @@ export function clearChatReplies() {
 }
 /** Presentation only: the engine result is committed/saved once, without timers. */
 export function presentChatReply(before: Game, after: Game, command: Command) {
-  if (!['dialogue', 'offer', 'counter', 'reject'].includes(command.type))
+  if (
+    ![
+      'chooseDelivery',
+      'inspectOnsite',
+      'onsiteOffer',
+      'saleDelivery',
+      'saleInspect',
+      'dialogue',
+      'offer',
+      'counter',
+      'reject',
+    ].includes(command.type)
+  )
     return;
   const threadId = replyThreadId(command);
   if (!threadId) return;

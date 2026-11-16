@@ -69,6 +69,7 @@ export interface Auction {
   history: ChatMessage[];
 }
 export interface Item {
+  delivery?: import('./delivery').DeliveryState;
   /** Absent on legacy items: retain original grade/value formulas; work eligibility uses shared content rules. */
   stateGrade?: import('../content/conditionGrades').Grade;
   repairDifficulty?: import('../content/conditionGrades').RepairDifficulty;
@@ -112,6 +113,7 @@ export interface Item {
   negotiatedPrice: number | null;
 }
 export interface Sale {
+  delivery?: import('./delivery').DeliveryAvailability;
   marketId?: MarketId;
   id: string;
   itemId: string;
@@ -121,6 +123,8 @@ export interface Sale {
   nextCheck: number;
 }
 export interface Inquiry {
+  delivery?: import('./delivery').DeliveryMethod;
+  inspected?: boolean;
   traderId?: string;
   chat?: ChatMessage[];
   id: string;
@@ -198,6 +202,19 @@ export interface Game {
   lastEvent: number;
 }
 export type Command =
+  | {
+      type: 'chooseDelivery';
+      id: string;
+      method: import('./delivery').DeliveryMethod;
+    }
+  | { type: 'inspectOnsite'; id: string }
+  | { type: 'onsiteOffer'; id: string; price: number }
+  | {
+      type: 'saleDelivery';
+      id: string;
+      method: import('./delivery').DeliveryMethod;
+    }
+  | { type: 'saleInspect'; id: string }
   | { type: 'startChat'; id: string }
   | { type: 'readChat'; id: string }
   | { type: 'dailyWork' }
@@ -217,7 +234,12 @@ export type Command =
   | { type: 'check'; id: string }
   | { type: 'repair'; id: string }
   | { type: 'discard'; id: string }
-  | { type: 'post'; id: string; price: number }
+  | {
+      type: 'post';
+      id: string;
+      price: number;
+      delivery?: import('./delivery').DeliveryAvailability;
+    }
   | { type: 'cancel'; id: string }
   | { type: 'accept'; id: string }
   | { type: 'reject'; id: string }

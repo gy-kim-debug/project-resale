@@ -1,3 +1,8 @@
+import {
+  deliveryStateValid,
+  physicalDelivery,
+  deliveryMethods,
+} from '../domain/delivery';
 import { validChatArchive } from '../domain/chats';
 import { isDailyState, isDailyScene } from '../domain/daily';
 import { SETTLEMENT_EVENTS } from '../content/settlementEvents';
@@ -172,6 +177,7 @@ function item(v: unknown): v is Item {
     (v.marketId !== 'auction' || v.auction !== undefined) &&
     (v.marketId === undefined || isMarketId(v.marketId)) &&
     listing(v.listing, v.kind) &&
+    deliveryStateValid(v.delivery, v as unknown as Item) &&
     (v.purchaseBargain === undefined ||
       (record(v.purchaseBargain) &&
         integer(v.purchaseBargain.rounds, 6) &&
@@ -667,6 +673,7 @@ export function isGame(v: unknown): v is Game {
       new Set(v.discoveredItems).size !== v.discoveredItems.length)
   )
     return false;
+  const inventory = v.inventory as Item[];
   const ids = new Set(v.inventory.map((i) => i.id));
   if (
     ids.size !== v.inventory.length ||
@@ -684,6 +691,12 @@ export function isGame(v: unknown): v is Game {
         (s.marketId === undefined || isMarketId(s.marketId)) &&
         text(s.itemId) &&
         ids.has(s.itemId) &&
+        (s.delivery === undefined ||
+          (typeof s.delivery === 'string' &&
+            ['meet', 'parcel', 'both'].includes(s.delivery) &&
+            (physicalDelivery(inventory.find((i) => i.id === s.itemId)!) !==
+              'meet' ||
+              s.delivery === 'meet'))) &&
         integer(s.price, RULES.maxMoney) &&
         s.price > 0 &&
         ['created', 'expires', 'nextCheck'].every((k) => integer(s[k])),
@@ -695,6 +708,7 @@ export function isGame(v: unknown): v is Game {
     new Set(v.sales.map((s) => s.itemId)).size !== v.sales.length
   )
     return false;
+  const saleRows = v.sales as import('../domain/game').Sale[];
   const sales = new Set(v.sales.map((s) => s.id));
   if (
     !Array.isArray(v.inquiries) ||
@@ -708,6 +722,18 @@ export function isGame(v: unknown): v is Game {
         text(q.name) &&
         (q.traderId === undefined || isTraderId(q.traderId)) &&
         chat(q.chat) &&
+        (q.delivery === undefined ||
+          deliveryMethods(
+            saleRows.find((s) => s.id === q.saleId)!.delivery ??
+              physicalDelivery(
+                inventory.find(
+                  (i) =>
+                    i.id === saleRows.find((s) => s.id === q.saleId)!.itemId,
+                )!,
+              ),
+          ).includes(q.delivery as 'meet' | 'parcel')) &&
+        (q.inspected === undefined || typeof q.inspected === 'boolean') &&
+        (!q.inspected || q.delivery === 'meet') &&
         integer(q.price, RULES.maxMoney) &&
         integer(q.max, RULES.maxMoney) &&
         integer(q.rounds, 2),

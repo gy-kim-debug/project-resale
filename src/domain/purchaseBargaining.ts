@@ -103,6 +103,7 @@ export function purchaseApproach(item: Item, price: number, round: number) {
   };
 }
 export const canPurchaseOffer = (item: Item) =>
+  !item.delivery?.inspected &&
   item.marketId !== 'auction' &&
   item.price > 0 &&
   !item.chatSettled &&
