@@ -1,9 +1,14 @@
+import { PARCEL_EVENTS } from './parcelEvents';
 import type { EventKind } from './story';
 /** Three authored situations per event. Braces refer only to public or post-purchase information. */
 export const EVENT_VARIANTS: Record<
   EventKind,
   readonly (readonly [string, string])[]
 > = {
+  parcelPacking: PARCEL_EVENTS.parcelPacking.variants,
+  parcelDispatch: PARCEL_EVENTS.parcelDispatch.variants,
+  parcelPhotos: PARCEL_EVENTS.parcelPhotos.variants,
+  parcelAddress: PARCEL_EVENTS.parcelAddress.variants,
   missing: [
     [
       '상자를 챙기다 보니 설명에 쓴 구성품 하나가 안 보이네요.',
@@ -266,6 +271,10 @@ export const QUESTION_LABELS: Record<EventQuestion, string> = {
   past: '이전 이야기를 더 듣기',
 };
 export const QUESTIONS_FOR: Record<EventKind, readonly EventQuestion[]> = {
+  parcelPacking: PARCEL_EVENTS.parcelPacking.questions,
+  parcelDispatch: PARCEL_EVENTS.parcelDispatch.questions,
+  parcelPhotos: PARCEL_EVENTS.parcelPhotos.questions,
+  parcelAddress: PARCEL_EVENTS.parcelAddress.questions,
   missing: ['reason', 'terms'],
   rehaggle: ['reason', 'terms'],
   regular: ['past', 'terms'],
@@ -291,6 +300,24 @@ export const EVENT_REASON_DETAILS: Record<
   EventKind,
   readonly [string, string, string]
 > = {
+  parcelPacking: Array(3).fill(PARCEL_EVENTS.parcelPacking.answers.reason) as [
+    string,
+    string,
+    string,
+  ],
+  parcelDispatch: Array(3).fill(
+    PARCEL_EVENTS.parcelDispatch.answers.reason,
+  ) as [string, string, string],
+  parcelPhotos: Array(3).fill(PARCEL_EVENTS.parcelPhotos.answers.reason) as [
+    string,
+    string,
+    string,
+  ],
+  parcelAddress: Array(3).fill(PARCEL_EVENTS.parcelAddress.answers.reason) as [
+    string,
+    string,
+    string,
+  ],
   missing: [
     '정리할 때 본품과 작은 부속들을 따로 담았는데, 부속 상자가 다른 곳으로 간 것 같아요.',
     '이사 업체가 포장한 상자라 지금 전부 열어 확인할 수는 없어요. 없는 구성을 있다고 하고 팔지는 않겠습니다.',

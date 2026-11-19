@@ -1,3 +1,4 @@
+import { PARCEL_BUY_EVENTS } from '../content/parcelEvents';
 import { buyerOpening } from './bargaining';
 import {
   chooseDelivery,
@@ -804,13 +805,18 @@ function executeCommand(
       }
       if (scene.resume) {
         if (
-          command.choice === 'deal' &&
-          ['missing', 'rush'].includes(scene.kind)
+          (command.choice === 'deal' &&
+            ['missing', 'rush'].includes(scene.kind)) ||
+          (command.choice === 'wait' &&
+            PARCEL_BUY_EVENTS.some((kind) => kind === scene.kind))
         ) {
           const item = preItem(g, scene.resume.id);
           item.negotiatedPrice = scene.price!;
         }
-        if (command.choice === 'deal' && scene.kind === 'rehaggle') {
+        if (
+          command.choice === 'deal' &&
+          ['rehaggle', 'parcelPhotos'].includes(scene.kind)
+        ) {
           const inquiry = g.inquiries.find((q) => q.id === scene.resume!.id);
           if (!inquiry) throw Error('종료된 문의입니다.');
           inquiry.price = scene.price!;
@@ -841,7 +847,10 @@ function executeCommand(
                 ),
               ),
             );
-          if (command.choice === 'wait')
+          if (
+            command.choice === 'wait' &&
+            ['appointment', 'inspection'].includes(scene.kind)
+          )
             queueFollowup(
               result.game,
               'referral',

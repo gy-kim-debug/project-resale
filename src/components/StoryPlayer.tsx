@@ -1,3 +1,6 @@
+import { LEGACY_PARCEL_EVENTS } from '../content/legacyParcelEvents';
+import { ParcelStage } from './ParcelStage';
+import { sceneDelivery } from '../domain/eventDepth';
 import { reducedGameMotion, preparePreferredAudio } from '../app/gameOptions';
 import { lotteryShots } from '../domain/lotteryPresentation';
 import { LottoResult } from './LottoResult';
@@ -132,7 +135,9 @@ export function StoryPlayer({
               ? INTRO_SHOTS[shot]
               : scene.kind === 'weekly'
                 ? SETTLEMENT_EVENTS[scene.settlement!.theme].title
-                : STORY_TITLES[scene.kind]}
+                : ((sceneDelivery(game, scene) === 'parcel'
+                    ? LEGACY_PARCEL_EVENTS[scene.kind]?.title
+                    : undefined) ?? STORY_TITLES[scene.kind])}
           </h1>
           {!last && <button onClick={() => void skip()}>스킵</button>}
         </header>
@@ -148,6 +153,13 @@ export function StoryPlayer({
             appearance={playerOf(game).appearance}
             step={scene.step}
             replying={!!scene.weeklyReply}
+          />
+        ) : sceneDelivery(game, scene) === 'parcel' ? (
+          <ParcelStage
+            appearance={playerOf(game).appearance}
+            step={scene.step}
+            kind={scene.kind}
+            complete={!!scene.outcome}
           />
         ) : shot ? (
           <IntroStage shot={shot} appearance={playerOf(game).appearance} />

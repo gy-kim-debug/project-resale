@@ -1,4 +1,10 @@
 import {
+  PARCEL_EVENT_KINDS,
+  PARCEL_BUY_EVENTS,
+  PARCEL_SELL_EVENTS,
+  isParcelEvent,
+} from '../content/parcelEvents';
+import {
   selectedDelivery,
   deliveryMethods,
   listingDelivery,
@@ -29,6 +35,7 @@ import {
 } from '../content/story';
 import {
   ACTION_TICK,
+  actionsLeft,
   won,
   type Game,
   type Command,
@@ -243,6 +250,7 @@ function baseChoices(g: Game): StoryChoice[] {
   if (
     extra &&
     [
+      ...PARCEL_EVENT_KINDS,
       'rush',
       'appointment',
       'scam',
@@ -326,6 +334,7 @@ export function storyChoices(g: Game): StoryChoice[] {
   if (
     s.outcome ||
     [
+      ...PARCEL_EVENT_KINDS,
       'rush',
       'appointment',
       'scam',
@@ -384,9 +393,13 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
       sale?.delivery ??
       (owned ? physicalDelivery(owned) : undefined);
     const eligible =
-      method === 'parcel' || q.inspected
-        ? kinds.filter((kind) => kind !== 'inspection')
-        : kinds;
+      method === 'parcel'
+        ? PARCEL_SELL_EVENTS.filter(
+            (kind) => kind !== 'parcelAddress' || actionsLeft(g) >= 2,
+          )
+        : q.inspected
+          ? kinds.filter((kind) => kind !== 'inspection')
+          : kinds;
     const kind = eligible[hash(signature + ':buyer') % eligible.length];
     return enrichScene(g, {
       kind,
@@ -394,7 +407,11 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
       target: q.id,
       name: q.name,
       price:
-        kind === 'rehaggle' ? Math.max(100, moneyRatio(q.price, 90)) : q.price,
+        kind === 'rehaggle'
+          ? Math.max(100, moneyRatio(q.price, 90))
+          : kind === 'parcelPhotos'
+            ? Math.max(100, moneyRatio(q.price, 95))
+            : q.price,
       traderId: q.traderId,
       resume: { type: 'accept', id: q.id },
     });
@@ -445,6 +462,15 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
   );
   if (extra && g.inventory.length + 2 <= RULES.capacity) kinds.push('bundle');
   if (st.contacts.includes(i.seller)) kinds.push('regular');
+  if (selectedDelivery(i) === 'parcel') {
+    kinds.splice(
+      0,
+      kinds.length,
+      ...PARCEL_BUY_EVENTS.filter(
+        (kind) => kind !== 'parcelPacking' || actionsLeft(g) >= 2,
+      ),
+    );
+  }
   const unseen = kinds.filter((k) => !st.history.includes(k));
   const pool = unseen.length ? unseen : kinds;
   const kind = pool[hash(signature + ':kind') % pool.length];
@@ -457,7 +483,10 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
         )
       : Math.max(
           100,
-          moneyRatio(i.negotiatedPrice ?? i.price, kind === 'rush' ? 95 : 90),
+          moneyRatio(
+            i.negotiatedPrice ?? i.price,
+            kind === 'rush' || isParcelEvent(kind) ? 95 : 90,
+          ),
         );
   return enrichScene(g, {
     kind,
@@ -465,7 +494,9 @@ export function beforeTrade(g: Game, c: Command): StoryScene | null {
     traderId: i.traderId,
     target: i.id,
     name: i.seller,
-    ...(['missing', 'rush', 'bundle'].includes(kind) ? { price } : {}),
+    ...(['missing', 'rush', 'bundle'].includes(kind) || isParcelEvent(kind)
+      ? { price }
+      : {}),
     ...(kind === 'bundle' ? { extra: extra!.id } : {}),
     resume: { type: 'buy', id: i.id },
   });
@@ -656,7 +687,10 @@ export function storyChoiceAffordable(g: Game, choice: StoryChoice): boolean {
   const item = g.board.find((i) => i.id === scene.resume!.id);
   if (!item) return false;
   const price =
-    choice.id === 'deal' && ['missing', 'rush', 'bundle'].includes(scene.kind)
+    (choice.id === 'deal' &&
+      ['missing', 'rush', 'bundle'].includes(scene.kind)) ||
+    (choice.id === 'wait' &&
+      PARCEL_BUY_EVENTS.some((kind) => kind === scene.kind))
       ? scene.price!
       : (item.negotiatedPrice ?? item.price);
   return price <= g.cash;

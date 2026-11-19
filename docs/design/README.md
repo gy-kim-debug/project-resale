@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [택배 전용 4종 이벤트·포장/접수 연출](events/PARCEL_EVENTS.md)
+
 - [이벤트 18종·54개 상황의 선택/결과 일치 점검](events/EVENT_CONSISTENCY_REVIEW.md)
 
 - [거래 방식·택배 가능 품목·직거래 현장 확인과 네고](trading/DELIVERY_AND_ONSITE.md)

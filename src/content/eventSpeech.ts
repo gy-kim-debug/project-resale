@@ -1,7 +1,12 @@
+import { PARCEL_EVENTS, isParcelEvent } from './parcelEvents';
 import type { EventKind } from './story';
 import type { EventQuestion } from './eventScenes';
 /** Button labels describe an action; these are the words the protagonist actually says. */
 const QUESTIONS: Record<EventKind, Partial<Record<EventQuestion, string>>> = {
+  parcelPacking: PARCEL_EVENTS.parcelPacking.ask,
+  parcelDispatch: PARCEL_EVENTS.parcelDispatch.ask,
+  parcelPhotos: PARCEL_EVENTS.parcelPhotos.ask,
+  parcelAddress: PARCEL_EVENTS.parcelAddress.ask,
   missing: {
     reason: '구성품이 빠진 건 어떤 사정 때문인가요?',
     terms: '빠진 구성품을 감안하면 어떤 조건으로 거래할 수 있을까요?',
@@ -91,6 +96,12 @@ export function eventDecisionSpeech(
   kind: EventKind,
   decision: string | undefined,
 ): string {
+  if (isParcelEvent(kind))
+    return (
+      (PARCEL_EVENTS[kind].decision as Partial<Record<string, string>>)[
+        decision ?? ''
+      ] ?? '발송 조건을 확인했습니다.'
+    );
   if (decision === 'report')
     return '먼저 돈을 보내지는 않겠습니다. 이 거래는 여기서 끝낼게요.';
   if (decision === 'hold')
@@ -156,6 +167,10 @@ export function eventQuestionReply(
   question: EventQuestion,
   variant: 0 | 1 | 2,
 ): string | undefined {
+  if (isParcelEvent(kind))
+    return (
+      PARCEL_EVENTS[kind].answers as Partial<Record<EventQuestion, string>>
+    )[question];
   const terms: Partial<Record<EventKind, string>> = {
     missing:
       '빠진 구성품 없이 받으시면 말씀드린 조정 금액으로 드리겠습니다. 본품 외에 다른 구성까지 더해 드릴 수는 없어요.',

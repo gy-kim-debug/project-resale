@@ -33,6 +33,15 @@ export function createEventPreview(
   };
   g.story!.active = scene;
   switch (kind) {
+    case 'parcelPacking':
+    case 'parcelDispatch':
+      item.delivery = { available: 'parcel', selected: 'parcel' };
+      g.story!.active = {
+        ...scene,
+        tradeMethod: 'parcel',
+        price: Math.max(100, moneyRatio(item.price, 95)),
+      };
+      break;
     case 'rush':
     case 'missing':
       g.story!.active = {
@@ -55,6 +64,8 @@ export function createEventPreview(
     case 'appointment':
     case 'scam':
       break;
+    case 'parcelPhotos':
+    case 'parcelAddress':
     case 'inspection':
     case 'reservation':
     case 'rehaggle': {
@@ -71,8 +82,11 @@ export function createEventPreview(
           nextCheck: g.minute + 8 * ACTION_TICK,
         },
       ];
+      const parcel = kind === 'parcelPhotos' || kind === 'parcelAddress';
+      if (parcel) g.sales[0].delivery = 'parcel';
       g.inquiries = [
         {
+          ...(parcel ? { delivery: 'parcel' as const } : {}),
           id: 'preview-buyer',
           saleId: 'preview-sale',
           name: '구매자',
@@ -83,12 +97,16 @@ export function createEventPreview(
       ];
       g.story!.active = {
         kind,
+        ...(parcel ? { tradeMethod: 'parcel' as const } : {}),
         step: 0,
         target: 'preview-buyer',
         name: '구매자',
         price:
-          kind === 'rehaggle'
-            ? Math.max(100, moneyRatio(item.price, 90))
+          kind === 'rehaggle' || kind === 'parcelPhotos'
+            ? Math.max(
+                100,
+                moneyRatio(item.price, kind === 'parcelPhotos' ? 95 : 90),
+              )
             : item.price,
         resume: { type: 'accept', id: 'preview-buyer' },
       };

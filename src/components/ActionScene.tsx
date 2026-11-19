@@ -1,13 +1,27 @@
+import { ParcelStage } from './ParcelStage';
+import type { DeliveryMethod } from '../domain/delivery';
 import type { PlayerAppearance } from '../content/player';
 import type { ActionSceneKind } from '../app/actionPresentation';
 import { PixelCharacter } from './PixelCharacter';
 export function ActionScene({
   kind,
   appearance,
+  delivery,
 }: {
   kind: ActionSceneKind;
   appearance?: PlayerAppearance;
+  delivery?: DeliveryMethod;
 }) {
+  if (delivery === 'parcel' && ['buy', 'sell'].includes(kind))
+    return (
+      <div
+        className="action-scene scene-parcel"
+        data-scene="parcel"
+        aria-hidden="true"
+      >
+        <ParcelStage appearance={appearance} complete compact />
+      </div>
+    );
   const trade = kind === 'buy' || kind === 'sell' || kind === 'gift';
   const desk = ['inspect', 'repair', 'listing', 'finance'].includes(kind);
   return (

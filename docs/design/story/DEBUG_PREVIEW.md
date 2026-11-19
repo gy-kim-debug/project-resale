@@ -52,3 +52,7 @@ previewEvent('예약 문의', 2); // 세 번째 상황 (0~2)
 ## 매주 상환 완료 이벤트
 
 `previewSettlement()`로 첫 납부 장면을 안전하게 미리 본다. `previewSettlement('rain', 4)`처럼 상황과 주차를 지정할 수 있다. 상황은 first/tight/business/halfway/near/rain/envelope/quiet, 주차는 1~12다. 실제 납부를 실행한 독립 게임 복사본을 사용하고 실제 슬롯·현금·난수·이벤트 이력을 바꾸지 않는다. 스킵·선택·Escape를 지원한다. [발생·저장·분기 규칙](WEEKLY_SETTLEMENT_EVENTS.md)을 따른다.
+
+## 택배 사건 — 2026-11-19
+
+`previewEvent("parcelPacking")`, `previewEvent("parcelDispatch")`, `previewEvent("parcelPhotos")`, `previewEvent("parcelAddress")`로 택배 전용 사건을 확인할 수 있다. 두 번째 인자 0·1·2로 각 상황을 고른다. 기존처럼 실제 슬롯을 읽거나 변경하지 않는 별도 미리보기다.

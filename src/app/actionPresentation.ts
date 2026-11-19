@@ -1,3 +1,11 @@
+import { sceneDelivery } from '../domain/eventDepth';
+import {
+  selectedDelivery,
+  listingDelivery,
+  deliveryMethods,
+  physicalDelivery,
+  type DeliveryMethod,
+} from '../domain/delivery';
 import type { Command, Game } from '../domain/game';
 
 export const ACTION_DURATION_MS = 750;
@@ -42,6 +50,7 @@ export function actionScene(command: Command): ActionSceneKind {
   }
 }
 export interface ActionPresentation {
+  delivery?: DeliveryMethod;
   scene: ActionSceneKind;
   id: number;
   label: string;
@@ -99,4 +108,28 @@ export function actionLabel(command: Command): string {
     event: '제안에 답하는 중…',
   };
   return labels[command.type];
+}
+
+/** Read-only visual choice; never affects settlement or economic randomness. */
+export function actionDelivery(
+  g: Game,
+  command: Command,
+): DeliveryMethod | undefined {
+  if (command.type === 'storyChoice' && g.story?.active)
+    return sceneDelivery(g, g.story.active);
+  if (command.type === 'buy') {
+    const item = g.board.find((i) => i.id === command.id);
+    return item
+      ? (selectedDelivery(item) ?? deliveryMethods(listingDelivery(item))[0])
+      : undefined;
+  }
+  if (command.type === 'accept') {
+    const q = g.inquiries.find((q) => q.id === command.id);
+    const sale = g.sales.find((s) => s.id === q?.saleId);
+    const item = g.inventory.find((i) => i.id === sale?.itemId);
+    return q && sale && item
+      ? (q.delivery ??
+          deliveryMethods(sale.delivery ?? physicalDelivery(item))[0])
+      : undefined;
+  }
 }

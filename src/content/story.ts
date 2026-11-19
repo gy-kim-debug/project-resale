@@ -1,4 +1,6 @@
+import { PARCEL_EVENT_KINDS, PARCEL_EVENTS } from './parcelEvents';
 export const EVENT_KINDS = [
+  ...PARCEL_EVENT_KINDS,
   'missing',
   'rehaggle',
   'regular',
@@ -28,6 +30,10 @@ export interface StoryLine {
   motion: 'phone' | 'listen' | 'look' | 'meet' | 'exchange' | 'leave';
 }
 export const STORY_TITLES: Record<SceneKind, string> = {
+  parcelPacking: PARCEL_EVENTS.parcelPacking.title,
+  parcelDispatch: PARCEL_EVENTS.parcelDispatch.title,
+  parcelPhotos: PARCEL_EVENTS.parcelPhotos.title,
+  parcelAddress: PARCEL_EVENTS.parcelAddress.title,
   intro: '첫 정산까지',
   weekly: '이번 주의 상환',
   lottery: '이번 주 복권',

@@ -28,7 +28,7 @@ function choose(g: Game, choice: string) {
   assert.ok(isGame(r.game));
   return r.game;
 }
-test('all 18 event types, 54 variants and every final choice charge their declared actions exactly once', () => {
+test('all 22 event types, 66 variants and every final choice charge their declared actions exactly once', () => {
   for (const kind of EVENT_KINDS)
     for (const variant of [0, 1, 2] as const) {
       const g = last(createEventPreview(kind, undefined, variant));

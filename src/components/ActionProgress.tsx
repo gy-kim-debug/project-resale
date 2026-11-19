@@ -86,6 +86,7 @@ export function ActionProgress({ action }: { action: ActionPresentation }) {
         }
       >
         <ActionScene
+          delivery={action.delivery}
           kind={action.scene}
           appearance={action.after.player?.appearance}
         />

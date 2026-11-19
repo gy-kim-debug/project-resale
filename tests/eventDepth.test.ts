@@ -33,8 +33,8 @@ function finishOutcome(g: Game) {
 }
 const save = (g: Game) =>
   parseSave({ version: 2, game: g, favoriteIds: [] }).game;
-test('18 events have 54 authored variants; every question and every final branch restores and validates', () => {
-  assert.equal(EVENT_KINDS.length, 18);
+test('22 events have 66 authored variants; every question and every final branch restores and validates', () => {
+  assert.equal(EVENT_KINDS.length, 22);
   let variants = 0;
   for (const kind of EVENT_KINDS) {
     assert.equal(EVENT_VARIANTS[kind].length, 3);
@@ -75,7 +75,7 @@ test('18 events have 54 authored variants; every question and every final branch
       }
     }
   }
-  assert.equal(variants, 54);
+  assert.equal(variants, 66);
 });
 test('purchase conversations never expose hidden value, defects or authenticity, even after optional questions', () => {
   for (const kind of [

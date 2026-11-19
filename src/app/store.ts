@@ -26,6 +26,7 @@ import {
   actionLabel,
   changesBetween,
   type ActionPresentation,
+  actionDelivery,
   actionScene,
   type Changes,
 } from './actionPresentation';
@@ -410,6 +411,8 @@ export const useGameStore = create<State>((set, get) => ({
               ? { type: 'refresh', marketId: pendingScene.marketId }
               : command))
         : command;
+    const delivery = actionDelivery(g, command);
+    const scene = actionScene(presentationCommand);
     // Commit and save once before presentation: reload cannot lose or replay an action.
     set({
       game: result.game,
@@ -419,8 +422,14 @@ export const useGameStore = create<State>((set, get) => ({
       actionId: id,
       action: {
         id,
-        label: actionLabel(presentationCommand),
-        scene: actionScene(presentationCommand),
+        label:
+          delivery === 'parcel' && scene === 'buy'
+            ? '택배를 받는 중…'
+            : delivery === 'parcel' && scene === 'sell'
+              ? '택배를 발송하는 중…'
+              : actionLabel(presentationCommand),
+        scene,
+        delivery,
         before: g,
         after: result.game,
         duration: ACTION_DURATION_MS,

@@ -1,3 +1,10 @@
+import { LEGACY_PARCEL_EVENTS } from '../content/legacyParcelEvents';
+import {
+  PARCEL_EVENTS,
+  isParcelEvent,
+  PARCEL_BUY_EVENTS,
+  PARCEL_SELL_EVENTS,
+} from '../content/parcelEvents';
 import {
   selectedDelivery,
   physicalDelivery,
@@ -53,6 +60,7 @@ export function sceneDelivery(
   g: Game,
   s: StoryScene,
 ): DeliveryMethod | undefined {
+  if (isParcelEvent(s.kind)) return 'parcel';
   if (s.tradeMethod) return s.tradeMethod;
   const item = sceneItem(g, s);
   if (s.resume?.type === 'buy' && item) return selectedDelivery(item);
@@ -69,6 +77,7 @@ export function deepLines(g: Game): StoryLine[] | null {
   if (s.variant === undefined || !isEventKind(s.kind)) return null;
   const kind = s.kind;
   const parcel = sceneDelivery(g, s) === 'parcel';
+  const legacy = parcel ? LEGACY_PARCEL_EVENTS[kind] : undefined;
   const name = s.name ?? (kind === 'creditor' ? '채권 담당자' : '거래 상대');
   const me = g.player?.nickname ?? '주인공';
   const line = (
@@ -76,6 +85,36 @@ export function deepLines(g: Game): StoryLine[] | null {
     text: string,
     motion: StoryLine['motion'] = 'meet',
   ): StoryLine => ({ speaker, text, motion });
+  if (isParcelEvent(kind)) {
+    const content = PARCEL_EVENTS[kind];
+    if (s.outcome)
+      return [
+        line(me, eventDecisionSpeech(kind, s.decision), 'phone'),
+        line(
+          name,
+          (content.reaction as Partial<Record<string, string>>)[
+            s.decision ?? ''
+          ] ?? '발송 조건대로 거래를 마쳤습니다.',
+          'listen',
+        ),
+      ];
+    if (s.branch)
+      return [
+        line(me, eventQuestionSpeech(kind, s.branch), 'phone'),
+        line(name, eventQuestionReply(kind, s.branch, s.variant)!, 'listen'),
+      ];
+    const title = sceneItem(g, s)?.title ?? '물건';
+    const [first, second] = content.variants[s.variant];
+    return [
+      line(
+        '',
+        `${title}. ${s.resume?.type === 'accept' ? '발송을 준비하던 중 구매자에게 연락이 왔다.' : '택배 발송을 앞두고 판매자에게 메시지가 왔다.'}`,
+        'phone',
+      ),
+      line(name, first, 'listen'),
+      line(name, second.replaceAll('{price}', won(s.price!)), 'phone'),
+    ];
+  }
   if (s.outcome) {
     const text: Record<SceneOutcome, string> = {
       purchased:
@@ -109,14 +148,17 @@ export function deepLines(g: Game): StoryLine[] | null {
           ? '납부 내역 확인했습니다. 다음 정산 때 연락드릴게요.'
           : parcel && kind === 'scam' && s.decision === 'continue'
             ? '예약금은 보내지 않겠습니다. 원래 합의한 택배 조건으로만 거래할게요.'
-            : eventDecisionSpeech(kind, s.decision),
+            : (legacy?.decisions?.[s.decision ?? ''] ??
+              eventDecisionSpeech(kind, s.decision)),
         'look',
       ),
       line(
         s.outcome === 'reported' || s.outcome === 'discovered' ? '' : name,
         parcel && s.outcome === 'purchased'
           ? '결제 확인했습니다. 약속한 물건은 택배로 전달하겠습니다.'
-          : text[s.outcome],
+          : parcel && s.outcome === 'sold'
+            ? '약속한 금액으로 결제했습니다. 확인한 발송 조건대로 보내주세요.'
+            : text[s.outcome],
         'exchange',
       ),
     ];
@@ -151,25 +193,27 @@ export function deepLines(g: Game): StoryLine[] | null {
     return [
       line(
         me,
-        parcel && kind === 'rehaggle' && s.branch === 'reason'
-          ? '합의한 금액을 다시 바꾸고 싶으신 이유가 있나요?'
-          : parcel && kind === 'scam' && s.branch === 'terms'
-            ? '예약금 없이 원래 택배 조건으로 거래할 수 있나요?'
-            : eventQuestionSpeech(kind, s.branch),
+        legacy?.questions?.[s.branch]?.[0] ??
+          (parcel && kind === 'rehaggle' && s.branch === 'reason'
+            ? '합의한 금액을 다시 바꾸고 싶으신 이유가 있나요?'
+            : parcel && kind === 'scam' && s.branch === 'terms'
+              ? '예약금 없이 원래 택배 조건으로 거래할 수 있나요?'
+              : eventQuestionSpeech(kind, s.branch)),
         'look',
       ),
       line(
         name,
-        s.branch === 'terms' && kind === 'bundle'
-          ? `${title}과 ${g.board.find((i) => i.id === s.extra)?.title ?? '함께 제안한 물건'}, 두 개 합쳐 ${won(s.price!)}입니다. 원래 물건만 사셔도 됩니다.`
-          : s.branch === 'terms' && kind === 'competitor'
-            ? `${(s.targets ?? [s.target!]).map((id) => g.inventory.find((i) => i.id === id)?.title ?? '제안한 물건').join(', ')}을 합쳐 ${won(s.price!)}입니다. 목록 밖의 물건은 포함하지 않습니다.`
-            : parcel && kind === 'scam' && s.branch === 'terms'
-              ? '예약금 없이 원래 합의한 택배 거래로 진행해도 됩니다.'
-              : kind === 'model' && item?.kind === '부동산'
-                ? '주소와 면적 등 제가 가진 자료는 보여드릴 수 있습니다. 권리 관계나 설비 상태까지 보증하는 건 아닙니다.'
-                : (eventQuestionReply(kind, s.branch, s.variant) ??
-                  answers[s.branch]),
+        legacy?.questions?.[s.branch]?.[1] ??
+          (s.branch === 'terms' && kind === 'bundle'
+            ? `${title}과 ${g.board.find((i) => i.id === s.extra)?.title ?? '함께 제안한 물건'}, 두 개 합쳐 ${won(s.price!)}입니다. 원래 물건만 사셔도 됩니다.`
+            : s.branch === 'terms' && kind === 'competitor'
+              ? `${(s.targets ?? [s.target!]).map((id) => g.inventory.find((i) => i.id === id)?.title ?? '제안한 물건').join(', ')}을 합쳐 ${won(s.price!)}입니다. 목록 밖의 물건은 포함하지 않습니다.`
+              : parcel && kind === 'scam' && s.branch === 'terms'
+                ? '예약금 없이 원래 합의한 택배 거래로 진행해도 됩니다.'
+                : kind === 'model' && item?.kind === '부동산'
+                  ? '주소와 면적 등 제가 가진 자료는 보여드릴 수 있습니다. 권리 관계나 설비 상태까지 보증하는 건 아닙니다.'
+                  : (eventQuestionReply(kind, s.branch, s.variant) ??
+                    answers[s.branch])),
         'listen',
       ),
     ];
@@ -193,6 +237,7 @@ export function deepLines(g: Game): StoryLine[] | null {
   }
   if (kind === 'missing' && item?.caseId === 'unopened')
     first = '미개봉 본품과 별도로 드리려던 외부 구성품 하나가 보이지 않네요.';
+  if (legacy) [first, second] = legacy.opening;
   const format = (text: string) =>
     text.replaceAll(
       '{price}',
@@ -248,6 +293,48 @@ export function depthChoices(
   const cancel = { id: 'cancel', label: '거래 취소' };
   let choices: { id: string; label: string; actions?: number }[] | null = null;
   switch (s.kind) {
+    case 'parcelPacking':
+      choices = [
+        {
+          id: 'wait',
+          label: `재포장 기다리고 ${won(s.price!)}에 구매`,
+          actions: 2,
+        },
+        cancel,
+      ];
+      break;
+    case 'parcelDispatch':
+      choices = [
+        {
+          id: 'wait',
+          label: `다음 접수까지 기다리고 ${won(s.price!)}에 구매`,
+          actions: 2,
+        },
+        { ...buy, label: '오늘 다른 지점에서 접수 · 원래 금액' },
+        cancel,
+      ];
+      break;
+    case 'parcelPhotos':
+      choices = [
+        { id: 'wait', label: '추가 사진 준비 후 원래 금액에 판매', actions: 2 },
+        {
+          id: 'deal',
+          label: `기존 사진 기준 ${won(s.price!)}에 판매`,
+          actions: 1,
+        },
+        cancel,
+      ];
+      break;
+    case 'parcelAddress':
+      choices = [
+        {
+          id: 'wait',
+          label: '운송장 수정·재접수 후 원래 금액에 판매',
+          actions: 2,
+        },
+        cancel,
+      ];
+      break;
     case 'rush':
       choices = [
         { id: 'deal', label: `${won(s.price!)}에 바로 구매`, actions: 1 },
@@ -316,7 +403,15 @@ export function depthChoices(
       ];
       break;
   }
-  return choices ? [...questions, ...choices] : questions;
+  const legacyLabels =
+    sceneDelivery(g, s) === 'parcel'
+      ? LEGACY_PARCEL_EVENTS[s.kind]?.choices
+      : undefined;
+  const final = choices?.map((choice) => ({
+    ...choice,
+    label: legacyLabels?.[choice.id] ?? choice.label,
+  }));
+  return final ? [...questions, ...final] : questions;
 }
 /** Enrichment is optional for backwards-compatible, already-open legacy scenes. */
 export function finishWithReaction(
@@ -364,6 +459,7 @@ export function queueFollowup(
   state.pending = state.pending.slice(-8);
 }
 export const PURCHASE_EVENTS: EventKind[] = [
+  ...PARCEL_BUY_EVENTS,
   'missing',
   'model',
   'memory',
@@ -374,6 +470,7 @@ export const PURCHASE_EVENTS: EventKind[] = [
   'scam',
 ];
 export const INQUIRY_EVENTS: EventKind[] = [
+  ...PARCEL_SELL_EVENTS,
   'rehaggle',
   'inspection',
   'reservation',

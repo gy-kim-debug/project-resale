@@ -1,7 +1,10 @@
+import { isParcelEvent, PARCEL_BUY_EVENTS } from '../content/parcelEvents';
 import {
   deliveryStateValid,
   physicalDelivery,
   deliveryMethods,
+  selectedDelivery,
+  canParcel,
 } from '../domain/delivery';
 import { validChatArchive } from '../domain/chats';
 import { isDailyState, isDailyScene } from '../domain/daily';
@@ -13,6 +16,7 @@ import { EVENT_QUESTIONS, QUESTIONS_FOR } from '../content/eventScenes';
 import {
   isEventKind,
   PURCHASE_EVENTS,
+  INQUIRY_EVENTS,
   PRIVATE_SALE_EVENTS,
 } from '../domain/eventDepth';
 import { isSceneKind, storyLines, type StoryState } from '../domain/story';
@@ -457,6 +461,12 @@ function validStory(g: Record<string, unknown>): boolean {
     );
   if (g.status !== 'playing') return false;
   if (['weekly', 'lottery', 'stroll'].includes(scene.kind)) return true;
+  if (
+    isParcelEvent(String(scene.kind)) &&
+    scene.tradeMethod !== undefined &&
+    scene.tradeMethod !== 'parcel'
+  )
+    return false;
   if (scene.outcome) return true;
   const board = Array.isArray(g.board) ? g.board.filter(record) : [];
   const inventory = Array.isArray(g.inventory)
@@ -465,6 +475,34 @@ function validStory(g: Record<string, unknown>): boolean {
   const inquiries = Array.isArray(g.inquiries)
     ? g.inquiries.filter(record)
     : [];
+  if (isParcelEvent(String(scene.kind))) {
+    if (record(scene.resume) && scene.resume.type === 'buy') {
+      const target = board.find((i) => i.id === scene.target);
+      if (
+        !target ||
+        typeof target.title !== 'string' ||
+        typeof target.kind !== 'string' ||
+        !canParcel(target as unknown as Item) ||
+        selectedDelivery(target as unknown as Item) !== 'parcel'
+      )
+        return false;
+    } else {
+      const q = inquiries.find((q) => q.id === scene.target);
+      const sale = (Array.isArray(g.sales) ? g.sales.filter(record) : []).find(
+        (s) => s.id === q?.saleId,
+      );
+      const target = inventory.find((i) => i.id === sale?.itemId);
+      if (
+        !q ||
+        !target ||
+        typeof target.title !== 'string' ||
+        typeof target.kind !== 'string' ||
+        !canParcel(target as unknown as Item) ||
+        (q.delivery ?? sale?.delivery) !== 'parcel'
+      )
+        return false;
+    }
+  }
   if (scene.kind === 'regular' && scene.resume === undefined) {
     return (
       inventory.some((i) => i.id === scene.target) &&
@@ -496,11 +534,12 @@ function validStory(g: Record<string, unknown>): boolean {
     )
       return false;
     if (
-      ['missing', 'rush'].includes(scene.kind) &&
+      (['missing', 'rush'].includes(scene.kind) ||
+        PARCEL_BUY_EVENTS.some((kind) => kind === scene.kind)) &&
       !integer(scene.price, RULES.maxMoney)
     )
       return false;
-  } else if (['rehaggle', 'inspection', 'reservation'].includes(scene.kind)) {
+  } else if (INQUIRY_EVENTS.includes(scene.kind as never)) {
     if (
       !inquiries.some((i) => i.id === scene.target) ||
       !record(scene.resume) ||

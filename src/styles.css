@@ -4432,3 +4432,75 @@ fieldset.conversation-composer {
     display: none;
   }
 }
+
+.parcel-stage > svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.parcel-stage.story-stage {
+  height: clamp(150px, 30dvh, 250px);
+  background: #15212e;
+}
+.parcel-stage .parcel-worker {
+  animation: parcel-work 1.1s ease-in-out infinite;
+}
+.parcel-stage .parcel-tape {
+  animation: parcel-tape 1.4s steps(3) infinite;
+}
+.parcel-stage .parcel-flash {
+  animation: parcel-flash 1.8s steps(1) infinite;
+}
+.parcel-stage .parcel-label {
+  animation: parcel-work 1.3s steps(2) infinite;
+}
+.parcel-stage .parcel-van {
+  animation: parcel-drive 2.4s ease-in-out infinite;
+}
+.parcel-stage-compact {
+  width: 100%;
+  height: 100%;
+}
+@keyframes parcel-work {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes parcel-tape {
+  50% {
+    transform: translateY(5px);
+  }
+}
+@keyframes parcel-flash {
+  0%,
+  85% {
+    opacity: 0;
+  }
+  86%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes parcel-drive {
+  0%,
+  20% {
+    transform: translateX(-4px);
+  }
+  75%,
+  100% {
+    transform: translateX(9px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .parcel-stage .parcel-worker,
+  .parcel-stage .parcel-tape,
+  .parcel-stage .parcel-flash,
+  .parcel-stage .parcel-label,
+  .parcel-stage .parcel-van {
+    animation: none;
+  }
+}
+
+.parcel-stage.story-stage > svg {
+  height: 100%;
+}
