@@ -13,6 +13,8 @@
 
 ## 현재 구현 원칙
 
+- [주식 화면·비율 주문·매매 기록 개선](daily/STOCKS_UX_REVIEW.md)
+
 - [택배 전용 4종 이벤트·포장/접수 연출](events/PARCEL_EVENTS.md)
 
 - [이벤트 18종·54개 상황의 선택/결과 일치 점검](events/EVENT_CONSISTENCY_REVIEW.md)

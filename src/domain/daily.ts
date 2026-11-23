@@ -29,7 +29,21 @@ export interface LotteryResult {
 export type DailyScene =
   | { kind: 'lottery'; result: LotteryResult }
   | { kind: 'stroll'; event: WalkKind; reward: number };
+export interface StockTrade {
+  stockId: StockId;
+  side: 'buy' | 'sell';
+  quantity: number;
+  price: number;
+  gross: number;
+  fee: number;
+  total: number;
+  basis: number;
+  profit: number;
+  week: number;
+  tick: number;
+}
 export interface DailyState {
+  stockOrders?: StockTrade[];
   version: 1;
   seed: number;
   quoteWeek: number;
@@ -109,13 +123,13 @@ export function buyLottery(g: Game, count: number) {
   d.tickets.count = 1;
   d.tickets.numbers = autoLottoNumbers((max) => roll(d, max));
 }
-export function tradeStock(
+export function stockOrderQuote(
   g: Game,
   id: string,
   side: 'buy' | 'sell',
   quantity: number,
 ) {
-  const d = (g.daily ??= dailyState(g)),
+  const d = dailyState(g),
     s = d.stocks.find((s) => s.id === id);
   if (
     !stockDefinition(id) ||
@@ -131,10 +145,18 @@ export function tradeStock(
   if (side === 'buy') {
     if (s.quantity + quantity > DAILY_RULES.stockLimit)
       throw Error('종목별 보유 한도를 넘었습니다.');
-    changeDailyCash(g, -gross);
-    s.quantity += quantity;
-    s.cost += gross;
-    return -gross;
+    if (g.cash < gross) throw Error('매수할 현금이 부족합니다.');
+    return {
+      id: s.id,
+      side,
+      quantity,
+      price: sharePrice(s),
+      gross,
+      fee: 0,
+      net: gross,
+      cashAfter: g.cash - gross,
+      remainingCost: s.cost + gross,
+    };
   }
   if (quantity > s.quantity) throw Error('보유 수량이 부족합니다.');
   const net = gross - stockFee(gross);
@@ -142,10 +164,72 @@ export function tradeStock(
     quantity === s.quantity
       ? 0
       : moneyRatio(s.cost, s.quantity - quantity, s.quantity);
-  changeDailyCash(g, net);
-  s.quantity -= quantity;
-  s.cost = remainingCost;
-  return net;
+  if (g.cash + net > RULES.maxMoney) throw Error('보유 현금 한도를 넘습니다.');
+  return {
+    id: s.id,
+    side,
+    quantity,
+    price: sharePrice(s),
+    gross,
+    fee: stockFee(gross),
+    net,
+    cashAfter: g.cash + net,
+    remainingCost,
+  };
+}
+export function tradeStock(
+  g: Game,
+  id: string,
+  side: 'buy' | 'sell',
+  quantity: number,
+) {
+  const quote = stockOrderQuote(g, id, side, quantity);
+  const d = (g.daily ??= dailyState(g));
+  const stock = d.stocks.find((s) => s.id === id)!;
+  const delta = side === 'buy' ? -quote.net : quote.net;
+  const basis = side === 'buy' ? quote.gross : stock.cost - quote.remainingCost;
+  changeDailyCash(g, delta);
+  d.stockOrders = [
+    {
+      stockId: stock.id,
+      side,
+      quantity,
+      price: quote.price,
+      gross: quote.gross,
+      fee: quote.fee,
+      total: quote.net,
+      basis,
+      profit: side === 'sell' ? quote.net - basis : 0,
+      week: weekOf(g),
+      tick: d.stockTick ?? d.quoteWeek - 1,
+    },
+    ...(d.stockOrders ?? []),
+  ].slice(0, 20);
+  stock.quantity += side === 'buy' ? quantity : -quantity;
+  stock.cost = quote.remainingCost;
+  return delta;
+}
+/** Largest affordable integer order, including the cash ceiling after a sale. */
+export function stockOrderLimit(g: Game, id: string, side: 'buy' | 'sell') {
+  const stock = dailyState(g).stocks.find((s) => s.id === id);
+  if (!stock) return 0;
+  if (side === 'buy')
+    return Math.max(
+      0,
+      Math.min(
+        DAILY_RULES.stockLimit - stock.quantity,
+        Math.floor(g.cash / sharePrice(stock)),
+      ),
+    );
+  let low = 0,
+    high = stock.quantity;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2),
+      gross = sharePrice(stock) * mid;
+    if (g.cash + gross - stockFee(gross) <= RULES.maxMoney) low = mid;
+    else high = mid - 1;
+  }
+  return low;
 }
 /** Called only after successful weekly debt payment; never on entering settlement. */
 export function finishDailyWeek(g: Game, paidWeek: number) {
@@ -357,6 +441,12 @@ export function isDailyState(v: unknown, week: number) {
     !record(v) ||
     v.version !== 1 ||
     !integer(v.seed, 4294967295) ||
+    (v.stockOrders !== undefined &&
+      !validStockOrders(
+        v.stockOrders,
+        week,
+        Number(v.stockTick ?? week - 1),
+      )) ||
     v.quoteWeek !== week ||
     (v.stockTick === undefined) !== (v.stockSeed === undefined) ||
     (v.stockTick !== undefined &&
@@ -423,6 +513,50 @@ export function isDailyState(v: unknown, week: number) {
       (actionMode
         ? history.at(-1).tick === v.stockTick
         : history.at(-1).week === week)
+    );
+  });
+}
+
+function validStockOrders(value: unknown, week: number, tick: number): boolean {
+  if (!Array.isArray(value) || value.length > 20) return false;
+  return value.every((v, index) => {
+    if (
+      !record(v) ||
+      typeof v.stockId !== 'string' ||
+      !stockDefinition(v.stockId) ||
+      typeof v.side !== 'string' ||
+      !['buy', 'sell'].includes(v.side) ||
+      !integer(v.quantity, DAILY_RULES.stockLimit) ||
+      v.quantity < 1 ||
+      !amount(v.price) ||
+      Number(v.price) < 100 ||
+      Number(v.price) > 1_000_000_000 ||
+      !['gross', 'fee', 'total', 'basis'].every((key) => amount(v[key])) ||
+      !integer(v.week, week) ||
+      v.week < 1 ||
+      !integer(v.tick, tick) ||
+      typeof v.profit !== 'number' ||
+      !Number.isSafeInteger(v.profit) ||
+      v.profit % 100 ||
+      Math.abs(v.profit) > RULES.maxMoney
+    )
+      return false;
+    const gross = Number(v.price) * v.quantity;
+    if (v.gross !== gross) return false;
+    if (
+      v.side === 'buy'
+        ? v.fee !== 0 ||
+          v.total !== gross ||
+          v.basis !== gross ||
+          v.profit !== 0
+        : v.fee !== stockFee(gross) ||
+          v.total !== gross - Number(v.fee) ||
+          v.profit !== Number(v.total) - Number(v.basis)
+    )
+      return false;
+    return (
+      index === 0 ||
+      (v.tick <= value[index - 1].tick && v.week <= value[index - 1].week)
     );
   });
 }

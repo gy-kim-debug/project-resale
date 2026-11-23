@@ -4504,3 +4504,532 @@ fieldset.conversation-composer {
 .parcel-stage.story-stage > svg {
   height: 100%;
 }
+
+.invest-screen {
+  color: #e3eaf2;
+  font-variant-numeric: tabular-nums;
+}
+.invest-overview {
+  padding: 20px;
+  border: 1px solid #344b49;
+  border-radius: 16px;
+  background: #182a2b;
+}
+.invest-overview > span {
+  display: block;
+  color: #afbfcb;
+  font-size: 14px;
+}
+.invest-overview > strong {
+  display: block;
+  margin: 8px 0 12px;
+  font-size: clamp(24px, 6vw, 32px);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.invest-overview > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+.invest-overview > div > span:last-child {
+  color: #afbfcb;
+}
+.invest-filters {
+  display: flex;
+  gap: 20px;
+  margin: 18px 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+.invest-filters button {
+  min-height: 44px;
+  padding: 8px 0;
+  background: transparent;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  font-size: 15px;
+}
+.invest-filters [aria-pressed='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.invest-market {
+  display: grid;
+  gap: 6px;
+}
+.invest-theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  min-height: 72px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #171f2a;
+  text-align: left;
+}
+.invest-theme[aria-pressed='true'] {
+  border-color: #679b8c;
+  background: #1d302f;
+}
+.invest-theme > span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.invest-theme > span:last-child {
+  text-align: right;
+}
+.invest-theme strong {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.invest-theme small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.invest-theme small.stock-up {
+  color: #91e1bf;
+}
+.invest-theme small.stock-down {
+  color: #f29d91;
+}
+.invest-detail {
+  padding: 24px 0 14px;
+}
+.invest-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.invest-detail-heading h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.invest-risk {
+  color: #afbecb;
+  font-size: 13px;
+  background: #222c39;
+  padding: 5px 9px;
+  border-radius: 20px;
+}
+.invest-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 12px;
+}
+.invest-price > strong {
+  font-size: 28px;
+  overflow-wrap: anywhere;
+}
+.invest-price > span {
+  font-size: 15px;
+}
+.invest-price small {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.invest-chart {
+  margin-top: 22px;
+  color: #91e1bf;
+}
+.invest-chart-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 14px;
+}
+.invest-chart-readout strong {
+  color: #e5edf4;
+  font-size: 16px;
+}
+.invest-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+}
+.invest-chart svg text {
+  fill: #9babbb;
+  font-size: 12px;
+}
+.invest-average {
+  stroke: #cbb38a;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+.invest-cursor {
+  stroke: #729f95;
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.invest-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.invest-chart-controls button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #c6d5e3;
+  background: #1c2734;
+  font-size: 14px;
+}
+.invest-chart-controls button:disabled {
+  opacity: 0.4;
+}
+.invest-position {
+  padding: 18px;
+  background: #171f2a;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.invest-position h3 {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+.invest-position h3 span {
+  color: var(--accent);
+}
+.invest-ledger {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  font-size: 14px;
+}
+.invest-ledger > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.invest-ledger dt {
+  color: #a6b5c4;
+}
+.invest-ledger dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.invest-history {
+  padding: 24px 0;
+}
+.invest-history h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+.invest-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.invest-history li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.invest-history li > span {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.invest-history li > span:last-child {
+  text-align: right;
+}
+.invest-history strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.invest-history b {
+  margin-left: 5px;
+  font-size: 12px;
+}
+.invest-history small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.invest-history small.stock-up {
+  color: #91e1bf;
+}
+.invest-history small.stock-down {
+  color: #f29d91;
+}
+.invest-history > button {
+  width: 100%;
+  padding: 12px;
+  min-height: 44px;
+  margin-top: 10px;
+  background: #202a38;
+  border-radius: 9px;
+  font-size: 14px;
+}
+.invest-history-empty {
+  color: var(--muted);
+  font-size: 14px;
+}
+.invest-dock {
+  position: sticky;
+  bottom: -24px;
+  z-index: 5;
+  margin: 12px -16px -24px;
+  padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+  background: #111923;
+  border-top: 1px solid #344655;
+}
+.invest-dock > span {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 14px;
+  color: #b8c7d5;
+}
+.invest-dock > div {
+  display: flex;
+  gap: 10px;
+}
+.invest-dock button {
+  flex: 1;
+  min-height: 50px;
+  padding: 12px;
+  border-radius: 11px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.invest-buy {
+  background: #8ce5c0;
+  color: #122c26;
+}
+.invest-sell {
+  background: #dba39b;
+  color: #321e21;
+}
+.invest-dock button:disabled {
+  opacity: 0.38;
+}
+.invest-dock > small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+}
+.invest-empty {
+  padding: 35px 12px;
+  text-align: center;
+  color: var(--muted);
+}
+.invest-empty button {
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 12px 20px;
+  background: #263b36;
+  color: var(--accent);
+  border-radius: 10px;
+}
+.invest-order {
+  position: fixed;
+  inset: auto 0 0;
+  margin: 0 auto;
+  width: calc(100% - 16px);
+  max-width: 480px;
+  max-height: calc(100dvh - 12px);
+  padding: 0;
+  background: #151e2a;
+  color: #e3eaf2;
+  border: 1px solid #415360;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -20px 90px #0008;
+  overflow: hidden;
+}
+.invest-order[open] {
+  display: flex;
+  flex-direction: column;
+}
+.invest-order::backdrop {
+  background: #050a12b8;
+}
+.invest-order header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.invest-order h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.invest-order header button {
+  min-height: 44px;
+  padding: 8px;
+  background: transparent;
+  font-size: 14px;
+  color: #b6c6d6;
+}
+.invest-order-body {
+  padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.invest-order-price {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 14px;
+  color: var(--muted);
+}
+.invest-order-price strong {
+  font-size: 22px;
+  color: #f0f3f6;
+}
+.invest-available {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  margin: 12px 0 18px;
+}
+.invest-available strong {
+  color: #cfdbe5;
+  font-weight: 500;
+}
+.invest-percent {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+.invest-percent button {
+  min-height: 44px;
+  background: #243142;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 14px;
+}
+.invest-percent [aria-pressed='true'] {
+  color: var(--accent);
+  border-color: #8ce5c0;
+  background: #273e37;
+}
+.invest-stepper {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+.invest-stepper button {
+  min-height: 48px;
+  border: 1px solid #405263;
+  border-radius: 10px;
+  background: #202d3d;
+  font-size: 26px;
+}
+.invest-stepper output {
+  text-align: center;
+  font-size: 16px;
+  color: var(--muted);
+}
+.invest-stepper output strong {
+  font-size: 30px;
+  color: #eff5f7;
+}
+.invest-adjust {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 20px;
+}
+.invest-adjust button {
+  min-height: 40px;
+  border-radius: 8px;
+  background: #202a39;
+  font-size: 13px;
+}
+.invest-order button:disabled {
+  opacity: 0.4;
+}
+.invest-review-quantity {
+  font-size: 25px;
+  font-weight: 700;
+  margin: 24px 0;
+}
+.invest-order-total {
+  border-top: 1px solid #354556;
+  padding-top: 12px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.invest-order footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 18px max(18px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+}
+.invest-order footer button {
+  flex: 1;
+  min-height: 50px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #293749;
+  font-size: 16px;
+}
+.invest-order footer .invest-submit.invest-buy {
+  background: #8ce5c0;
+}
+.invest-order footer .invest-submit.invest-sell {
+  background: #dba39b;
+}
+.invest-order-error {
+  color: #edaaa0;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+@media (min-width: 700px) {
+  .invest-order {
+    inset: 50% 0 auto;
+    transform: translateY(-50%);
+    border-radius: 18px;
+    max-height: 90dvh;
+  }
+}
+.invest-order-cap {
+  color: #b0c2d0;
+  font-size: 13px;
+  margin: -6px 0 12px;
+}
+.invest-average-label {
+  display: block;
+  margin-top: 8px;
+  color: #cbb38a;
+  font-size: 12px;
+}
+.invest-market-jump {
+  display: block;
+  margin: -10px 0 6px auto;
+  min-height: 44px;
+  padding: 8px 0 8px 12px;
+  background: transparent;
+  color: #b1c6d5;
+  font-size: 14px;
+}
